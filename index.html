@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JavaScript Pivot-Table Analysis</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background-color: #ffffff;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            color: #2c3e50;
+            font-size: 1.75rem;
+            font-weight: 600;
+        }
+
+        .logo {
+            width: 220px;
+            height: 80px;
+            /* background: linear-gradient(135deg, #3498db, #2c3e50); */
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .content {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .button-container {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .nav-button {
+            padding: 1.2rem 2.5rem;
+            font-size: 1.2rem;
+            font-weight: 500;
+            text-align: center;
+            text-decoration: none;
+            color: white;
+            background-color: #3498db;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+            min-width: 180px;
+            width: 180px;
+        }
+
+        .nav-button:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .nav-button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1 class="header-title">JavaScript Pivot-Table Analysis</h1>
+        <div class="logo"><img src="./images/SanofiLogov1.png" /></div>
+    </header>
+    
+    <main class="content">
+        <div class="button-container">
+            <a href="bom.html" class="nav-button">BOM</a>
+            <a href="revenue.html" class="nav-button">Revenue</a>
+        </div>
+    </main>
+
+    <script>
+        // JavaScript can be added here for enhanced functionality
+        document.querySelectorAll('.nav-button').forEach(button => {
+            button.addEventListener('click', function(e) {
+                // Optional: Add click animations or tracking here
+                console.log(`Navigating to ${this.getAttribute('href')}`);
+            });
+        });
+    </script>
+</body>
+</html>
