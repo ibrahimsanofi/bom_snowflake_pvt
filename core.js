@@ -1,4 +1,3 @@
-
 // This module now focuses only on core app functionality. There is no direct imports of other app modules to avoid circular dependencies
 
 const core = {
@@ -19,36 +18,22 @@ const core = {
      */
     getDomElements: function() {
         return {
-            // Directory picker
-            selectDirectoryBtn: document.getElementById('selectDirectoryBtn'),
-            directoryPath: document.getElementById('directoryPath'),
-            fileList: document.getElementById('fileList'),
+            // Database connection elements
+            connectionStatus: document.getElementById('connectionStatus'),
+            loadDataBtn: document.getElementById('loadDataBtn'),
+            reconnectBtn: document.getElementById('reconnectBtn'),
             
-            // File status indicators
-            dimLegalEntityStatus: document.getElementById('dimLegalEntityStatus'),
-            factBOMStatus: document.getElementById('factBOMStatus'),
-            dimCostElementStatus: document.getElementById('dimCostElementStatus'),
-            dimGMIDDisplayStatus: document.getElementById('dimGMIDDisplayStatus'),
-            dimSmartCodeStatus: document.getElementById('dimSmartCodeStatus'),
-            dimItemCostTypeStatus: document.getElementById('dimItemCostTypeStatus'),
-            dimMaterialTypeStatus: document.getElementById('dimMaterialTypeStatus'),
-            
-            // File inputs
-            factBOMFile: document.getElementById('factBOMFile'),
-            dimLegalEntityFile: document.getElementById('dimLegalEntityFile'),
-            dimCostElementFile: document.getElementById('dimCostElementFile'),
-            dimGMIDDisplayFile: document.getElementById('dimGMIDDisplayFile'),
-            dimSmartCodeFile: document.getElementById('dimSmartCodeFile'),
-            dimItemCostTypeFile: document.getElementById('dimItemCostTypeFile'),
-            dimMaterialTypeFile: document.getElementById('dimMaterialTypeFile'),
-            
-            // Buttons and status
-            processFilesBtn: document.getElementById('processFilesBtn'),
-            uploadStatus: document.getElementById('uploadStatus'),
+            // Table status indicators
+            // dimLegalEntityStatus: document.getElementById('dimLegalEntityStatus'),
+            // factBOMStatus: document.getElementById('factBOMStatus'),
+            // dimCostElementStatus: document.getElementById('dimCostElementStatus'),
+            // dimGMIDDisplayStatus: document.getElementById('dimGMIDDisplayStatus'),
+            // dimSmartCodeStatus: document.getElementById('dimSmartCodeStatus'),
+            // dimItemCostTypeStatus: document.getElementById('dimItemCostTypeStatus'),
+            // dimMaterialTypeStatus: document.getElementById('dimMaterialTypeStatus'),
             
             // App sections
             appContent: document.getElementById('appContent'),
-            fallbackUpload: document.getElementById('fallbackUpload'),
             loadingIndicator: document.getElementById('loadingIndicator'),
             
             // Tabs and content
@@ -64,7 +49,12 @@ const core = {
             
             // Pivot table
             pivotTableHeader: document.getElementById('pivotTableHeader'),
-            pivotTableBody: document.getElementById('pivotTableBody')
+            pivotTableBody: document.getElementById('pivotTableBody'),
+            
+            // Buttons
+            processFilesBtn: document.getElementById('processFilesBtn'),
+            uploadStatus: document.getElementById('uploadStatus'),
+            refreshButton: document.getElementById('refreshBtn')
         };
     },
 
@@ -80,7 +70,7 @@ const core = {
         }
         
         this.state.expandedNodes = {
-            legal_entity: {
+            le: {
                 row: { 'ROOT': true },
                 column: { 'ROOT': true }
             },
@@ -92,7 +82,7 @@ const core = {
                 row: { 'ROOT': true },
                 column: { 'ROOT': true }
             },
-            smart_code: {
+            smartcode: {
                 row: { 'ROOT': true },
                 column: { 'ROOT': true }
             }
@@ -134,6 +124,40 @@ const core = {
      */
     debugLog: function(message, object) {
         console.log(`DEBUG: ${message}`, object);
+    },
+    
+    /**
+     * Update the application UI based on the connection status
+     * @param {boolean} connected - Whether connected to database
+     */
+    updateConnectionUI: function(connected) {
+        const elements = this.getDomElements();
+        
+        // Update load data button
+        if (elements.loadDataBtn) {
+            elements.loadDataBtn.disabled = !connected;
+        }
+        
+        // Show appropriate sections
+        if (elements.appContent) {
+            elements.appContent.style.display = connected ? 'block' : 'none';
+        }
+    },
+    
+    /**
+     * Update table status indicators
+     * @param {string} tableName - The table name
+     * @param {string} status - Status (waiting, loading, loaded, error)
+     */
+    updateTableStatus: function(tableName, status) {
+        const normalizedName = tableName.toLowerCase().replace(/[^a-z0-9_]/g, '');
+        const statusElementId = `${normalizedName}Status`;
+        const statusElement = document.getElementById(statusElementId);
+        
+        if (statusElement) {
+            statusElement.className = `table-status ${status}`;
+            statusElement.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+        }
     }
 };
 

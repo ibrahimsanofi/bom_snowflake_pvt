@@ -1,4 +1,3 @@
-
 // This module handles ui-centric tasks
 
 // Import signature
@@ -25,16 +24,57 @@ function setDefaultFields() {
 
 
 /**
- * Display a status message with type-based styling
+ * Display a connection status message
  * @param {string} message - The message to display
- * @param {string} type - The type of message (success, error, info)
- * @param {object} elements - DOM elements object containing uploadStatus
+ * @param {string} status - Connection status (connecting, success, error)
  */
-function showStatus(message, type, elements) {
-    if (elements && elements.uploadStatus) {
-        elements.uploadStatus.innerHTML = `<div class="status-bar status-${type}">${message}</div>`;
-    } else {
-        console.log(`Status (${type}): ${message}`);
+function showConnectionStatus(message, status) {
+    const connectionStatus = document.getElementById('connectionStatus');
+    if (!connectionStatus) return;
+    
+    let icon, className;
+    
+    switch (status) {
+        case 'connecting':
+            icon = '<i class="fas fa-circle-notch fa-spin"></i>';
+            className = 'connection-status';
+            break;
+        case 'success':
+            icon = '<i class="fas fa-check-circle"></i>';
+            className = 'connection-status success';
+            break;
+        case 'error':
+            icon = '<i class="fas fa-times-circle"></i>';
+            className = 'connection-status error';
+            break;
+        default:
+            icon = '<i class="fas fa-info-circle"></i>';
+            className = 'connection-status';
+    }
+    
+    connectionStatus.innerHTML = `${icon} ${message}`;
+    connectionStatus.className = className;
+}
+
+
+/**
+ * Update table status indicator
+ * @param {string} tableName - Table name
+ * @param {string} status - Status (waiting, loading, loaded, error)
+ * @param {number} rowCount - Number of rows (optional)
+ */
+function updateTableStatus(tableName, status, rowCount) {
+    const normalizedName = tableName.toLowerCase().replace(/[^a-z0-9_]/g, '');
+    const statusElement = document.getElementById(`${normalizedName}Status`);
+    const rowCountElement = document.getElementById(`${normalizedName}Rows`);
+    
+    if (statusElement) {
+        statusElement.className = `table-status ${status}`;
+        statusElement.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+    }
+    
+    if (rowCountElement && rowCount !== undefined) {
+        rowCountElement.textContent = `${rowCount.toLocaleString()} rows`;
     }
 }
 
@@ -192,370 +232,6 @@ function renderFieldContainer(container, fieldIds) {
         
         container.appendChild(fieldEl);
     });
-}
-
-
-/**
- * Renders filter controls for the active filter fields
- * Creates a tree-style UI for hierarchical dimensions and text inputs for regular dimensions
- */
-function renderFilterControls() {
-    // Create or get the filter container
-    let filterContainer = document.getElementById('pivotFilterControls');
-    if (!filterContainer) {
-        // Create the container if it doesn't exist
-        filterContainer = document.createElement('div');
-        filterContainer.id = 'pivotFilterControls';
-        filterContainer.className = 'pivot-filter-controls';
-        
-        // Insert filter container before the pivot table
-        const pivotTableContainer = document.getElementById('pivotTableContainer');
-        if (pivotTableContainer) {
-            pivotTableContainer.parentNode.insertBefore(filterContainer, pivotTableContainer);
-        }
-    }
-    
-    // Clear existing filters
-    filterContainer.innerHTML = '';
-    
-    // Hide container if no filter fields
-    if (!state.filterFields || state.filterFields.length === 0) {
-        filterContainer.style.display = 'none';
-        return;
-    }
-    
-    // Show the container
-    filterContainer.style.display = 'block';
-    
-    // Add a header
-    const header = document.createElement('div');
-    header.className = 'filter-header';
-    header.textContent = 'Filters:';
-    filterContainer.appendChild(header);
-    
-    // Render each filter field
-    state.filterFields.forEach(fieldId => {
-        // Find the field definition
-        const field = state.availableFields.find(f => f.id === fieldId);
-        if (!field) return; // Skip if field not found
-        
-        // Create filter control container
-        const filterControl = document.createElement('div');
-        filterControl.className = 'filter-control';
-        
-        // Create filter label
-        const filterLabel = document.createElement('span');
-        filterLabel.className = 'filter-label';
-        filterLabel.textContent = field.label + ': ';
-        filterControl.appendChild(filterLabel);
-        
-        // Create different filter controls based on field type
-        if (field.hierarchical) {
-            // Render tree-style filter for hierarchical dimensions
-            renderHierarchicalFilter(filterControl, field, fieldId);
-        } else {
-            // Render text input filter for non-hierarchical dimensions
-            renderTextFilter(filterControl, field, fieldId);
-        }
-        
-        // Add the completed filter control to the container
-        filterContainer.appendChild(filterControl);
-    });
-}
-
-
-/**
- * Renders a hierarchical tree-style filter for dimension fields
- * @param {HTMLElement} filterControl - The parent filter control element
- * @param {object} field - The field definition
- * @param {string} fieldId - The field ID
- */
-function renderHierarchicalFilter(filterControl, field, fieldId) {
-    // Get dimension name and hierarchy
-    const dimName = field.id.replace('DIM_', '').toLowerCase();
-    const hierarchy = state.hierarchies[dimName];
-    
-    // Only proceed if hierarchy exists and has a root node
-    if (hierarchy && hierarchy.root) {
-        // Create container for tree control
-        const treeContainer = document.createElement('div');
-        treeContainer.className = 'filter-tree-container';
-        
-        // Initialize filter tree state if not already set
-        if (!state.filterTreeState) {
-            state.filterTreeState = {};
-        }
-        if (!state.filterTreeState[fieldId]) {
-            state.filterTreeState[fieldId] = { 'ROOT': true }; // Root is expanded by default
-        }
-        
-        // Create "All" option at the top
-        renderAllOption(treeContainer, fieldId);
-        
-        // Start building tree from the root node
-        buildTreeNode(hierarchy.root, treeContainer, fieldId);
-        
-        // Add clear button if filter is active
-        renderClearButton(treeContainer, fieldId);
-        
-        // Add the tree container to the filter control
-        filterControl.appendChild(treeContainer);
-    }
-}
-
-
-/**
- * Renders the "All" option at the top of a hierarchical filter
- * @param {HTMLElement} treeContainer - The tree container element
- * @param {string} fieldId - The field ID
- */
-function renderAllOption(treeContainer, fieldId) {
-    const allOption = document.createElement('div');
-    allOption.className = 'filter-tree-item';
-    
-    // Create radio button for "All"
-    const allRadio = document.createElement('input');
-    allRadio.type = 'radio';
-    allRadio.name = `filter-${fieldId}`;
-    allRadio.value = 'ALL';
-    allRadio.id = `filter-${fieldId}-ALL`;
-    
-    // Check if "All" is selected (no active filter)
-    if (!state.activeFilters || !state.activeFilters[fieldId]) {
-        allRadio.checked = true;
-    }
-    
-    // Add change event for "All" option
-    allRadio.addEventListener('change', function() {
-        if (this.checked) {
-            // Clear filter for this field
-            state.activeFilters = state.activeFilters || {};
-            state.activeFilters[fieldId] = null;
-            
-            // Regenerate pivot table
-            generatePivotTable();
-        }
-    });
-    
-    // Create label for "All" option
-    const allLabel = document.createElement('label');
-    allLabel.setAttribute('for', `filter-${fieldId}-ALL`);
-    allLabel.textContent = 'All';
-    allLabel.className = 'filter-tree-label';
-    
-    // Add elements to the container
-    allOption.appendChild(allRadio);
-    allOption.appendChild(allLabel);
-    treeContainer.appendChild(allOption);
-}
-
-
-/**
- * Renders a clear button for an active filter
- * @param {HTMLElement} treeContainer - The tree container element
- * @param {string} fieldId - The field ID
- */
-function renderClearButton(treeContainer, fieldId) {
-    // Only add clear button if filter is active
-    if (state.activeFilters && state.activeFilters[fieldId]) {
-        const clearButton = document.createElement('button');
-        clearButton.className = 'clear-filter';
-        clearButton.textContent = 'Clear Filter';
-        clearButton.addEventListener('click', function() {
-            // Clear the filter
-            state.activeFilters[fieldId] = null;
-            
-            // Check the "All" radio button
-            const allRadio = document.getElementById(`filter-${fieldId}-ALL`);
-            if (allRadio) allRadio.checked = true;
-            
-            // Regenerate pivot table
-            generatePivotTable();
-        });
-        
-        // Add clear button to control
-        const clearContainer = document.createElement('div');
-        clearContainer.className = 'filter-clear-container';
-        clearContainer.appendChild(clearButton);
-        treeContainer.appendChild(clearContainer);
-    }
-}
-
-
-/**
- * Renders an expand/collapse control for nodes with children
- * @param {HTMLElement} nodeItem - The node item element
- * @param {object} node - The node data
- * @param {string} fieldId - The field ID
- */
-function renderExpandCollapseControl(nodeItem, node, fieldId) {
-    const expandControl = document.createElement('span');
-    expandControl.className = `expand-collapse ${state.filterTreeState[fieldId][node.id] ? 'expanded' : 'collapsed'}`;
-    expandControl.setAttribute('data-node-id', node.id);
-    expandControl.setAttribute('data-field-id', fieldId);
-    
-    // Add expand/collapse functionality
-    expandControl.addEventListener('click', function(e) {
-        e.stopPropagation(); // Prevent radio selection
-        
-        const nodeId = this.getAttribute('data-node-id');
-        const fieldId = this.getAttribute('data-field-id');
-        
-        // Toggle expanded state
-        state.filterTreeState[fieldId][nodeId] = !state.filterTreeState[fieldId][nodeId];
-        
-        // Toggle expanded/collapsed class
-        this.classList.toggle('expanded');
-        this.classList.toggle('collapsed');
-        
-        // Show/hide children container
-        const childrenContainer = this.parentElement.nextElementSibling;
-        if (childrenContainer && childrenContainer.classList.contains('filter-tree-children')) {
-            childrenContainer.style.display = state.filterTreeState[fieldId][nodeId] ? 'block' : 'none';
-        }
-    });
-    
-    nodeItem.appendChild(expandControl);
-}
-
-
-/**
- * Renders a radio button for a filter tree node
- * @param {HTMLElement} nodeItem - The node item element
- * @param {object} node - The node data
- * @param {string} fieldId - The field ID
- */
-function renderNodeRadioButton(nodeItem, node, fieldId) {
-    // Create radio button
-    const radio = document.createElement('input');
-    radio.type = 'radio';
-    radio.name = `filter-${fieldId}`;
-    radio.value = node.id;
-    radio.id = `filter-${fieldId}-${node.id}`;
-    
-    // Check if this node is selected
-    if (state.activeFilters && state.activeFilters[fieldId] === node.id) {
-        radio.checked = true;
-    }
-    
-    // Add change event
-    radio.addEventListener('change', function() {
-        if (this.checked) {
-            // Set filter for this field
-            state.activeFilters = state.activeFilters || {};
-            state.activeFilters[fieldId] = node.id;
-            
-            // Regenerate pivot table
-            generatePivotTable();
-        }
-    });
-    
-    // Create label
-    const label = document.createElement('label');
-    label.setAttribute('for', `filter-${fieldId}-${node.id}`);
-    label.textContent = node.label;
-    label.className = 'filter-tree-label';
-    
-    nodeItem.appendChild(radio);
-    nodeItem.appendChild(label);
-}
-
-
-/**
- * Renders a container for child nodes
- * @param {HTMLElement} nodeContainer - The parent node container
- * @param {object} node - The parent node data
- * @param {string} fieldId - The field ID
- * @param {number} level - The current indentation level
- */
-function renderChildrenContainer(nodeContainer, node, fieldId, level) {
-    const childrenContainer = document.createElement('div');
-    childrenContainer.className = 'filter-tree-children';
-    
-    // Set initial display based on expanded state
-    const isExpanded = state.filterTreeState[fieldId][node.id];
-    childrenContainer.style.display = isExpanded ? 'block' : 'none';
-    
-    // Add children recursively
-    node.children.forEach(child => {
-        buildTreeNode(child, childrenContainer, fieldId, level + 1);
-    });
-    
-    nodeContainer.appendChild(childrenContainer);
-}
-
-
-/**
- * Renders a text input filter for non-hierarchical dimensions
- * @param {HTMLElement} filterControl - The filter control element
- * @param {object} field - The field definition
- * @param {string} fieldId - The field ID
- */
-function renderTextFilter(filterControl, field, fieldId) {
-    // Create text input
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.className = 'filter-input';
-    input.setAttribute('data-field', fieldId);
-    input.placeholder = 'Filter value...';
-    
-    // Set current value if filter is active
-    if (state.activeFilters && state.activeFilters[fieldId]) {
-        input.value = state.activeFilters[fieldId];
-        input.classList.add('has-filter');
-    }
-    
-    // Create apply button
-    const button = document.createElement('button');
-    button.className = 'filter-button';
-    button.textContent = 'Apply';
-    button.addEventListener('click', function() {
-        applyTextFilter(input);
-    });
-    
-    // Add enter key support for the input
-    input.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            applyTextFilter(input);
-        }
-    });
-    
-    // Add elements to the filter control
-    filterControl.appendChild(input);
-    filterControl.appendChild(button);
-    
-    // Add clear button if filter is active
-    if (state.activeFilters && state.activeFilters[fieldId]) {
-        renderTextFilterClearButton(filterControl, input);
-    }
-}
-
-
-/**
- * Renders a clear button for text filters
- * @param {HTMLElement} filterControl - The filter control element
- * @param {HTMLInputElement} input - The filter input element
- */
-function renderTextFilterClearButton(filterControl, input) {
-    const clearButton = document.createElement('button');
-    clearButton.className = 'clear-filter';
-    clearButton.textContent = 'Clear';
-    clearButton.addEventListener('click', function() {
-        const fieldId = input.getAttribute('data-field');
-        
-        // Clear the filter
-        state.activeFilters[fieldId] = null;
-        input.value = '';
-        input.classList.remove('has-filter');
-        
-        // Remove the clear button
-        this.remove();
-        
-        // Regenerate pivot table
-        generatePivotTable();
-    });
-    
-    filterControl.appendChild(clearButton);
 }
 
 
@@ -755,11 +431,13 @@ function handleDrop(e) {
     const sourceContainer = e.dataTransfer.getData('source');
     const targetContainer = dropTarget.id;
     
+    console.log(`Dragging field ${fieldId} from ${sourceContainer} to ${targetContainer}`);
+    
     // Check if drop is allowed based on field type and target zone
     let dropAllowed = false;
     
     if (targetContainer === 'availableFields') {
-        // Always allow dropping back to available fields
+        // Always allow dropping back to available fields - THIS IS THE KEY FIX
         dropAllowed = true;
     } else if ((targetContainer === 'rowFields' || 
                 targetContainer === 'columnFields' || 
@@ -773,18 +451,18 @@ function handleDrop(e) {
         dropAllowed = true;
     }
     
-    // If dropping in the same container, update order but don't change containers
-    if (sourceContainer === targetContainer) {
-        if (dropAllowed) {
-            // Update the order without changing containers
-            updateFieldOrder();
-        }
-        return;
-    } else if (!dropAllowed) {
+    if (!dropAllowed) {
+        console.log(`Drop not allowed for ${fieldId} to ${targetContainer}`);
         return;
     }
     
-    // Check for duplicates before proceeding
+    // If dropping in the same container, update order but don't change containers
+    if (sourceContainer === targetContainer) {
+        updateFieldOrder();
+        return;
+    }
+    
+    // Check for duplicates before proceeding (ONLY for non-availableFields targets)
     if (targetContainer !== 'availableFields') {
         // Check if the field already exists in the target zone
         const isDuplicate = checkForDuplicate(fieldId, targetContainer);
@@ -794,23 +472,21 @@ function handleDrop(e) {
         }
     }
     
-    // Remove from source container's state array
-    if (sourceContainer === 'availableFields') {
-        // No need to remove from available fields - it's always there
-    } else if (sourceContainer === 'rowFields') {
-        state.rowFields = state.rowFields.filter(f => f !== fieldId);
-    } else if (sourceContainer === 'columnFields') {
-        state.columnFields = state.columnFields.filter(f => f !== fieldId);
-    } else if (sourceContainer === 'valueFields') {
-        state.valueFields = state.valueFields.filter(f => f !== fieldId);
-    } else if (sourceContainer === 'filterFields') {
-        state.filterFields = state.filterFields.filter(f => f !== fieldId);
+    // Remove from source container's state array (UNLESS source is availableFields)
+    if (sourceContainer !== 'availableFields') {
+        if (sourceContainer === 'rowFields') {
+            state.rowFields = state.rowFields.filter(f => f !== fieldId);
+        } else if (sourceContainer === 'columnFields') {
+            state.columnFields = state.columnFields.filter(f => f !== fieldId);
+        } else if (sourceContainer === 'valueFields') {
+            state.valueFields = state.valueFields.filter(f => f !== fieldId);
+        } else if (sourceContainer === 'filterFields') {
+            state.filterFields = state.filterFields.filter(f => f !== fieldId);
+        }
     }
     
-    // Add to target container's state array in the correct position
-    if (targetContainer === 'availableFields') {
-        // No need to add to available fields - fields are always in the available zone
-    } else {
+    // Add to target container's state array (UNLESS target is availableFields)
+    if (targetContainer !== 'availableFields') {
         // Insert at the correct position
         insertFieldAtPosition(fieldId, targetContainer);
     }
@@ -826,7 +502,7 @@ function handleDrop(e) {
     // If we added a hierarchical field, initialize its expansion state
     if (isHierarchical && targetContainer !== 'availableFields') {
         const zone = targetContainer.replace('Fields', '');
-        core.debugLog("Dropped hierarchical field", {fieldId, zone});
+        console.log("Dropped hierarchical field", {fieldId, zone});
         
         // Only handle row and column zones
         if (zone === 'row' || zone === 'column') {
@@ -921,7 +597,7 @@ function insertFieldAtPosition(fieldId, targetContainer) {
  */
 function initializeHierarchyExpansion(fieldId, zone) {
     const dimName = fieldId.replace('DIM_', '').toLowerCase();
-    if (['legal_entity', 'gmid_display', 'smart_code', 'cost_element'].includes(dimName)) {
+    if (['le', 'gmid_display', 'smartcode', 'cost_element'].includes(dimName)) {
         // Initialize expansion state for this dimension if it doesn't exist
         state.expandedNodes[dimName] = state.expandedNodes[dimName] || {};
         state.expandedNodes[dimName][zone] = state.expandedNodes[dimName][zone] || {};
@@ -972,6 +648,7 @@ function handleDragEnd(e) {
 
 // Override console.log to add timestamp
 const originalConsoleLog = console.log;
+
 console.log = function(...args) {
     const timestamp = new Date().toISOString().split('T')[1].split('.')[0]; // HH:MM:SS
     originalConsoleLog.apply(console, [`[${timestamp}]`, ...args]);
@@ -1189,6 +866,7 @@ function addToProcessingStatus(message, type = 'info') {
     }
 }
 
+
 // Update progress bar based on message content
 function updateProgressFromMessage(message) {
     const progressBar = document.getElementById('progressBar');
@@ -1209,7 +887,7 @@ function updateProgressFromMessage(message) {
             return;
         }
         
-        if (message.includes('loading files') || message.includes('parsing files')) {
+        if (message.includes('Loading data from Snowflake') || message.includes('connecting to database')) {
             progressBar.style.width = '20%';
             return;
         }
@@ -1224,7 +902,7 @@ function updateProgressFromMessage(message) {
             return;
         }
         
-        if (message.includes('Facts Records Loaded')) {
+        if (message.includes('Records Loaded') || message.includes('Data retrieved from database')) {
             progressBar.style.width = '75%';
             return;
         }
@@ -1265,53 +943,48 @@ function formatNumber(num) {
 }
 
 
-// Update row counts for all files when data is loaded
-function updateFileRowCounts() {
+// Update row counts for all database tables when data is loaded
+function updateDatabaseTableCounts() {
     // Get reference to the application state
     const state = window.stateModule?.state;
     if (!state) return;
     
     // Update FACT_BOM row count
-    if (state.factData && state.factData.length) {
-        const rowCountElement = document.getElementById('factBOMRows');
+    if (state.rawFactBOMData && state.rawFactBOMData.length) {
+        const rowCountElement = document.getElementById('factDataRows');
+        const statusElement = document.getElementById('factDataStatus');
+        
         if (rowCountElement) {
-            rowCountElement.textContent = formatNumber(state.factData.length) + ' rows';
+            rowCountElement.textContent = formatNumber(state.rawFactBOMData.length) + ' rows';
+        }
+        
+        if (statusElement) {
+            statusElement.className = 'table-status loaded';
+            statusElement.textContent = 'Loaded';
         }
     }
     
     // Update dimension row counts
     if (state.dimensions) {
-        // Update DIM_LE.csv row count
-        if (state.dimensions.legal_entity) {
-            const rowCountElement = document.getElementById('dimLERows');
+        Object.entries(state.dimensions).forEach(([dimName, data]) => {
+            if (!data || !Array.isArray(data)) return;
+            
+            // Get normalized dimension name for element IDs
+            const normalizedName = dimName.toLowerCase().replace(/[^a-z0-9]/g, '');
+            
+            // Update row count
+            const rowCountElement = document.getElementById(`${normalizedName}Rows`);
             if (rowCountElement) {
-                rowCountElement.textContent = formatNumber(state.dimensions.legal_entity.length) + ' rows';
+                rowCountElement.textContent = formatNumber(data.length) + ' rows';
             }
-        }
-        
-        // Update DIM_COST_ELEMENT.csv row count
-        if (state.dimensions.cost_element) {
-            const rowCountElement = document.getElementById('dimCostElementRows');
-            if (rowCountElement) {
-                rowCountElement.textContent = formatNumber(state.dimensions.cost_element.length) + ' rows';
+            
+            // Update status
+            const statusElement = document.getElementById(`${normalizedName}Status`);
+            if (statusElement) {
+                statusElement.className = 'table-status loaded';
+                statusElement.textContent = 'Loaded';
             }
-        }
-        
-        // Update DIM_GMID_DISPLAY.csv row count
-        if (state.dimensions.gmid_display) {
-            const rowCountElement = document.getElementById('dimGMIDDisplayRows');
-            if (rowCountElement) {
-                rowCountElement.textContent = formatNumber(state.dimensions.gmid_display.length) + ' rows';
-            }
-        }
-        
-        // Update DIM_SMARTCODE.csv row count
-        if (state.dimensions.smart_code) {
-            const rowCountElement = document.getElementById('dimSmartCodeRows');
-            if (rowCountElement) {
-                rowCountElement.textContent = formatNumber(state.dimensions.smart_code.length) + ' rows';
-            }
-        }
+        });
     }
 }
 
@@ -1321,28 +994,26 @@ function setupRowCountUpdates() {
     // Store original console.log
     const originalConsoleLog = console.log;
     
-    // Override console.log to detect when files are loaded
+    // Override console.log to detect when data is loaded
     console.log = function() {
         // Call original method
         originalConsoleLog.apply(console, arguments);
         
-        // Check if message indicates files were loaded
+        // Check if message indicates data was loaded
         if (typeof arguments[0] === 'string') {
             const message = arguments[0];
             
-            // When dimensions are loaded or parsing is complete, update counts
-            if (message.includes('dimension parse results') || 
-                message.includes('Facts Records Loaded') ||
-                message.includes('Parsing') && message.includes('complete')) {
+            // When dimensions are loaded or data loading is complete
+            if (message.includes('loaded from Snowflake database') || 
+                message.includes('Data loading complete') ||
+                message.includes('records loaded') ||
+                message.includes('rows loaded')) {
                 
                 // Use setTimeout to ensure state has been updated
-                setTimeout(updateFileRowCounts, 100);
+                setTimeout(updateDatabaseTableCounts, 100);
             }
         }
     };
-    
-    // Also update when state changes (for cached data)
-    stateModule.setupStateChangeDetection();
 }
 
 
@@ -1473,18 +1144,48 @@ function handleMultiDimensionExpandCollapseClick(e) {
         state.expandedNodes[hierarchyName][zone][nodeId] = !state.expandedNodes[hierarchyName][zone][nodeId];
         
         // Toggle in the hierarchy structure using enhanced function
-        hierarchyHandler.enhancedToggleNodeExpansion(hierarchyName, nodeId, state.hierarchies, zone);
+        enhancedToggleNodeExpansion(hierarchyName, nodeId, state.hierarchies, zone);
         
         // Update the UI to show the expand/collapse status
         const expandClass = state.expandedNodes[hierarchyName][zone][nodeId] ? 'expanded' : 'collapsed';
         e.target.className = `expand-collapse ${expandClass}`;
         
         // Regenerate pivot table
-        generatePivotTable();
+        if (window.generatePivotTable) {
+            window.generatePivotTable();
+        }
         
         // Prevent event from bubbling up
         e.stopPropagation();
     }
+}
+
+
+/**
+ * Enhanced version of the toggleNodeExpansion function to better handle column zone
+ * @param {string} hierarchyName - Name of the hierarchy
+ * @param {string} nodeId - ID of the node to toggle
+ * @param {Object} hierarchies - Object containing all hierarchies
+ * @param {string} zone - Zone of the node (row/column)
+ * @returns {boolean} - Whether the operation was successful
+ */
+function enhancedToggleNodeExpansion(hierarchyName, nodeId, hierarchies, zone = 'row') {
+    const hierarchy = hierarchies[hierarchyName];
+    if (!hierarchy || !hierarchy.nodesMap[nodeId]) return false;
+    
+    const node = hierarchy.nodesMap[nodeId];
+    
+    // Toggle the main expanded state
+    node.expanded = !node.expanded;
+    
+    // Handle zone-specific expanded state
+    if (zone === 'column') {
+        node.columnExpanded = node.expanded;
+    } else {
+        node.rowExpanded = node.expanded;
+    }
+    
+    return true;
 }
 
 
@@ -1495,7 +1196,10 @@ export default {
     renderAvailableFields,
     renderFieldContainers,
     renderFieldContainer,
-    renderFilterControls,
+    
+    // Database status UI functions
+    showConnectionStatus,
+    updateTableStatus,
     
     // Drag and drop functionality
     initDragAndDrop,
@@ -1509,11 +1213,12 @@ export default {
     renderMultiDimensionRowCells,
     renderDimensionCell,
     isMultiDimensionRowVisible,
+    enhancedToggleNodeExpansion,
     handleMultiDimensionExpandCollapseClick,
 
-    // Others
+    // Console and logging
     initializeEnhancedConsole,
-    updateFileRowCounts,
+    updateDatabaseTableCounts,
     setupRowCountUpdates,
     addToProcessingStatus,
     updateProgressFromMessage,
@@ -1521,9 +1226,5 @@ export default {
     setupConsoleInterception,
     setupActivityLogControls,
     addLogEntry,
-    renderExpandCollapseControl,
-    renderChildrenContainer,
-    renderNodeRadioButton,
-    showStatus
-
+    
   };

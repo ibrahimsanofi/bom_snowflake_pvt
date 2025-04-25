@@ -1,5 +1,4 @@
-
-// This module handles the data filtering logic for increased performance  7 better UX
+// This module handles the data filtering logic for increased performance and better UX
 
 // Import signature
 import stateModule from './state.js';
@@ -42,6 +41,23 @@ function initializeFilters() {
     
     // Load filter options
     loadFilterOptions();
+}
+
+
+function filterByDimension(records, dimDef) {
+    if (!dimDef) return records;
+    
+    // For multi-dimension rows/columns
+    if (dimDef.dimensions) {
+        let result = [...records];
+        dimDef.dimensions.forEach(dimension => {
+            result = filterByDimensionNode(result, dimension);
+        });
+        return result;
+    }
+    
+    // For single dimension rows/columns
+    return filterByDimensionNode(records, dimDef);
 }
 
 
@@ -155,7 +171,11 @@ function setupDropdownSearch() {
 }
 
 
-// Add to filters.js
+/**
+ * Apply special dimension filters
+ * @param {Array} filteredData - The data to filter
+ * @returns {Array} - Filtered data
+ */
 function applySpecialDimensionFilters(filteredData) {
     // Apply Item Cost Type filters
     if (state.activeFilters && state.activeFilters['DIM_ITEM_COST_TYPE'] && 
@@ -199,8 +219,12 @@ function applySpecialDimensionFilters(filteredData) {
     return filteredData;
 }
 
+
 /**
- * Add this function to optimizedFilterUI.js
+ * Render data volume indicator
+ * @param {HTMLElement} container - Container element
+ * @param {number} originalCount - Original data count
+ * @param {number} filteredCount - Filtered data count
  */
 function renderDataVolumeIndicator(container, originalCount, filteredCount) {
     // Calculate percentage
@@ -234,7 +258,7 @@ function renderDataVolumeIndicator(container, originalCount, filteredCount) {
  */
 function loadFilterOptions() {
     // Only load options once all data is available
-    if (!state.factData || !state.dimensions) {
+    if (!state.rawFactBOMData || !state.dimensions) {
         // Set a timeout to try again later
         setTimeout(loadFilterOptions, 500);
         return;
@@ -263,7 +287,12 @@ function loadFilterOptions() {
 }
 
 
-function directRenderLegalEntityFilter(csvData, containerId) {
+/**
+ * Direct render method for Legal Entity filters
+ * @param {Array} data - Legal entity data 
+ * @param {string} containerId - Container element ID
+ */
+function directRenderLegalEntityFilter(data, containerId) {
     console.log("Direct rendering LEGAL_ENTITY filter");
 
     // Get the container
@@ -290,7 +319,7 @@ function directRenderLegalEntityFilter(csvData, containerId) {
     const processedEntities = new Set();
 
     // Process each row
-    csvData.forEach((row, index) => {
+    data.forEach((row, index) => {
         if (!row) return;
         
         // Get entity ID or generate one
@@ -499,11 +528,14 @@ function directRenderLegalEntityFilter(csvData, containerId) {
 }
 
 
+/**
+ * Handler for Legal Entity filter zone
+ */
 function handleLegalEntityFilterZone() {
     console.log("Processing LEGAL_ENTITY for filter zone");
 
     // Get the raw data directly from state
-    const legalEntityData = state.dimensions.legal_entity;
+    const legalEntityData = state.dimensions.le;
 
     if (!legalEntityData || legalEntityData.length === 0) {
         console.error("No LEGAL_ENTITY data found");
@@ -549,7 +581,7 @@ function renderMultiDimensionFilters(filterContainer) {
     
     // Check if we have LEGAL_ENTITY in the filter fields
     const hasLegalEntity = state.filterFields.some(field => 
-        field === 'DIM_LEGAL_ENTITY' || field.toLowerCase().includes('legal_entity')
+        field === 'DIM_LE' || field.toLowerCase().includes('le')
     );
     
     if (hasLegalEntity) {
@@ -558,7 +590,7 @@ function renderMultiDimensionFilters(filterContainer) {
         
         // Filter out LEGAL_ENTITY from regular processing
         const otherFilters = state.filterFields.filter(field => 
-            field !== 'DIM_LEGAL_ENTITY' && !field.toLowerCase().includes('legal_entity')
+            field !== 'DIM_LE' && !field.toLowerCase().includes('le')
         );
         
         // Process the remaining filters normally
@@ -569,7 +601,7 @@ function renderMultiDimensionFilters(filterContainer) {
             });
         }
     } else {
-        // No LEGAL_ENTITY, process filters normally
+        // No LE, process filters normally
         const { filterDimensions } = this.processFilterDimensions(state.filterFields);
         filterDimensions.forEach(dimension => {
             this.renderFilterDimension(filterContainer, dimension);
@@ -616,7 +648,7 @@ function applyMultiDimensionFilters(data) {
         if (!hierarchy) return;
         
         // Get fact ID field for this dimension
-        const factIdField = hierarchyHandler.getFactIdField(dimName);
+        const factIdField = this.getFactIdField(dimName);
         
         // Build a set of valid fact IDs based on selected nodes
         const validFactIds = new Set();
@@ -631,7 +663,7 @@ function applyMultiDimensionFilters(data) {
                 validFactIds.add(node.factId);
             } else {
                 // Non-leaf node - add all descendant leaf node fact IDs
-                const leafNodes = hierarchyHandler.getAllLeafDescendants(node);
+                const leafNodes = getAllLeafDescendants(node);
                 leafNodes.forEach(leafNode => {
                     if (leafNode.factId) {
                         validFactIds.add(leafNode.factId);
@@ -779,9 +811,9 @@ function renderOptimizedFilters(container) {
 function extractUniqueValues(fieldName) {
     const uniqueValues = new Set();
     
-    if (!state.factData) return [];
+    if (!state.rawFactBOMData) return [];
     
-    state.factData.forEach(row => {
+    state.rawFactBOMData.forEach(row => {
         if (row[fieldName] && row[fieldName].toString().trim() !== '') {
             uniqueValues.add(row[fieldName].toString());
         }
@@ -1378,7 +1410,7 @@ function loadLegalEntityOptions() {
     optionsContainer.innerHTML = '';
     
     // Get Legal Entity hierarchy
-    const hierarchy = state.hierarchies.legal_entity;
+    const hierarchy = state.hierarchies.le;
     if (!hierarchy || !hierarchy.root) {
         optionsContainer.innerHTML = '<div class="dropdown-option">No Legal Entity data available</div>';
         return;
@@ -1443,7 +1475,7 @@ function loadSmartcodeOptions() {
     optionsContainer.innerHTML = '';
     
     // Get Smartcode hierarchy
-    const hierarchy = state.hierarchies.smart_code;
+    const hierarchy = state.hierarchies.smartcode;
     if (!hierarchy || !hierarchy.root) {
         optionsContainer.innerHTML = '<div class="dropdown-option">No Smartcode data available</div>';
         return;
@@ -1580,7 +1612,7 @@ function buildHierarchicalOptions(node, container, prefix, level, filterKey) {
             node.children.forEach(childId => {
                 const childNode = node.hierarchy ? 
                     node.hierarchy.nodesMap[childId] : 
-                    state.hierarchies[filterKey === 'legalEntity' ? 'legal_entity' : 
+                    state.hierarchies[filterKey === 'legalEntity' ? 'le' : 
                                        filterKey === 'smartcode' ? 'smart_code' : 
                                        'cost_element'].nodesMap[childId];
                 
@@ -1659,8 +1691,8 @@ function buildHierarchicalOptions(node, container, prefix, level, filterKey) {
         node.children.forEach(childId => {
             const childNode = node.hierarchy ? 
                 node.hierarchy.nodesMap[childId] : 
-                state.hierarchies[filterKey === 'legalEntity' ? 'legal_entity' : 
-                                   filterKey === 'smartcode' ? 'smart_code' : 
+                state.hierarchies[filterKey === 'legalEntity' ? 'le' : 
+                                   filterKey === 'smartcode' ? 'smartCode' : 
                                    'cost_element'].nodesMap[childId];
             
             if (childNode) {
@@ -1681,8 +1713,8 @@ function buildHierarchicalOptions(node, container, prefix, level, filterKey) {
  */
 function updateChildCheckboxes(nodeId, isChecked, prefix, filterKey) {
     // Get the hierarchy
-    const hierarchy = state.hierarchies[filterKey === 'legalEntity' ? 'legal_entity' : 
-                                        filterKey === 'smartcode' ? 'smart_code' : 
+    const hierarchy = state.hierarchies[filterKey === 'legalEntity' ? 'le' : 
+                                        filterKey === 'smartcode' ? 'smartCode' : 
                                         'cost_element'];
     
     if (!hierarchy || !hierarchy.nodesMap || !hierarchy.nodesMap[nodeId]) return;
@@ -1793,7 +1825,7 @@ function getChildNode(parentNode, childId) {
     // Try to determine the hierarchy from the parent's ID
     if (parentNode.id) {
         // Check each hierarchy for this node
-        for (const hierarchyName of ['legal_entity', 'smart_code', 'cost_element']) {
+        for (const hierarchyName of ['le', 'smartcode', 'cost_element']) {
             const hierarchy = state.hierarchies[hierarchyName];
             if (hierarchy && hierarchy.nodesMap && hierarchy.nodesMap[parentNode.id]) {
                 return hierarchy.nodesMap[childId];
@@ -1802,7 +1834,7 @@ function getChildNode(parentNode, childId) {
     }
     
     // If we can't determine the hierarchy, check all hierarchies
-    for (const hierarchyName of ['legal_entity', 'smart_code', 'cost_element']) {
+    for (const hierarchyName of ['le', 'smartcode', 'cost_element']) {
         const hierarchy = state.hierarchies[hierarchyName];
         if (hierarchy && hierarchy.nodesMap && hierarchy.nodesMap[childId]) {
             return hierarchy.nodesMap[childId];
@@ -1858,40 +1890,6 @@ function updateSelectedFiltersCount() {
  * Apply filters to fact data
  * This function filters the fact data and updates the pivot table
  */
-// function applyFilters() {
-//     // Show loading indicator
-//     const applyBtn = document.getElementById('applyFiltersBtn');
-//     if (applyBtn) {
-//         const originalText = applyBtn.innerHTML;
-//         applyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Applying...';
-//         applyBtn.disabled = true;
-        
-//         // Use setTimeout to allow the UI to update before the filtering starts
-//         setTimeout(() => {
-//             // Apply filters
-//             filterFactData();
-            
-//             // Generate pivot table with filtered data
-//             if (window.generatePivotTable) {
-//                 window.generatePivotTable();
-//             }
-            
-//             // Reset button
-//             applyBtn.innerHTML = originalText;
-//             applyBtn.disabled = false;
-//         }, 100);
-//     } else {
-//         // No button, just apply filters directly
-//         filterFactData();
-        
-//         // Generate pivot table with filtered data
-//         if (window.generatePivotTable) {
-//             window.generatePivotTable();
-//         }
-//     }
-// }
-
-// Replace or modify the existing applyFilters function in filters.js
 function applyFilters() {
     // Show loading indicator
     const applyBtn = document.getElementById('applyFiltersBtn');
@@ -1907,19 +1905,19 @@ function applyFilters() {
             console.log(`Filtered data contains ${filteredData.length} records`);
             
             // Verify the first few records have numeric values
-            if (filteredData.length > 0) {
-                const sampleSize = Math.min(5, filteredData.length);
-                console.log("Verifying sample data values:");
-                for (let i = 0; i < sampleSize; i++) {
-                    const record = filteredData[i];
-                    console.log(`Sample ${i+1}:`, {
-                        COST_UNIT: record.COST_UNIT,
-                        QTY_UNIT: record.QTY_UNIT,
-                        type_COST_UNIT: typeof record.COST_UNIT,
-                        type_QTY_UNIT: typeof record.QTY_UNIT
-                    });
-                }
-            }
+            // if (filteredData.length > 0) {
+            //     const sampleSize = Math.min(5, filteredData.length);
+            //     console.log("Verifying sample data values:");
+            //     for (let i = 0; i < sampleSize; i++) {
+            //         const record = filteredData[i];
+            //         console.log(`Sample ${i+1}:`, {
+            //             COST_UNIT: record.COST_UNIT,
+            //             QTY_UNIT: record.QTY_UNIT,
+            //             type_COST_UNIT: typeof record.COST_UNIT,
+            //             type_QTY_UNIT: typeof record.QTY_UNIT
+            //         });
+            //     }
+            // }
             
             // Generate pivot table with filtered data
             if (window.generatePivotTable) {
@@ -1945,74 +1943,82 @@ function applyFilters() {
 /**
  * Filter fact data based on selected filters
  * Updates state.filteredData with the filtered results
+ * @returns {Array} The filtered data
  */
 function filterFactData() {
     // Start with all fact data
-    let filteredData = [...state.factData];
+    let filteredData = [...state.rawFactBOMData];
     
+    // Filter by Root GMID
+    if (state.filters && state.filters.gmidDisplay && state.filters.gmidDisplay.length > 0) {
+        filteredData = filteredData.filter(row => 
+            state.filters.gmidDisplay.includes(row.COMPONENT_GMID)
+        );
+    }
+
     // Filter by Legal Entity
-    if (state.filters.legalEntity && state.filters.legalEntity.length > 0) {
+    if (state.filters && state.filters.legalEntity && state.filters.legalEntity.length > 0) {
         filteredData = filteredData.filter(row => 
             state.filters.legalEntity.includes(row.LE)
         );
     }
     
     // Filter by Smartcode
-    if (state.filters.smartcode && state.filters.smartcode.length > 0) {
+    if (state.filters && state.filters.smartCode && state.filters.smartCode.length > 0) {
         filteredData = filteredData.filter(row => 
-            state.filters.smartcode.includes(row.ROOT_SMARTCODE)
+            state.filters.smartCode.includes(row.ROOT_SMARTCODE)
         );
     }
     
     // Filter by Cost Element
-    if (state.filters.costElement && state.filters.costElement.length > 0) {
+    if (state.filters && state.filters.costElement && state.filters.costElement.length > 0) {
         filteredData = filteredData.filter(row => 
             state.filters.costElement.includes(row.COST_ELEMENT)
         );
     }
     
     // Filter by Business Year
-    if (state.filters.businessYear && state.filters.businessYear.length > 0) {
+    if (state.filters && state.filters.businessYear && state.filters.businessYear.length > 0) {
         filteredData = filteredData.filter(row => 
             state.filters.businessYear.includes(row.ZYEAR)
         );
     }
     
     // Filter by Item Cost Type
-    if (state.filters.itemCostType && state.filters.itemCostType.length > 0) {
+    if (state.filters && state.filters.itemCostType && state.filters.itemCostType.length > 0) {
         filteredData = filteredData.filter(row => 
             state.filters.itemCostType.includes(row.ITEM_COST_TYPE)
         );
     }
     
     // Filter by Component Material Type
-    if (state.filters.componentMaterialType && state.filters.componentMaterialType.length > 0) {
+    if (state.filters && state.filters.componentMaterialType && state.filters.componentMaterialType.length > 0) {
         filteredData = filteredData.filter(row => 
             state.filters.componentMaterialType.includes(row.COMPONENT_MATERIAL_TYPE)
         );
     }
 
     // Ensure all numeric fields remain numeric
-    filteredData.forEach(row => {
-        // Force COST_UNIT to number
-        if (row.COST_UNIT !== undefined) {
-            const parsedValue = parseFloat(row.COST_UNIT);
-            row.COST_UNIT = isNaN(parsedValue) ? 0 : parsedValue;
-        }
+    // filteredData.forEach(row => {
+    //     // Force COST_UNIT to number
+    //     if (row.COST_UNIT !== undefined) {
+    //         const parsedValue = parseFloat(row.COST_UNIT);
+    //         row.COST_UNIT = isNaN(parsedValue) ? 0 : parsedValue;
+    //     }
         
-        // Force QTY_UNIT to number
-        if (row.QTY_UNIT !== undefined) {
-            const parsedValue = parseFloat(row.QTY_UNIT);
-            row.QTY_UNIT = isNaN(parsedValue) ? 0 : parsedValue;
-        }
-    });
+    //     // Force QTY_UNIT to number
+    //     if (row.QTY_UNIT !== undefined) {
+    //         const parsedValue = parseFloat(row.QTY_UNIT);
+    //         row.QTY_UNIT = isNaN(parsedValue) ? 0 : parsedValue;
+    //     }
+    // });
     
     // Log data types for verification
-    if (filteredData.length > 0) {
-        console.log("Filtered data sample:", filteredData[0]);
-        console.log("COST_UNIT type:", typeof filteredData[0].COST_UNIT);
-        console.log("QTY_UNIT type:", typeof filteredData[0].QTY_UNIT);
-    }
+    // if (filteredData.length > 0) {
+    //     console.log("Filtered data sample:", filteredData[0]);
+    //     console.log("COST_UNIT type:", typeof filteredData[0].COST_UNIT);
+    //     console.log("QTY_UNIT type:", typeof filteredData[0].QTY_UNIT);
+    // }
     
     // Store the filtered data
     state.filteredData = filteredData;
@@ -2030,8 +2036,8 @@ function filterFactData() {
         }
         
         // Calculate percentage
-        const percentage = Math.round((filteredData.length / state.factData.length) * 100);
-        countElement.textContent = `${filteredData.length.toLocaleString()} / ${state.factData.length.toLocaleString()} records (${percentage}%)`;
+        const percentage = Math.round((filteredData.length / state.rawFactBOMData.length) * 100);
+        countElement.textContent = `${filteredData.length.toLocaleString()} / ${state.rawFactBOMData.length.toLocaleString()} records (${percentage}%)`;
     }
     
     return filteredData;
@@ -2063,7 +2069,6 @@ function preFilterData(originalData) {
     const beforeDimFilters = filteredData.length;
     filteredData = applyDimensionFilters(filteredData);
     console.log(`After applying dimension filters: ${filteredData.length} records (${beforeDimFilters - filteredData.length} removed)`);
-
     
     // Apply any active non-hierarchical filters (e.g. direct field filters)
     const beforeDirectFilters = filteredData.length;
@@ -2149,7 +2154,7 @@ function applyDimensionFilters(data) {
             return;
         }
         
-        // Get dimension name (e.g., legal_entity from DIM_LEGAL_ENTITY)
+        // Get dimension name (e.g., legal_entity from DIM_LE)
         const dimName = fieldId.replace('DIM_', '').toLowerCase();
         
         // Skip if we've already processed this dimension type
@@ -2191,7 +2196,7 @@ function applyDimensionFilters(data) {
         }
         
         // Get fact ID field for this dimension
-        const factIdField = getFactIdField(dimName);
+        const factIdField = this.getFactIdField(dimName);
         if (!factIdField) {
             return;
         }
@@ -2277,7 +2282,7 @@ function getAllLeafDescendants(node, result = []) {
  * Call this when the application loads
  */
 function initializeFilterSystem() {
-    console.log("initializeFilters called with state data:", state?.factData?.length || 0, "rows available");
+    console.log("Initializing filter system with database connection...");
 
     // Initialize filter state if needed
     if (!state.activeFilters) {
@@ -2291,6 +2296,18 @@ function initializeFilterSystem() {
     // Initialize filter tree state if needed
     if (!state.filterTreeState) {
         state.filterTreeState = {};
+    }
+
+    // Initialize filters object if not already there
+    if (!state.filters) {
+        state.filters = {
+            legalEntity: [],
+            smartcode: [],
+            costElement: [],
+            businessYear: [],
+            itemCostType: [],
+            componentMaterialType: []
+        };
     }
     
     console.log('Filter system initialized');
@@ -2391,5 +2408,9 @@ export default {
     
     // Hierarchy-specific filter functions
     buildHierarchyTree,
-    simplifiedBuildTree
+    simplifiedBuildTree,
+    
+    // Helper functions
+    getAllLeafDescendants
   };
+    
