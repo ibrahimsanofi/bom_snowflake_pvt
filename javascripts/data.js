@@ -1652,6 +1652,7 @@ function buildLegalEntityHierarchy(data) {
             node.children.forEach(sortNodes);
         }
     };
+    // console.log("nodes", nodesMap); 
     
     sortNodes(root);
     
@@ -2571,26 +2572,15 @@ function buildMaterialTypeMapping(materialTypeData, bomData) {
  * @returns {Array} - Flattened array of nodes with hierarchy information
  */
 function flattenHierarchy(node, result = [], level = 0, parentPath = [], nodesMap = {}) {
-    // Node validation
-    if (!node) {
-        console.warn("flattenHierarchy called with null/undefined node");
-        return result;
-    }
-    
-    // Get node ID with fallback
+    if (!node) return result;
     const nodeId = node.id || node._id;
-    if (!nodeId) {
-        console.warn("Node has no ID:", node);
-        return result;
-    }
-    
-    // Create current path
+    if (!nodeId) return result;
     const currentPath = [...parentPath, nodeId];
-    
-    // Add current node to result with label
+
+    // Ajoute le nœud courant une seule fois
     result.push({
         id: nodeId,
-        label: node.label || nodeId, // Ensure label exists
+        label: node.label || nodeId,
         level: level,
         path: currentPath,
         hasChildren: !!(node.children && node.children.length > 0),
@@ -2601,104 +2591,24 @@ function flattenHierarchy(node, result = [], level = 0, parentPath = [], nodesMa
         gmid: node.gmid,
         data: node.data
     });
-    
-    // Track processed nodes to prevent circular references
-    const processedNodes = new Set([nodeId]);
-    
-    // Process children if node is expanded and has children
+
+    // Parcours récursif des enfants (sans double ajout)
     if (node.expanded && node.children && node.children.length > 0) {
-        // Limit children processing to prevent stack overflow
         const MAX_CHILDREN = 5000;
         const childrenToProcess = node.children.length > MAX_CHILDREN ?
-            node.children.slice(0, MAX_CHILDREN) : 
-            node.children;
-            
+            node.children.slice(0, MAX_CHILDREN) : node.children;
+
         if (node.children.length > MAX_CHILDREN) {
             console.warn(`Processing only ${MAX_CHILDREN} of ${node.children.length} children to avoid stack overflow`);
         }
-        
-        // Process each child safely
-        for (let i = 0; i < childrenToProcess.length; i++) {
-            try {
-                const child = childrenToProcess[i];
-                
-                // Is child a string ID or an object?
-                if (typeof child === 'string') {
-                    // If it's a string ID and nodesMap is provided, use it
-                    if (nodesMap[child] && !processedNodes.has(child)) {
-                        processedNodes.add(child);
-                        // Use iteration instead of recursion to avoid stack overflow
-                        const childNode = nodesMap[child];
-                        if (childNode) {
-                            result.push({
-                                id: childNode.id || childNode._id || child,
-                                label: childNode.label || child,
-                                level: level + 1,
-                                path: [...currentPath, childNode.id || childNode._id || child],
-                                hasChildren: !!(childNode.children && childNode.children.length > 0),
-                                isLeaf: !!childNode.isLeaf,
-                                expanded: !!childNode.expanded,
-                                factId: childNode.factId,
-                                factCode: childNode.factCode,
-                                gmid: childNode.gmid,
-                                data: childNode.data
-                            });
-                        }
-                    }
-                } else if (child && typeof child === 'object') {
-                    // If it's a direct object reference, use it
-                    const childId = child.id || child._id;
-                    if (childId && !processedNodes.has(childId)) {
-                        processedNodes.add(childId);
-                        // Use iteration instead of recursion
-                        result.push({
-                            id: childId,
-                            label: child.label || childId,
-                            level: level + 1,
-                            path: [...currentPath, childId],
-                            hasChildren: !!(child.children && child.children.length > 0),
-                            isLeaf: !!child.isLeaf,
-                            expanded: !!child.expanded,
-                            factId: child.factId,
-                            factCode: child.factCode,
-                            gmid: child.gmid,
-                            data: child.data
-                        });
-                    }
-                }
-            } catch (error) {
-                console.error("Error processing child in flattenHierarchy:", error);
-            }
-        }
-        
-        // For a limited subset of direct children, still use recursion to go deeper
-        // but limit to prevent stack overflow
-        const RECURSION_LIMIT = 50;
-        const recursiveChildren = childrenToProcess.slice(0, RECURSION_LIMIT);
-        
-        recursiveChildren.forEach(child => {
-            try {
-                // Is child a string ID or an object?
-                if (typeof child === 'string') {
-                    // If it's a string ID and nodesMap is provided, use it
-                    if (nodesMap[child] && !processedNodes.has(`deep_${child}`)) {
-                        processedNodes.add(`deep_${child}`);
-                        flattenHierarchy(nodesMap[child], result, level + 1, currentPath, nodesMap);
-                    }
-                } else if (child && typeof child === 'object') {
-                    // If it's a direct object reference, use it
-                    const childId = child.id || child._id;
-                    if (childId && !processedNodes.has(`deep_${childId}`)) {
-                        processedNodes.add(`deep_${childId}`);
-                        flattenHierarchy(child, result, level + 1, currentPath, nodesMap);
-                    }
-                }
-            } catch (error) {
-                console.error("Error processing recursive child in flattenHierarchy:", error);
+
+        childrenToProcess.forEach(child => {
+            const childNode = typeof child === 'string' ? nodesMap[child] : child;
+            if (childNode) {
+                flattenHierarchy(childNode, result, level + 1, currentPath, nodesMap);
             }
         });
     }
-    
     return result;
 }
 
