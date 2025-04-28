@@ -10,6 +10,8 @@ import data from './data.js';
 import filters from './filters.js';
 import ui from './ui.js';
 
+let isConnectingToDatabase = false; // Flag global
+
 /**
  * Initialize the application. This should be called when the DOM is loaded
  */
@@ -210,7 +212,12 @@ function initializeApp() {
  * @param {Object} elements - DOM elements
  */
 function setupDatabaseConnection(elements) {
-    try{
+    if (isConnectingToDatabase) {
+        console.log('Connexion déjà en cours, attente...');
+        return;
+    }
+    isConnectingToDatabase = true;
+    try {
         // Update connection status to connecting
         updateConnectionStatus('connecting', 'Connecting to Snowflake database...');
 
@@ -250,16 +257,18 @@ function setupDatabaseConnection(elements) {
             
             // Update UI
             updateTableStatuses(availableDimensions, 'waiting');
+            isConnectingToDatabase = false;
         })
         .catch(error => {
             console.error('Connection error:', error);
             updateConnectionStatus('error', 'Failed to connect to database server');
+            isConnectingToDatabase = false;
         });
 
-    } catch(error)
-    {
+    } catch(error) {
         console.error('Error setting up database connection:', error);
-        updateConnectionStatus('error', 'Error setting up database connection')
+        updateConnectionStatus('error', 'Error setting up database connection');
+        isConnectingToDatabase = false;
     }
 }
 
