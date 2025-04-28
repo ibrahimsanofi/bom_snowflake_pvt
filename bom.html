@@ -10,8 +10,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
+
     <!-- Import our modular application -->
     <script type="module" src="./javascripts/app-init.js"></script>
+    <script type="module" src="./javascripts/filter-renderer-init.js"></script>
+
     
     <style id="pivot-value-styles">
         .value-cell {
@@ -56,7 +59,7 @@
                 <span class="current">BOM Pivot Table</span>
             </div>
         </div>
-        
+
         <div class="card database-connection-container">
             <div class="card-header">
                 <div class="card-title">
@@ -74,6 +77,7 @@
                         <i class="fas fa-circle-notch fa-spin"></i>
                         <span>Connecting to Snowflake database...</span>
                     </div>
+                    <br>
                 </div>
                 
                 <div class="connection-actions">
@@ -84,38 +88,37 @@
                         <i class="fas fa-sync"></i> Reconnect
                     </button>
                 </div>
-                
-                <!-- <div id="uploadStatus" class="status-container"></div> -->
             </div>
         </div>
 
-        <!-- Activity Log Container -->
-        <div class="activity-log-container card" id="activityLogPanel">
-            <div class="card-header">
+        <!-- Filtering segment -->
+        <div class="card filter-panel-container">
+            <div class="card-header" id="filterHeader">
                 <div class="card-title">
-                    <i class="fas fa-history"></i>
-                    <span>Activity Log</span>
+                    <i class="fas fa-filter"></i>
+                    <span>Data Filters</span>
+                    <span id="filteredRecordsCount" class="filtered-count"></span>
                 </div>
                 <div class="card-actions">
-                    <button class="btn-icon" id="collapseActivityLog"><i class="fas fa-chevron-down"></i></button>
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="activity-log-content">
-                    <div id="activityLog" class="activity-log">
-                        <!-- Log messages will be added here -->
-                    </div>
-                </div>
-                <div class="activity-log-actions">
-                    <button id="clearLogBtn" class="btn btn-sm">
-                        <i class="fas fa-trash-alt"></i> Clear Log
+                    <button class="btn-icon" id="toggleFilterContent">
+                        <i class="fas fa-chevron-down"></i>
                     </button>
                 </div>
             </div>
+            
+            <div class="card-body" id="filterContent">
+                <!-- Filter content will be dynamically generated here -->
+            </div>
+            
+            <div class="filter-actions">
+                <button id="applyFiltersBtn" class="apply-filters-btn">
+                    <i class="fas fa-check"></i> Apply Filters
+                </button>
+            </div>
         </div>
-
+        
         <!-- App content segment -->
-        <div id="appContent" style="display:none;">
+        <div id="appContent" style="display:block;">
             <div class="tabs-container">
                 <div class="tabs">
                     <div class="tab active" data-tab="data">
@@ -242,9 +245,6 @@
                     </div>
                 </div>
                 
-                <!-- Filter Controls -->
-                <div id="pivotFilterControls" class="pivot-filter-controls"></div>
-                
                 <div id="pivotTableContainer" class="pivot-table-container">
                     <table id="pivotTable" class="table-modern">
                         <thead id="pivotTableHeader"></thead>
@@ -289,6 +289,184 @@
             </div>
         </div>
         
+        <div id="fallbackUpload" style="display: none;" class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>Directory selection not supported</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <p class="mb-3">Please upload each file individually:</p>
+                
+                <div class="file-input-container">
+                    <div class="file-input-group">
+                        <label class="file-input-label" for="factRevenueFile">
+                            <i class="fas fa-file-csv"></i> Fact Revenue:
+                        </label>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="factRevenueFile" accept=".csv" />
+                            <div class="file-input-custom">
+                                <span>Choose file</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="file-input-group">
+                        <label class="file-input-label" for="dimLegalEntityFile">
+                            <i class="fas fa-file-csv"></i> Dim Legal Entity:
+                        </label>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="dimLegalEntityFile" accept=".csv" />
+                            <div class="file-input-custom">
+                                <span>Choose file</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="file-input-group">
+                        <label class="file-input-label" for="dimManagerialViewFile">
+                            <i class="fas fa-file-csv"></i> Dim Managerial View:
+                        </label>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="dimManagerialViewFile" accept=".csv" />
+                            <div class="file-input-custom">
+                                <span>Choose file</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="file-input-group">
+                        <label class="file-input-label" for="dimMarketCountryFile">
+                            <i class="fas fa-file-csv"></i> Dim Market Country:
+                        </label>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="dimMarketCountryFile" accept=".csv" />
+                            <div class="file-input-custom">
+                                <span>Choose file</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="file-input-group">
+                        <label class="file-input-label" for="dimRevAccountFile">
+                            <i class="fas fa-file-csv"></i> Dim Rev Account:
+                        </label>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="dimRevAccountFile" accept=".csv" />
+                            <div class="file-input-custom">
+                                <span>Choose file</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="file-input-group">
+                        <label class="file-input-label" for="dimTimeFile">
+                            <i class="fas fa-file-csv"></i> Dim Time:
+                        </label>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="dimTimeFile" accept=".csv" />
+                            <div class="file-input-custom">
+                                <span>Choose file</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="file-input-group">
+                        <label class="file-input-label" for="dimCostElementFile">
+                            <i class="fas fa-file-csv"></i> Dim Cost Element:
+                        </label>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="dimCostElementFile" accept=".csv" />
+                            <div class="file-input-custom">
+                                <span>Choose file</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <button id="processFilesBtn" class="btn btn-primary btn-block" disabled>
+                    <i class="fas fa-cogs"></i> Process Files
+                </button>
+            </div>
+        </div>
+
+        <!-- Activity Log Container -->
+        <div class="activity-log-container card" id="activityLogPanel">
+            <div class="card-header">
+                <div class="card-title">
+                    <i class="fas fa-history"></i>
+                    <span>Activity Log</span>
+                </div>
+                <div class="card-actions">
+                    <button class="btn-icon" id="collapseActivityLog"><i class="fas fa-chevron-down"></i></button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="activity-log-content">
+                    <div id="activityLog" class="activity-log">
+                        <!-- Log messages will be added here -->
+                    </div>
+                </div>
+                <div class="activity-log-actions">
+                    <button id="clearLogBtn" class="btn btn-sm">
+                        <i class="fas fa-trash-alt"></i> Clear Log
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <style>
+            .activity-log-container {
+                margin-bottom: 1rem;
+            }
+            
+            .activity-log {
+                max-height: 200px;
+                overflow-y: auto;
+                background-color: #f5f5f5;
+                border-radius: 4px;
+                padding: 0.5rem;
+                font-family: monospace;
+                font-size: 0.85rem;
+                color: #333;
+            }
+            
+            .activity-log-entry {
+                margin-bottom: 0.25rem;
+                padding: 0.25rem;
+                border-bottom: 1px solid #e0e0e0;
+            }
+            
+            .activity-log-timestamp {
+                color: #666;
+                margin-right: 0.5rem;
+                font-weight: bold;
+            }
+            
+            .activity-log-message {
+                white-space: pre-wrap;
+            }
+            
+            .activity-log-info {
+                color: #0277bd;
+            }
+            
+            .activity-log-warning {
+                color: #ff8f00;
+            }
+            
+            .activity-log-error {
+                color: #c62828;
+            }
+            
+            .activity-log-actions {
+                margin-top: 0.5rem;
+                display: flex;
+                justify-content: flex-end;
+            }
+        </style>
+        
         <div class="instructions card" id="instructionsPanel">
             <div class="card-header">
                 <div class="card-title">
@@ -304,33 +482,40 @@
                     <div class="instruction-step">
                         <div class="step-number">1</div>
                         <div class="step-content">
-                            <h4>Connect to Database</h4>
-                            <p>Click on <strong>Load Data</strong> to fetch data from the Snowflake database.</p>
-                        </div>
-                    </div>
-                    <div class="instruction-step">
-                        <div class="step-number">2</div>
-                        <div class="step-content">
                             <h4>Add Fields</h4>
                             <p>Drag fields from <strong>Available Fields</strong> to the Row, Column, Value, or Filter areas.</p>
                         </div>
                     </div>
                     <div class="instruction-step">
-                        <div class="step-number">3</div>
+                        <div class="step-number">2</div>
                         <div class="step-content">
                             <h4>Configure View</h4>
                             <p>Row Fields determine the table rows. Column Fields create columns for each unique value.</p>
                         </div>
                     </div>
                     <div class="instruction-step">
-                        <div class="step-number">4</div>
+                        <div class="step-number">3</div>
                         <div class="step-content">
                             <h4>Analyze Data</h4>
                             <p>Value Fields are aggregated (summed) in the intersections of rows and columns.</p>
                         </div>
                     </div>
                     <div class="instruction-step">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <h4>View Results</h4>
+                            <p>Switch to the <strong>Pivot Table</strong> tab to see the results and <strong>Chart</strong> tab for visualizations.</p>
+                        </div>
+                    </div>
+                    <div class="instruction-step">
                         <div class="step-number">5</div>
+                        <div class="step-content">
+                            <h4>View Results</h4>
+                            <p>Switch to the <strong>Pivot Table</strong> tab to see the results and <strong>Chart</strong> tab for visualizations.</p>
+                        </div>
+                    </div>
+                    <div class="instruction-step">
+                        <div class="step-number">6</div>
                         <div class="step-content">
                             <h4>View Results</h4>
                             <p>Switch to the <strong>Pivot Table</strong> tab to see the results and <strong>Chart</strong> tab for visualizations.</p>
@@ -354,7 +539,7 @@
                 
                 <h5>Getting Started</h5>
                 <ol>
-                    <li>Connect to Snowflake database to access all required data</li>
+                    <li>Select a directory containing all required CSV files</li>
                     <li>Drag dimension fields to Row/Column areas</li>
                     <li>Drag measure fields to Values area</li>
                     <li>Use filters to narrow down your analysis</li>
@@ -375,5 +560,18 @@
             </div>
         </div>
     </div>
+
+    <script>
+        // If you have a refresh button on your UI, add this handler:
+        const refreshButton = document.querySelector('.refresh-button');
+        if (refreshButton) {
+            refreshButton.addEventListener('click', window.refreshPivotTable);
+        }
+    </script>
+
+
+    <!-- Load our filter integration fixes -->
+    <script type="module" src="./javascripts/filter-renderer-init.js"></script>
+    
 </body>
 </html>

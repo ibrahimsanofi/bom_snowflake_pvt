@@ -1,4 +1,5 @@
-// This module handles the data filtering logic for increased performance and better UX
+
+// This module handles the data filtering logic for increased performance  7 better UX
 
 // Import signature
 import stateModule from './state.js';
@@ -12,8 +13,83 @@ const state = stateModule.state;
  * Initialize the filter container
  * Sets up event handlers and loads filter options
  */
-function initializeFilters() {
+// function initializeFilters() {
         
+//     // Set up toggle for filter container
+//     const filterHeader = document.getElementById('filterHeader');
+//     const filterContent = document.getElementById('filterContent');
+//     const toggleIcon = document.querySelector('#toggleFilterContent i');
+    
+//     if (filterHeader && filterContent) {
+//         filterHeader.addEventListener('click', () => {
+//             const isCollapsed = filterContent.style.display === 'none';
+//             filterContent.style.display = isCollapsed ? 'block' : 'none';
+//             toggleIcon.className = isCollapsed ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
+//         });
+//     }
+    
+//     // Set up dropdown toggles
+//     setupDropdownToggles();
+    
+//     // Set up search functionality
+//     setupDropdownSearch();
+    
+//     // Initialize apply filters button
+//     const applyFiltersBtn = document.getElementById('applyFiltersBtn');
+//     if (applyFiltersBtn) {
+//         applyFiltersBtn.addEventListener('click', applyFilters);
+//     }
+    
+//     // Load filter options
+//     loadFilterOptions();
+// }
+
+
+// function initializeFilters() {
+//     // Set up toggle for filter container
+//     const filterHeader = document.getElementById('filterHeader');
+//     const filterContent = document.getElementById('filterContent');
+//     const toggleIcon = document.querySelector('#toggleFilterContent i');
+    
+//     if (filterHeader && filterContent) {
+//         filterHeader.addEventListener('click', () => {
+//             const isCollapsed = filterContent.style.display === 'none';
+//             filterContent.style.display = isCollapsed ? 'block' : 'none';
+//             toggleIcon.className = isCollapsed ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
+//         });
+//     }
+    
+//     // Set up dropdown toggles
+//     setupDropdownToggles();
+    
+//     // Set up search functionality
+//     setupDropdownSearch();
+    
+//     // Initialize apply filters button
+//     const applyFiltersBtn = document.getElementById('applyFiltersBtn');
+//     if (applyFiltersBtn) {
+//         applyFiltersBtn.addEventListener('click', applyFilters);
+//     }
+    
+//     // Initialize filters state if needed
+//     if (!state.filters) {
+//         state.filters = {
+//             legalEntity: [],
+//             smartcode: [],
+//             costElement: [],
+//             businessYear: [],
+//             itemCostType: [],
+//             componentMaterialType: []
+//         };
+//     }
+    
+//     // Load filter options
+//     loadFilterOptions();
+// }
+
+function initializeFilters() {
+    console.log("Setting up filter UI...");
+    
     // Set up toggle for filter container
     const filterHeader = document.getElementById('filterHeader');
     const filterContent = document.getElementById('filterContent');
@@ -25,6 +101,8 @@ function initializeFilters() {
             filterContent.style.display = isCollapsed ? 'block' : 'none';
             toggleIcon.className = isCollapsed ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
         });
+    } else {
+        console.warn("Filter header or content elements not found");
     }
     
     // Set up dropdown toggles
@@ -37,27 +115,35 @@ function initializeFilters() {
     const applyFiltersBtn = document.getElementById('applyFiltersBtn');
     if (applyFiltersBtn) {
         applyFiltersBtn.addEventListener('click', applyFilters);
+    } else {
+        console.warn("Apply filters button not found");
     }
     
-    // Load filter options
-    loadFilterOptions();
-}
-
-
-function filterByDimension(records, dimDef) {
-    if (!dimDef) return records;
-    
-    // For multi-dimension rows/columns
-    if (dimDef.dimensions) {
-        let result = [...records];
-        dimDef.dimensions.forEach(dimension => {
-            result = filterByDimensionNode(result, dimension);
+    // Check if hierarchies are available before loading filter options
+    if (!state.hierarchies || !state.factData) {
+        console.log("Data not loaded yet, will load filter options when data is available");
+        
+        // Add a wait indicator to each filter dropdown
+        document.querySelectorAll('.dropdown-options').forEach(container => {
+            container.innerHTML = '<div class="dropdown-option loading">Waiting for data to load...</div>';
         });
-        return result;
+        
+        // Set a timeout to check again later
+        setTimeout(() => {
+            if (state.hierarchies && state.factData) {
+                console.log("Data now available, loading filter options");
+                loadFilterOptions();
+            } else {
+                console.warn("Data still not available after delay");
+            }
+        }, 2000);
+    } else {
+        // Data is already available, load filter options immediately
+        loadFilterOptions();
     }
-    
-    // For single dimension rows/columns
-    return filterByDimensionNode(records, dimDef);
+
+    console.log("UI filter UI setup completed.");
+    console.log("You can begin using the tool.");
 }
 
 
@@ -75,9 +161,7 @@ function updateFilterIndicator(fieldId) {
     if (!header) return;
     
     // Check if filter is active
-    const isActive = state.activeFilters && 
-                    state.activeFilters[fieldId] && 
-                    state.activeFilters[fieldId].length > 0;
+    const isActive = state.activeFilters && state.activeFilters[fieldId] && state.activeFilters[fieldId].length > 0;
     
     // Update header class
     if (isActive) {
@@ -171,61 +255,7 @@ function setupDropdownSearch() {
 }
 
 
-/**
- * Apply special dimension filters
- * @param {Array} filteredData - The data to filter
- * @returns {Array} - Filtered data
- */
-function applySpecialDimensionFilters(filteredData) {
-    // Apply Item Cost Type filters
-    if (state.activeFilters && state.activeFilters['DIM_ITEM_COST_TYPE'] && 
-        state.activeFilters['DIM_ITEM_COST_TYPE'].length > 0) {
-        
-        const validValues = new Set();
-        
-        // Get all selected values from the filter
-        state.activeFilters['DIM_ITEM_COST_TYPE'].forEach(nodeId => {
-            // Extract the actual value from the node ID
-            // The node ID might be something like "ITEM_COST_TYPE_VALUE"
-            const value = nodeId.replace('ITEM_COST_TYPE_', '');
-            validValues.add(value);
-        });
-        
-        // Filter data
-        filteredData = filteredData.filter(record => 
-            record.ITEM_COST_TYPE && validValues.has(record.ITEM_COST_TYPE)
-        );
-    }
-    
-    // Apply Material Type filters
-    if (state.activeFilters && state.activeFilters['DIM_MATERIAL_TYPE'] && 
-        state.activeFilters['DIM_MATERIAL_TYPE'].length > 0) {
-        
-        const validValues = new Set();
-        
-        // Get all selected values from the filter
-        state.activeFilters['DIM_MATERIAL_TYPE'].forEach(nodeId => {
-            // Extract the actual value from the node ID
-            const value = nodeId.replace('MATERIAL_TYPE_', '');
-            validValues.add(value);
-        });
-        
-        // Filter data
-        filteredData = filteredData.filter(record => 
-            record.COMPONENT_MATERIAL_TYPE && validValues.has(record.COMPONENT_MATERIAL_TYPE)
-        );
-    }
-    
-    return filteredData;
-}
 
-
-/**
- * Render data volume indicator
- * @param {HTMLElement} container - Container element
- * @param {number} originalCount - Original data count
- * @param {number} filteredCount - Filtered data count
- */
 function renderDataVolumeIndicator(container, originalCount, filteredCount) {
     // Calculate percentage
     const percentage = originalCount > 0 ? Math.round((filteredCount / originalCount) * 100) : 0;
@@ -249,6 +279,7 @@ function renderDataVolumeIndicator(container, originalCount, filteredCount) {
     // Add to container
     indicatorContainer.appendChild(progressBar);
     indicatorContainer.appendChild(textIndicator);
+    container.innerHTML = '';
     container.appendChild(indicatorContainer);
 }
 
@@ -258,7 +289,7 @@ function renderDataVolumeIndicator(container, originalCount, filteredCount) {
  */
 function loadFilterOptions() {
     // Only load options once all data is available
-    if (!state.rawFactBOMData || !state.dimensions) {
+    if (!state.factData || !state.dimensions) {
         // Set a timeout to try again later
         setTimeout(loadFilterOptions, 500);
         return;
@@ -287,12 +318,7 @@ function loadFilterOptions() {
 }
 
 
-/**
- * Direct render method for Legal Entity filters
- * @param {Array} data - Legal entity data 
- * @param {string} containerId - Container element ID
- */
-function directRenderLegalEntityFilter(data, containerId) {
+function directRenderLegalEntityFilter(csvData, containerId) {
     console.log("Direct rendering LEGAL_ENTITY filter");
 
     // Get the container
@@ -319,7 +345,7 @@ function directRenderLegalEntityFilter(data, containerId) {
     const processedEntities = new Set();
 
     // Process each row
-    data.forEach((row, index) => {
+    csvData.forEach((row, index) => {
         if (!row) return;
         
         // Get entity ID or generate one
@@ -528,14 +554,11 @@ function directRenderLegalEntityFilter(data, containerId) {
 }
 
 
-/**
- * Handler for Legal Entity filter zone
- */
 function handleLegalEntityFilterZone() {
     console.log("Processing LEGAL_ENTITY for filter zone");
 
     // Get the raw data directly from state
-    const legalEntityData = state.dimensions.le;
+    const legalEntityData = state.dimensions.legal_entity;
 
     if (!legalEntityData || legalEntityData.length === 0) {
         console.error("No LEGAL_ENTITY data found");
@@ -581,7 +604,7 @@ function renderMultiDimensionFilters(filterContainer) {
     
     // Check if we have LEGAL_ENTITY in the filter fields
     const hasLegalEntity = state.filterFields.some(field => 
-        field === 'DIM_LE' || field.toLowerCase().includes('le')
+        field === 'DIM_LEGAL_ENTITY' || field.toLowerCase().includes('legal_entity')
     );
     
     if (hasLegalEntity) {
@@ -590,7 +613,7 @@ function renderMultiDimensionFilters(filterContainer) {
         
         // Filter out LEGAL_ENTITY from regular processing
         const otherFilters = state.filterFields.filter(field => 
-            field !== 'DIM_LE' && !field.toLowerCase().includes('le')
+            field !== 'DIM_LEGAL_ENTITY' && !field.toLowerCase().includes('legal_entity')
         );
         
         // Process the remaining filters normally
@@ -601,7 +624,7 @@ function renderMultiDimensionFilters(filterContainer) {
             });
         }
     } else {
-        // No LE, process filters normally
+        // No LEGAL_ENTITY, process filters normally
         const { filterDimensions } = this.processFilterDimensions(state.filterFields);
         filterDimensions.forEach(dimension => {
             this.renderFilterDimension(filterContainer, dimension);
@@ -648,7 +671,7 @@ function applyMultiDimensionFilters(data) {
         if (!hierarchy) return;
         
         // Get fact ID field for this dimension
-        const factIdField = this.getFactIdField(dimName);
+        const factIdField = hierarchyHandler.getFactIdField(dimName);
         
         // Build a set of valid fact IDs based on selected nodes
         const validFactIds = new Set();
@@ -663,7 +686,7 @@ function applyMultiDimensionFilters(data) {
                 validFactIds.add(node.factId);
             } else {
                 // Non-leaf node - add all descendant leaf node fact IDs
-                const leafNodes = getAllLeafDescendants(node);
+                const leafNodes = hierarchyHandler.getAllLeafDescendants(node);
                 leafNodes.forEach(leafNode => {
                     if (leafNode.factId) {
                         validFactIds.add(leafNode.factId);
@@ -811,9 +834,9 @@ function renderOptimizedFilters(container) {
 function extractUniqueValues(fieldName) {
     const uniqueValues = new Set();
     
-    if (!state.rawFactBOMData) return [];
+    if (!state.factData) return [];
     
-    state.rawFactBOMData.forEach(row => {
+    state.factData.forEach(row => {
         if (row[fieldName] && row[fieldName].toString().trim() !== '') {
             uniqueValues.add(row[fieldName].toString());
         }
@@ -1408,11 +1431,24 @@ function loadLegalEntityOptions() {
     
     // Clear loading indicator
     optionsContainer.innerHTML = '';
+
+    // Check if state.hierarchies is properly initialized
+    if (!state.hierarchies) {
+        console.warn("state.hierarchies is not initialized");
+        optionsContainer.innerHTML = '<div class="dropdown-option">Hierarchy data not available yet</div>';
+        return;
+    }
     
     // Get Legal Entity hierarchy
     const hierarchy = state.hierarchies.le;
-    if (!hierarchy || !hierarchy.root) {
+    if (!hierarchy) {
         optionsContainer.innerHTML = '<div class="dropdown-option">No Legal Entity data available</div>';
+        return;
+    }
+
+    if (!hierarchy.root) {
+        // console.warn("Legal Entity hierarchy has no root node");
+        optionsContainer.innerHTML = '<div class="dropdown-option">Legal Entity hierarchy structure is incomplete</div>';
         return;
     }
     
@@ -1474,10 +1510,24 @@ function loadSmartcodeOptions() {
     // Clear loading indicator
     optionsContainer.innerHTML = '';
     
-    // Get Smartcode hierarchy
+    // Check if state.hierarchies is properly initialized
+    if (!state.hierarchies) {
+        console.warn("state.hierarchies is not initialized");
+        optionsContainer.innerHTML = '<div class="dropdown-option">Hierarchy data not available yet</div>';
+        return;
+    }
+    
+    // Get Smartcode hierarchy with proper error handling
     const hierarchy = state.hierarchies.smartcode;
-    if (!hierarchy || !hierarchy.root) {
-        optionsContainer.innerHTML = '<div class="dropdown-option">No Smartcode data available</div>';
+    if (!hierarchy) {
+        console.warn("Smartcode hierarchy not found in state.hierarchies");
+        optionsContainer.innerHTML = '<div class="dropdown-option">Smartcode hierarchy not found</div>';
+        return;
+    }
+    
+    if (!hierarchy.root) {
+        console.warn("Smartcode hierarchy has no root node");
+        optionsContainer.innerHTML = '<div class="dropdown-option">Smartcode hierarchy structure is incomplete</div>';
         return;
     }
     
@@ -1500,6 +1550,10 @@ function loadSmartcodeOptions() {
             checkbox.checked = isChecked;
         });
         
+        // Ensure state.filters is initialized
+        if (!state.filters) state.filters = {};
+        if (!state.filters.smartcode) state.filters.smartcode = [];
+        
         // Update state if "Select All" is unchecked (clear all)
         if (!isChecked) {
             state.filters.smartcode = [];
@@ -1521,12 +1575,18 @@ function loadSmartcodeOptions() {
         updateSelectedFiltersCount();
     });
     
-    // Recursively build hierarchical options
-    buildHierarchicalOptions(hierarchy.root, optionsContainer, 'sc', 0, 'smartcode');
+    try {
+        // Recursively build hierarchical options with error handling
+        buildHierarchicalOptions(hierarchy.root, optionsContainer, 'sc', 0, 'smartcode');
+    } catch (error) {
+        console.error("Error building Smartcode hierarchy options:", error);
+        optionsContainer.innerHTML += `<div class="dropdown-option error">Error building hierarchy: ${error.message}</div>`;
+    }
     
     // Update button text based on current selection
-    updateDropdownButtonText('smartcodeDropdown', 'Smartcodes', state.filters.smartcode);
+    updateDropdownButtonText('smartcodeDropdown', 'Smartcodes', state.filters?.smartcode || []);
 }
+
 
 
 /**
@@ -1604,23 +1664,59 @@ function loadCostElementOptions() {
  * @param {string} filterKey - The key in state.filters
  */
 function buildHierarchicalOptions(node, container, prefix, level, filterKey) {
-    if (!node) return;
+    // Safety check for null node
+    if (!node) {
+        console.warn(`Attempted to build hierarchical options with null node for ${filterKey}`);
+        container.innerHTML += '<div class="dropdown-option">No hierarchy data available</div>';
+        return;
+    }
     
-    // Skip ROOT node
+    // Skip ROOT node but process its children
     if (node.id === 'ROOT') {
-        if (node.children && node.children.length > 0) {
-            node.children.forEach(childId => {
-                const childNode = node.hierarchy ? 
-                    node.hierarchy.nodesMap[childId] : 
-                    state.hierarchies[filterKey === 'legalEntity' ? 'le' : 
-                                       filterKey === 'smartcode' ? 'smart_code' : 
-                                       'cost_element'].nodesMap[childId];
-                
-                if (childNode) {
-                    buildHierarchicalOptions(childNode, container, prefix, level, filterKey);
-                }
-            });
+        // Safety check for children array
+        if (!node.children || !Array.isArray(node.children) || node.children.length === 0) {
+            console.warn(`ROOT node for ${filterKey} has no children`);
+            container.innerHTML += '<div class="dropdown-option">No hierarchy data available</div>';
+            return;
         }
+        
+        // Process each child of the ROOT node
+        node.children.forEach(childId => {
+            let childNode = null;
+            
+            // Handle case where childId is actually an object (node) instead of a string ID
+            if (typeof childId === 'object' && childId !== null) {
+                childNode = childId; // Use the object directly
+            } 
+            // Handle case where childId is a string ID
+            else if (typeof childId === 'string') {
+                // First try to get child from hierarchy property if available
+                if (node.hierarchy && node.hierarchy.nodesMap && node.hierarchy.nodesMap[childId]) {
+                    childNode = node.hierarchy.nodesMap[childId];
+                } 
+                // Otherwise determine the correct hierarchy to use based on filterKey
+                else {
+                    let hierarchyName = '';
+                    if (filterKey === 'legalEntity') hierarchyName = 'le';
+                    else if (filterKey === 'smartcode') hierarchyName = 'smartcode';
+                    else if (filterKey === 'costElement') hierarchyName = 'cost_element';
+                    
+                    // Get hierarchy object from state
+                    const hierarchy = state.hierarchies[hierarchyName];
+                    
+                    if (hierarchy && hierarchy.nodesMap) {
+                        childNode = hierarchy.nodesMap[childId];
+                    }
+                }
+            }
+            
+            // Process the child if found
+            if (childNode) {
+                buildHierarchicalOptions(childNode, container, prefix, level, filterKey);
+            } else {
+                console.warn(`Could not find child node with ID ${childId} for ${filterKey}`);
+            }
+        });
         return;
     }
     
@@ -1631,17 +1727,28 @@ function buildHierarchicalOptions(node, container, prefix, level, filterKey) {
     
     const isLeaf = node.isLeaf;
     const factId = node.factId;
-    const nodeId = node.id;
+    
+    // Handle case where node.id might be an object
+    let nodeId;
+    if (typeof node.id === 'object' && node.id !== null) {
+        // Generate a stable string ID for this object
+        nodeId = 'obj_' + Math.random().toString(36).substring(2);
+    } else {
+        nodeId = node.id;
+    }
     
     // Check if this node is selected
-    const isSelected = isLeaf && factId && state.filters[filterKey].includes(factId);
+    const isSelected = isLeaf && factId && 
+                      state.filters && 
+                      state.filters[filterKey] && 
+                      state.filters[filterKey].includes(factId);
     
     // Create a unique ID for the checkbox
     const uniqueId = `${prefix}-${nodeId}`;
     
     option.innerHTML = `
         <input type="checkbox" id="${uniqueId}" data-node-id="${nodeId}" data-fact-id="${factId || ''}" ${isSelected ? 'checked' : ''}>
-        <label for="${uniqueId}">${node.label}</label>
+        <label for="${uniqueId}">${node.label || String(node.id)}</label>
     `;
     
     // Add change event for the checkbox
@@ -1650,6 +1757,10 @@ function buildHierarchicalOptions(node, container, prefix, level, filterKey) {
         const isChecked = e.target.checked;
         const factId = e.target.getAttribute('data-fact-id');
         const nodeId = e.target.getAttribute('data-node-id');
+        
+        // Ensure state.filters is initialized
+        if (!state.filters) state.filters = {};
+        if (!state.filters[filterKey]) state.filters[filterKey] = [];
         
         if (isLeaf && factId) {
             if (isChecked) {
@@ -1689,14 +1800,39 @@ function buildHierarchicalOptions(node, container, prefix, level, filterKey) {
     // Process children recursively
     if (node.children && node.children.length > 0) {
         node.children.forEach(childId => {
-            const childNode = node.hierarchy ? 
-                node.hierarchy.nodesMap[childId] : 
-                state.hierarchies[filterKey === 'legalEntity' ? 'le' : 
-                                   filterKey === 'smartcode' ? 'smartCode' : 
-                                   'cost_element'].nodesMap[childId];
+            let childNode = null;
             
+            // Handle case where childId is actually an object (node) instead of a string ID
+            if (typeof childId === 'object' && childId !== null) {
+                childNode = childId; // Use the object directly
+            } 
+            // Handle case where childId is a string ID
+            else if (typeof childId === 'string') {
+                // First try to get child from hierarchy property if available
+                if (node.hierarchy && node.hierarchy.nodesMap && node.hierarchy.nodesMap[childId]) {
+                    childNode = node.hierarchy.nodesMap[childId];
+                } 
+                // Otherwise determine the correct hierarchy to use based on filterKey
+                else {
+                    let hierarchyName = '';
+                    if (filterKey === 'legalEntity') hierarchyName = 'le';
+                    else if (filterKey === 'smartcode') hierarchyName = 'smartcode';
+                    else if (filterKey === 'costElement') hierarchyName = 'cost_element';
+                    
+                    // Get hierarchy object from state
+                    const hierarchy = state.hierarchies[hierarchyName];
+                    
+                    if (hierarchy && hierarchy.nodesMap) {
+                        childNode = hierarchy.nodesMap[childId];
+                    }
+                }
+            }
+            
+            // Process child if found
             if (childNode) {
                 buildHierarchicalOptions(childNode, container, prefix, level + 1, filterKey);
+            } else {
+                console.warn(`Could not find child node with ID ${childId} for ${filterKey}`);
             }
         });
     }
@@ -1713,8 +1849,8 @@ function buildHierarchicalOptions(node, container, prefix, level, filterKey) {
  */
 function updateChildCheckboxes(nodeId, isChecked, prefix, filterKey) {
     // Get the hierarchy
-    const hierarchy = state.hierarchies[filterKey === 'legalEntity' ? 'le' : 
-                                        filterKey === 'smartcode' ? 'smartCode' : 
+    const hierarchy = state.hierarchies[filterKey === 'legalEntity' ? 'legal_entity' : 
+                                        filterKey === 'smartcode' ? 'smart_code' : 
                                         'cost_element'];
     
     if (!hierarchy || !hierarchy.nodesMap || !hierarchy.nodesMap[nodeId]) return;
@@ -1797,9 +1933,16 @@ function walkHierarchy(node, callback) {
     // Process children
     if (node.children && node.children.length > 0) {
         node.children.forEach(childId => {
-            const childNode = node.hierarchy ? 
-                node.hierarchy.nodesMap[childId] : 
-                getChildNode(node, childId);
+            let childNode = null;
+            
+            // Handle case where childId is actually an object (node) instead of a string ID
+            if (typeof childId === 'object' && childId !== null) {
+                childNode = childId; // Use the object directly
+            } else {
+                childNode = node.hierarchy ? 
+                    node.hierarchy.nodesMap[childId] : 
+                    getChildNode(node, childId);
+            }
             
             if (childNode) {
                 walkHierarchy(childNode, callback);
@@ -1817,6 +1960,11 @@ function walkHierarchy(node, callback) {
  * @returns {Object} The child node
  */
 function getChildNode(parentNode, childId) {
+    // Handle case where childId is actually an object (node) instead of a string ID
+    if (typeof childId === 'object' && childId !== null) {
+        return childId; // Return the object directly
+    }
+    
     // Check if the parent has a reference to the hierarchy
     if (parentNode.hierarchy && parentNode.hierarchy.nodesMap) {
         return parentNode.hierarchy.nodesMap[childId];
@@ -1905,19 +2053,19 @@ function applyFilters() {
             console.log(`Filtered data contains ${filteredData.length} records`);
             
             // Verify the first few records have numeric values
-            // if (filteredData.length > 0) {
-            //     const sampleSize = Math.min(5, filteredData.length);
-            //     console.log("Verifying sample data values:");
-            //     for (let i = 0; i < sampleSize; i++) {
-            //         const record = filteredData[i];
-            //         console.log(`Sample ${i+1}:`, {
-            //             COST_UNIT: record.COST_UNIT,
-            //             QTY_UNIT: record.QTY_UNIT,
-            //             type_COST_UNIT: typeof record.COST_UNIT,
-            //             type_QTY_UNIT: typeof record.QTY_UNIT
-            //         });
-            //     }
-            // }
+            if (filteredData.length > 0) {
+                const sampleSize = Math.min(5, filteredData.length);
+                console.log("Verifying sample data values:");
+                for (let i = 0; i < sampleSize; i++) {
+                    const record = filteredData[i];
+                    console.log(`Sample ${i+1}:`, {
+                        COST_UNIT: record.COST_UNIT,
+                        QTY_UNIT: record.QTY_UNIT,
+                        type_COST_UNIT: typeof record.COST_UNIT,
+                        type_QTY_UNIT: typeof record.QTY_UNIT
+                    });
+                }
+            }
             
             // Generate pivot table with filtered data
             if (window.generatePivotTable) {
@@ -1943,82 +2091,52 @@ function applyFilters() {
 /**
  * Filter fact data based on selected filters
  * Updates state.filteredData with the filtered results
- * @returns {Array} The filtered data
  */
 function filterFactData() {
     // Start with all fact data
-    let filteredData = [...state.rawFactBOMData];
+    let filteredData = [...state.factData];
     
-    // Filter by Root GMID
-    if (state.filters && state.filters.gmidDisplay && state.filters.gmidDisplay.length > 0) {
-        filteredData = filteredData.filter(row => 
-            state.filters.gmidDisplay.includes(row.COMPONENT_GMID)
-        );
-    }
-
     // Filter by Legal Entity
-    if (state.filters && state.filters.legalEntity && state.filters.legalEntity.length > 0) {
+    if (state.filters.legalEntity && state.filters.legalEntity.length > 0) {
         filteredData = filteredData.filter(row => 
             state.filters.legalEntity.includes(row.LE)
         );
     }
     
     // Filter by Smartcode
-    if (state.filters && state.filters.smartCode && state.filters.smartCode.length > 0) {
+    if (state.filters.smartcode && state.filters.smartcode.length > 0) {
         filteredData = filteredData.filter(row => 
-            state.filters.smartCode.includes(row.ROOT_SMARTCODE)
+            state.filters.smartcode.includes(row.ROOT_SMARTCODE)
         );
     }
     
     // Filter by Cost Element
-    if (state.filters && state.filters.costElement && state.filters.costElement.length > 0) {
+    if (state.filters.costElement && state.filters.costElement.length > 0) {
         filteredData = filteredData.filter(row => 
             state.filters.costElement.includes(row.COST_ELEMENT)
         );
     }
     
     // Filter by Business Year
-    if (state.filters && state.filters.businessYear && state.filters.businessYear.length > 0) {
+    if (state.filters.businessYear && state.filters.businessYear.length > 0) {
         filteredData = filteredData.filter(row => 
             state.filters.businessYear.includes(row.ZYEAR)
         );
     }
     
     // Filter by Item Cost Type
-    if (state.filters && state.filters.itemCostType && state.filters.itemCostType.length > 0) {
+    if (state.filters.itemCostType && state.filters.itemCostType.length > 0) {
         filteredData = filteredData.filter(row => 
             state.filters.itemCostType.includes(row.ITEM_COST_TYPE)
         );
     }
     
     // Filter by Component Material Type
-    if (state.filters && state.filters.componentMaterialType && state.filters.componentMaterialType.length > 0) {
+    if (state.filters.componentMaterialType && state.filters.componentMaterialType.length > 0) {
         filteredData = filteredData.filter(row => 
             state.filters.componentMaterialType.includes(row.COMPONENT_MATERIAL_TYPE)
         );
     }
-
-    // Ensure all numeric fields remain numeric
-    // filteredData.forEach(row => {
-    //     // Force COST_UNIT to number
-    //     if (row.COST_UNIT !== undefined) {
-    //         const parsedValue = parseFloat(row.COST_UNIT);
-    //         row.COST_UNIT = isNaN(parsedValue) ? 0 : parsedValue;
-    //     }
-        
-    //     // Force QTY_UNIT to number
-    //     if (row.QTY_UNIT !== undefined) {
-    //         const parsedValue = parseFloat(row.QTY_UNIT);
-    //         row.QTY_UNIT = isNaN(parsedValue) ? 0 : parsedValue;
-    //     }
-    // });
-    
-    // Log data types for verification
-    // if (filteredData.length > 0) {
-    //     console.log("Filtered data sample:", filteredData[0]);
-    //     console.log("COST_UNIT type:", typeof filteredData[0].COST_UNIT);
-    //     console.log("QTY_UNIT type:", typeof filteredData[0].QTY_UNIT);
-    // }
     
     // Store the filtered data
     state.filteredData = filteredData;
@@ -2036,12 +2154,19 @@ function filterFactData() {
         }
         
         // Calculate percentage
-        const percentage = Math.round((filteredData.length / state.rawFactBOMData.length) * 100);
-        countElement.textContent = `${filteredData.length.toLocaleString()} / ${state.rawFactBOMData.length.toLocaleString()} records (${percentage}%)`;
+        const percentage = Math.round((filteredData.length / state.factData.length) * 100);
+        countElement.textContent = `${filteredData.length.toLocaleString()} / ${state.factData.length.toLocaleString()} records (${percentage}%)`;
+    }
+    
+    // Update the data volume indicator
+    const dataVolumeIndicator = document.getElementById('dataVolumeIndicator');
+    if (dataVolumeIndicator) {
+        renderDataVolumeIndicator(dataVolumeIndicator, state.factData.length, filteredData.length);
     }
     
     return filteredData;
 }
+
 
 
 /**
@@ -2069,6 +2194,7 @@ function preFilterData(originalData) {
     const beforeDimFilters = filteredData.length;
     filteredData = applyDimensionFilters(filteredData);
     console.log(`After applying dimension filters: ${filteredData.length} records (${beforeDimFilters - filteredData.length} removed)`);
+
     
     // Apply any active non-hierarchical filters (e.g. direct field filters)
     const beforeDirectFilters = filteredData.length;
@@ -2080,6 +2206,7 @@ function preFilterData(originalData) {
     
     return filteredData;
 }
+
 
 
 /**
@@ -2100,29 +2227,29 @@ function logActiveFilters() {
         console.log("Dimension filters active:", state.activeFilters);
         
         // Log details for each active dimension filter
-        Object.keys(state.activeFilters).forEach(fieldId => {
-            if (!state.activeFilters[fieldId] || state.activeFilters[fieldId].length === 0) {
-                return;
-            }
+        // Object.keys(state.activeFilters).forEach(fieldId => {
+        //     if (!state.activeFilters[fieldId] || state.activeFilters[fieldId].length === 0) {
+        //         return;
+        //     }
             
-            const dimName = fieldId.replace('DIM_', '').toLowerCase();
-            const hierarchy = state.hierarchies[dimName];
+        //     const dimName = fieldId.replace('DIM_', '').toLowerCase();
+        //     const hierarchy = state.hierarchies[dimName];
             
-            if (!hierarchy) {
-                console.log(`  ${fieldId}: Hierarchy not found`);
-                return;
-            }
+        //     if (!hierarchy) {
+        //         console.log(`  ${fieldId}: Hierarchy not found`);
+        //         return;
+        //     }
             
-            console.log(`  ${fieldId}: ${state.activeFilters[fieldId].length} nodes selected`);
-            state.activeFilters[fieldId].forEach(nodeId => {
-                const node = hierarchy.nodesMap[nodeId];
-                if (node) {
-                    console.log(`    - Node: ${nodeId}, Label: ${node.label}, FactId: ${node.factId || 'none'}`);
-                } else {
-                    console.log(`    - Node: ${nodeId} (not found in hierarchy)`);
-                }
-            });
-        });
+        //     console.log(`  ${fieldId}: ${state.activeFilters[fieldId].length} nodes selected`);
+        //     state.activeFilters[fieldId].forEach(nodeId => {
+        //         const node = hierarchy.nodesMap[nodeId];
+        //         if (node) {
+        //             console.log(`    - Node: ${nodeId}, Label: ${node.label}, FactId: ${node.factId || 'none'}`);
+        //         } else {
+        //             console.log(`    - Node: ${nodeId} (not found in hierarchy)`);
+        //         }
+        //     });
+        // });
     } else {
         console.log("No dimension filters active");
     }
@@ -2154,7 +2281,7 @@ function applyDimensionFilters(data) {
             return;
         }
         
-        // Get dimension name (e.g., legal_entity from DIM_LE)
+        // Get dimension name (e.g., legal_entity from DIM_LEGAL_ENTITY)
         const dimName = fieldId.replace('DIM_', '').toLowerCase();
         
         // Skip if we've already processed this dimension type
@@ -2196,7 +2323,7 @@ function applyDimensionFilters(data) {
         }
         
         // Get fact ID field for this dimension
-        const factIdField = this.getFactIdField(dimName);
+        const factIdField = getFactIdField(dimName);
         if (!factIdField) {
             return;
         }
@@ -2241,7 +2368,7 @@ function applyDirectFilters(data) {
             record[fieldName] && validValues.has(record[fieldName])
         );
         
-        console.log(`Applied ${fieldName} filter: ${validValues.size} values → ${filteredData.length} records`);
+        // console.log(`Applied ${fieldName} filter: ${validValues.size} values → ${filteredData.length} records`);
     });
     
     return filteredData;
@@ -2282,7 +2409,7 @@ function getAllLeafDescendants(node, result = []) {
  * Call this when the application loads
  */
 function initializeFilterSystem() {
-    console.log("Initializing filter system with database connection...");
+    console.log("initializeFilters called with state data:", state?.factData?.length || 0, "rows available");
 
     // Initialize filter state if needed
     if (!state.activeFilters) {
@@ -2296,18 +2423,6 @@ function initializeFilterSystem() {
     // Initialize filter tree state if needed
     if (!state.filterTreeState) {
         state.filterTreeState = {};
-    }
-
-    // Initialize filters object if not already there
-    if (!state.filters) {
-        state.filters = {
-            legalEntity: [],
-            smartcode: [],
-            costElement: [],
-            businessYear: [],
-            itemCostType: [],
-            componentMaterialType: []
-        };
     }
     
     console.log('Filter system initialized');
@@ -2409,8 +2524,7 @@ export default {
     // Hierarchy-specific filter functions
     buildHierarchyTree,
     simplifiedBuildTree,
-    
-    // Helper functions
-    getAllLeafDescendants
+
+    // Others
+    updateSelectedFiltersCount
   };
-    

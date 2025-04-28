@@ -1,30 +1,6 @@
+
 // This module defines the application state structure and provides helper functions for initializing and managing state.
 
-// Define raw dimension variables that will be globally accessible
-export const DIM_LE = 'DIM_LE';
-export const DIM_GMID_DISPLAY = 'DIM_GMID_DISPLAY';
-export const DIM_SMARTCODE = 'DIM_SMARTCODE';
-export const DIM_ITEM_COST_TYPE = 'DIM_ITEM_COST_TYPE';
-export const DIM_MATERIAL_TYPE = 'DIM_MATERIAL_TYPE';
-export const DIM_COST_ELEMENT = 'DIM_COST_ELEMENT';
-export const DIM_YEAR = 'DIM_YEAR';
-export const DIM_MC = 'DIM_MC';
-export const FACT_BOM = 'FACT_BOM';
-
-// Map dimension names to their table column names for filtering and joins
-export const DIMENSION_FIELD_MAPPING = {
-    [DIM_LE]: { idField: 'LE', descField: 'LE_DESC', foreignKey: 'LE' },
-    [DIM_GMID_DISPLAY]: { idField: 'COMPONENT_GMID', descField: 'DISPLAY', foreignKey: 'COMPONENT_GMID' },
-    [DIM_SMARTCODE]: { idField: 'SMARTCODE', descField: 'SMARTCODE_DESC', foreignKey: 'ROOT_SMARTCODE' },
-    [DIM_ITEM_COST_TYPE]: { idField: 'ITEM_COST_TYPE', descField: 'ITEM_COST_TYPE_DESC', foreignKey: 'ITEM_COST_TYPE' },
-    [DIM_MATERIAL_TYPE]: { idField: 'MATERIAL_TYPE', descField: 'MATERIAL_TYPE_DESC', foreignKey: 'COMPONENT_MATERIAL_TYPE' },
-    [DIM_COST_ELEMENT]: { idField: 'COST_ELEMENT', descField: 'COST_ELEMENT_DESC', foreignKey: 'COST_ELEMENT' },
-    [DIM_YEAR]: { idField: 'ZYEAR', descField: 'ZYEAR_DESC', foreignKey: 'ZYEAR' },
-    [DIM_MC]: { idField: 'MC', descField: 'MC_DESC', foreignKey: 'MC' }
-};
-
-// Define which dimensions are hierarchical
-export const HIERARCHICAL_DIMENSIONS = [DIM_LE, DIM_GMID_DISPLAY, DIM_SMARTCODE, DIM_COST_ELEMENT];
 
 /**
  * Main application state object
@@ -32,28 +8,22 @@ export const HIERARCHICAL_DIMENSIONS = [DIM_LE, DIM_GMID_DISPLAY, DIM_SMARTCODE,
  */
 const state = {
     // Core data
-    rawFactBOMData: [],                // Array to store the main fact table BOM data
-    filteredData: [],            // Array to store filtered fact BOM data
-    dimensions: {},              // Object to store dimension data by dimension name
-    hierarchies: {},             // Object to store hierarchy definitions
+    factData: [],                 // Array to store the main fact table data
+    filteredData: [],             // Array to store filtered fact data
+    dimensions: {},               // Object to store dimension metadata
+    hierarchies: {},              // Object to store hierarchy definitions
     
     // Filter state
     filters: {                    // Filter state object
         legalEntity: [],
-        smartCode: [],
+        smartcode: [],
         costElement: [],
         businessYear: [],
         itemCostType: [],
         componentMaterialType: [],
-        gmidDisplay: []
-    },
-
-    // Database connection state
-    database: {
-        connected: false,
-        lastRefreshed: null,
-        connectionDetails: null,
-        availableTables: []
+        mc: [],
+        itemCostType: [],
+        materialType: []
     },
     
     // UI expansion state for hierarchical dimensions
@@ -73,12 +43,28 @@ const state = {
         smartcode: {
             row: { 'ROOT': true },
             column: { 'ROOT': true }
+        },
+        mc: {
+            row: { 'ROOT': true },
+            column: { 'ROOT': true }
+        },
+        year: {
+            row: { 'ROOT': true },
+            column: { 'ROOT': true }
+        },
+        item_cost_type: {
+            row: { 'ROOT': true },
+            column: { 'ROOT': true }
+        },
+        material_type: {
+            row: { 'ROOT': true },
+            column: { 'ROOT': true }
         }
     },
     
     // Data and field configuration
+    availableFiles: [],           // List of available data files
     availableFields: [],          // List of all available fields for analysis
-    availableFiles: [],
     rowFields: [],                // Fields selected for row dimension
     columnFields: [],             // Fields selected for column dimension
     valueFields: [],              // Fields selected for metrics/measures
@@ -86,64 +72,15 @@ const state = {
     pivotData: null,              // Processed pivot table data
     loading: true,                // Loading state flag
     
+    directory: null,              // Current working directory
+    
+    // Filter state
+    filterTreeState: {},          // UI state for filter selection trees
+    activeFilters: {},            // Currently applied filters
+    
     // Store unique values for fields
-    uniqueValues: {},             // Store unique values for fields like ZYEAR, ITEM_COST_TYPE, etc.
-    
-    // Mappings between dimensions for lookup
-    mappings: {},                 // Store mappings between dimensions and fact data
-    
-    // Available database tables
-    availableTables: [],          // List of tables available in the database
-    
-    // Active filters for data
-    activeFilters: {},            // Store active filters
-    filterTreeState: {},          // Store tree expansion state for filter hierarchies
-    directFilters: {}             // Store direct field filters
+    uniqueValues: {}              // Store unique values for fields like ZYEAR, ITEM_COST_TYPE, etc.
 };
-
-
-/**
- * Get a dimension data by its name
- * @param {string} dimensionName - The dimension name (e.g., DIM_LE)
- * @returns {Array|null} - The dimension data or null if not found
- */
-export function getDimensionData(dimensionName) {
-    return state.dimensions[dimensionName.toLowerCase().replace('dim_', '')] || null;
-}
-
-
-/**
- * Get the dimension field mapping for a dimension
- * @param {string} dimensionName - The dimension name
- * @returns {Object|null} - The field mapping or null if not found
- */
-export function getDimensionMapping(dimensionName) {
-    return DIMENSION_FIELD_MAPPING[dimensionName] || null;
-}
-
-
-/**
- * Check if a dimension is hierarchical
- * @param {string} dimensionName - The dimension name
- * @returns {boolean} - True if the dimension is hierarchical
- */
-export function isHierarchicalDimension(dimensionName) {
-    return HIERARCHICAL_DIMENSIONS.includes(dimensionName);
-}
-
-
-/**
- * Updates the database connection state
- * @param {Object} connectionInfo - Connection information
- */
-function updateDatabaseConnection(connectionInfo) {
-    state.database.connected = true;
-    state.database.lastRefreshed = new Date();
-    state.database.connectionDetails = connectionInfo;
-    
-    console.log(`Database connection updated: ${new Date().toLocaleString()}`);
-}
-
 
 
 /**
@@ -167,6 +104,22 @@ function initializeExpandedNodes() {
         smartcode: {
             row: { 'ROOT': true },
             column: { 'ROOT': true }
+        },
+        mc: {
+            row: { 'ROOT': true },
+            column: { 'ROOT': true }
+        },
+        year: {
+            row: { 'ROOT': true },
+            column: { 'ROOT': true }
+        },
+        item_cost_type: {
+            row: { 'ROOT': true },
+            column: { 'ROOT': true }
+        },
+        material_type: {
+            row: { 'ROOT': true },
+            column: { 'ROOT': true }
         }
     };
 
@@ -176,22 +129,7 @@ function initializeExpandedNodes() {
             const hierarchy = state.hierarchies[hierarchyName];
             if (hierarchy && hierarchy.root) {
                 hierarchy.root.expanded = true;
-                
-                // Additionally expand first level children for cost_element hierarchy
-                if (hierarchyName === 'cost_element' && hierarchy.root.children) {
-                    hierarchy.root.children.forEach(child => {
-                        const childId = typeof child === 'string' ? child : child.id;
-                        if (childId && hierarchy.nodesMap[childId]) {
-                            // Set the child node's expanded property to true
-                            hierarchy.nodesMap[childId].expanded = false;
-                            
-                            // Update the expandedNodes state tracking
-                            state.expandedNodes.cost_element.row[childId] = true;
-                            state.expandedNodes.cost_element.column[childId] = true;
-                        }
-                    });
-                }
-            }
+            }   
         });
     }
     
@@ -214,6 +152,9 @@ function saveStateToCache() {
                 valueFields: state.valueFields || [],
                 filterFields: state.filterFields || []
             },
+            
+            // Store filter state - but simplified
+            filters: {}, // Simplified to prevent large objects
             
             // Timestamp for cache validation
             timestamp: Date.now(),
@@ -249,19 +190,47 @@ function saveStateToCache() {
 
 
 /**
- * Restore state from localStorage cache
+ * Restore state from localStorage cache with support for compressed data
  * @returns {boolean} Whether state was restored from cache
  */
 function restoreStateFromCache() {
     try {
-        // First check for minimal state
-        const minimalJson = localStorage.getItem('pivotTableMinimal');
-        if (!minimalJson) {
+        // First check for compressed metadata
+        let metadata = null;
+        try {
+            const compressedMetadata = localStorage.getItem('pivotTableMetadata_compressed');
+            if (compressedMetadata) {
+                const decompressedData = decompressData(compressedMetadata);
+                metadata = JSON.parse(decompressedData);
+                console.log("Restored compressed metadata");
+            }
+        } catch (compressionError) {
+            console.warn("Error decompressing metadata, trying uncompressed:", compressionError);
+        }
+        
+        // Fallback to uncompressed
+        if (!metadata) {
+            const metadataJson = localStorage.getItem('pivotTableMetadata');
+            if (metadataJson) {
+                metadata = JSON.parse(metadataJson);
+                console.log("Restored uncompressed metadata");
+            }
+        }
+        
+        // Fallback to minimal
+        if (!metadata) {
+            const minimalJson = localStorage.getItem('pivotTableMinimal');
+            if (minimalJson) {
+                metadata = JSON.parse(minimalJson);
+                console.log("Restored minimal metadata");
+            }
+        }
+        
+        // If no metadata found at all
+        if (!metadata) {
             console.log("No cached metadata found");
             return false;
         }
-
-        const metadata = JSON.parse(minimalJson);
         
         // Check metadata timestamp (max age: 24 hours)
         const cacheAge = Date.now() - (metadata.timestamp || 0);
@@ -271,6 +240,18 @@ function restoreStateFromCache() {
             console.log("Cache is too old, not using");
             clearCache();
             return false;
+        }
+        
+        // Restore filter state if available
+        if (metadata.filters) {
+            state.filters = metadata.filters;
+            console.log("Restored filter state from cache");
+        }
+        
+        // Restore expansion states if available
+        if (metadata.expandedNodes) {
+            state.expandedNodes = metadata.expandedNodes;
+            console.log("Restored expansion states from cache");
         }
         
         // Restore field selections if available
@@ -284,13 +265,31 @@ function restoreStateFromCache() {
         
         // Try to restore available fields
         try {
-            const fieldsJson = localStorage.getItem('pivotTableFields');
-            if (fieldsJson) {
-                const fieldsData = JSON.parse(fieldsJson);
-                if (fieldsData && fieldsData.availableFields) {
-                    state.availableFields = fieldsData.availableFields;
-                    console.log("Restored available fields from cache");
+            // First try compressed
+            let fieldsData = null;
+            try {
+                const compressedFields = localStorage.getItem('pivotTableFields_compressed');
+                if (compressedFields) {
+                    const decompressedFields = decompressData(compressedFields);
+                    fieldsData = JSON.parse(decompressedFields);
+                    console.log("Restored compressed fields");
                 }
+            } catch (compressedFieldsError) {
+                console.warn("Error decompressing fields:", compressedFieldsError);
+            }
+            
+            // Fallback to uncompressed
+            if (!fieldsData) {
+                const fieldsJson = localStorage.getItem('pivotTableFields');
+                if (fieldsJson) {
+                    fieldsData = JSON.parse(fieldsJson);
+                    console.log("Restored uncompressed fields");
+                }
+            }
+            
+            if (fieldsData && fieldsData.availableFields) {
+                state.availableFields = fieldsData.availableFields;
+                console.log("Restored available fields from cache");
             }
         } catch (fieldsError) {
             console.warn("Could not restore field configurations:", fieldsError);
@@ -305,13 +304,15 @@ function restoreStateFromCache() {
 
 
 /**
- * Clear all cached data
+ * Clear all cached data including compressed versions
  */
 function clearCache() {
     try {
         // Clear all versions of cache data
         localStorage.removeItem('pivotTableMetadata');
+        localStorage.removeItem('pivotTableMetadata_compressed');
         localStorage.removeItem('pivotTableFields');
+        localStorage.removeItem('pivotTableFields_compressed');
         localStorage.removeItem('pivotTableMinimal');
         console.log("Cache cleared completely");
     } catch (error) {
@@ -321,64 +322,207 @@ function clearCache() {
 
 
 /**
- * Updates table row counts for display
+ * Improved LZW compression algorithm with safeguards against large inputs
+ * @param {string} input - String to compress
+ * @returns {string} - Compressed string (Base64 encoded)
  */
-function updateTableRowCounts() {
-    const counts = {};
+function compressData(input) {
+    if (!input) return "";
     
-    // Count dimensions
-    Object.entries(state.dimensions).forEach(([dimName, data]) => {
-        counts[`dim_${dimName}`] = data ? data.length : 0;
-    });
+    // Add size limit to prevent stack overflow
+    if (input.length > 1000000) {
+        console.warn("Input too large for compression, truncating to prevent overflow");
+        input = input.substring(0, 1000000);
+    }
     
-    // Count fact data
-    counts['fact_bom'] = state.rawFactBOMData ? state.rawFactBOMData.length : 0;
-    
-    // Update UI elements with counts
-    Object.entries(counts).forEach(([table, count]) => {
-        const element = document.getElementById(`${table}Rows`);
-        if (element) {
-            element.textContent = `${count.toLocaleString()} rows`;
+    try {
+        // Dictionary size must be greater than 255
+        const dict = {};
+        const data = (input + "").split("");
+        const out = [];
+        let currChar;
+        let phrase = data[0];
+        let code = 256;
+        
+        for (let i = 1; i < data.length; i++) {
+            currChar = data[i];
+            if (dict[phrase + currChar] !== undefined) {
+                phrase += currChar;
+            } else {
+                out.push(phrase.length > 1 ? dict[phrase] : phrase.charCodeAt(0));
+                dict[phrase + currChar] = code;
+                code++;
+                phrase = currChar;
+            }
         }
         
-        // Also update status indicator
-        const statusElement = document.getElementById(`${table}Status`);
-        if (statusElement) {
-            statusElement.className = 'table-status loaded';
-            statusElement.textContent = 'Loaded';
+        out.push(phrase.length > 1 ? dict[phrase] : phrase.charCodeAt(0));
+        
+        // Convert to a string representation using a safer approach
+        let compressedStr = "";
+        const chunkSize = 8192; // Process in chunks to avoid call stack issues
+        
+        for (let i = 0; i < out.length; i += chunkSize) {
+            const chunk = out.slice(i, i + chunkSize);
+            compressedStr += String.fromCharCode.apply(null, chunk);
         }
-    });
+        
+        // Base64 encode for safer storage
+        return btoa(compressedStr);
+    } catch (e) {
+        console.error("Compression failed:", e);
+        return ""; // Return empty string on failure
+    }
+}
+
+
+
+/**
+ * LZW decompression of compressed string
+ * @param {string} compressed - Compressed string (Base64 encoded)
+ * @returns {string} - Original decompressed string
+ */
+function decompressData(compressed) {
+    if (!compressed) return "";
     
-    console.log("Updated table row counts:", counts);
+    // Base64 decode
+    let input = atob(compressed);
+    
+    // Convert string back to character codes
+    const compressedCodes = [];
+    for (let i = 0; i < input.length; i++) {
+        compressedCodes.push(input.charCodeAt(i));
+    }
+    
+    // Decompress
+    const dict = {};
+    const data = compressedCodes;
+    let currChar = String.fromCharCode(data[0]);
+    let oldPhrase = currChar;
+    const out = [currChar];
+    let code = 256;
+    let phrase;
+    
+    for (let i = 1; i < data.length; i++) {
+        const currCode = data[i];
+        if (currCode < 256) {
+            phrase = String.fromCharCode(currCode);
+        } else {
+            phrase = dict[currCode] ? dict[currCode] : (oldPhrase + currChar);
+        }
+        
+        out.push(phrase);
+        currChar = phrase.charAt(0);
+        dict[code] = oldPhrase + currChar;
+        code++;
+        oldPhrase = phrase;
+    }
+    
+    return out.join("");
+}
+
+
+// For browsers that don't support btoa/atob natively (should be rare)
+if (typeof btoa === 'undefined') {
+    window.btoa = function(str) {
+        return Buffer.from(str, 'binary').toString('base64');
+    };
+}
+
+
+if (typeof atob === 'undefined') {
+    window.atob = function(b64Encoded) {
+        return Buffer.from(b64Encoded, 'base64').toString('binary');
+    };
 }
 
 
 /**
- * Set up detection for state changes that require UI updates
+ * Determine if we should use cached data
+ * @param {Object} files - The loaded files
+ * @returns {Promise<boolean>} - Whether to use cached data
  */
-function setupStateChangeDetection() {
-    // This is a simple polling mechanism to detect state changes
-    // In a more sophisticated app, you might use a Proxy or custom setter methods
+async function shouldUseCache(files) {
+    // Get the last modified times of all files
+    const fileTimePromises = Object.values(files || {}).map(async file => {
+        if (!file) return 0;
+        return file.lastModified;
+    });
     
-    let lastrawFactBOMDataLength = 0;
-    let lastDimensionsCount = 0;
-    
-    // Check state every second
-    setInterval(() => {
-        const currentrawFactBOMDataLength = state.rawFactBOMData ? state.rawFactBOMData.length : 0;
-        const currentDimensionsCount = state.dimensions ? Object.keys(state.dimensions).length : 0;
+    try {
+        const fileTimes = await Promise.all(fileTimePromises);
         
-        // If data has changed, update counts
-        if (currentrawFactBOMDataLength !== lastrawFactBOMDataLength || 
-            currentDimensionsCount !== lastDimensionsCount) {
-            
-            updateTableRowCounts();
-            
-            // Update last values
-            lastrawFactBOMDataLength = currentrawFactBOMDataLength;
-            lastDimensionsCount = currentDimensionsCount;
+        // Get the latest file modification time
+        const latestFileTime = Math.max(...fileTimes.filter(t => t));
+        
+        // Get the cache timestamp
+        let cacheTimestamp = 0;
+        try {
+            const metadataJson = localStorage.getItem('pivotTableMetadata');
+            if (metadataJson) {
+                const metadata = JSON.parse(metadataJson);
+                cacheTimestamp = metadata.timestamp || 0;
+            }
+        } catch (error) {
+            console.warn("Error checking cache timestamp:", error);
+            return false;
         }
-    }, 1000);
+        
+        // Use cache if it's newer than the latest file modification
+        // Also check for a minimum timestamp to avoid using cache from testing
+        const minimumTimestamp = Date.now() - (7 * 24 * 60 * 60 * 1000); // 7 days ago
+        const isCacheNewer = cacheTimestamp > latestFileTime;
+        const isCacheRecent = cacheTimestamp > minimumTimestamp;
+        
+        console.log("Cache evaluation:", {
+            latestFileTime,
+            cacheTimestamp,
+            isCacheNewer,
+            isCacheRecent,
+            useCache: isCacheNewer && isCacheRecent
+        });
+        
+        return isCacheNewer && isCacheRecent;
+    } catch (error) {
+        console.error("Error determining cache usage:", error);
+        return false;
+    }
+}
+
+
+/**
+ * Add debugging commands to the window object for inspecting hierarchies
+ */
+function exposeDebugCommands() {
+    window.debugHierarchies = function() {
+        console.log("===== DEBUGGING ALL HIERARCHIES =====");
+        const hierarchyNames = Object.keys(state.hierarchies || {});
+        console.log(`Found ${hierarchyNames.length} hierarchies: ${hierarchyNames.join(', ')}`);
+        
+        hierarchyNames.forEach(name => {
+            debugHierarchy(name, state);
+        });
+    };
+    
+    window.debugGmidHierarchy = function() {
+        debugHierarchy('gmid_display', state);
+    };
+    
+    window.debugFilters = function() {
+        console.log("===== CURRENT FILTER STATE =====");
+        console.log(state.filters);
+        
+        // Count total selected filters
+        let totalCount = 0;
+        Object.entries(state.filters).forEach(([key, values]) => {
+            // console.log(`${key}: ${values.length} selected`);
+            totalCount += values.length;
+        });
+        
+        console.log(`Total filters: ${totalCount}`);
+    };
+    
+    console.log("Debug commands available: window.debugHierarchies(), window.debugGmidHierarchy(), window.debugFilters()");
 }
 
 
@@ -388,7 +532,7 @@ function setupStateChangeDetection() {
  * @param {string} hierarchyName - Name of the hierarchy (e.g., 'gmid_display')
  * @param {object} state - Application state object containing hierarchies
  */
-function debugHierarchy(hierarchyName) {
+function debugHierarchy(hierarchyName, state) {
     console.log(`======== DEBUGGING ${hierarchyName.toUpperCase()} HIERARCHY ========`);
     
     // 1. Check if hierarchy exists in state
@@ -405,7 +549,7 @@ function debugHierarchy(hierarchyName) {
         return;
     }
     
-    console.log(`Root node found: id=${hierarchy.root.id}, label=${hierarchy.root.label}, expanded=${hierarchy.root.expanded}`);
+    // console.log(`Root node found: id=${hierarchy.root.id}, label=${hierarchy.root.label}, expanded=${hierarchy.root.expanded}`);
     
     // 3. Check nodesMap
     if (!hierarchy.nodesMap) {
@@ -414,7 +558,7 @@ function debugHierarchy(hierarchyName) {
     }
     
     const nodeCount = Object.keys(hierarchy.nodesMap).length;
-    console.log(`Nodes map contains ${nodeCount} nodes`);
+    // console.log(`Nodes map contains ${nodeCount} nodes`);
     
     // 4. Validate expansion states
     console.log("Checking expansion states...");
@@ -446,13 +590,13 @@ function debugHierarchy(hierarchyName) {
         for (let i = 0; i < sampleSize; i++) {
             const child = rootChildren[i];
             if (!child) {
-                console.error(`Child at index ${i} is undefined`);
+                // console.error(`Child at index ${i} is undefined`);
                 continue;
             }
             
             const childNode = hierarchy.nodesMap[child.id || child];
             if (!childNode) {
-                console.error(`Child node ${child.id || child} not found in nodesMap`);
+                // console.error(`Child node ${child.id || child} not found in nodesMap`);
                 continue;
             }
             
@@ -469,82 +613,21 @@ function debugHierarchy(hierarchyName) {
 }
 
 
-/**
- * Add debugging commands to the window object for inspecting hierarchies
- */
-function exposeDebugCommands() {
-    window.debugHierarchies = function() {
-        console.log("===== DEBUGGING ALL HIERARCHIES =====");
-        const hierarchyNames = Object.keys(state.hierarchies || {});
-        console.log(`Found ${hierarchyNames.length} hierarchies: ${hierarchyNames.join(', ')}`);
-        
-        hierarchyNames.forEach(name => {
-            debugHierarchy(name);
-        });
-    };
+// Setup detection of state changes for cached data scenarios
+function setupStateChangeDetection() {
+    // Check every second for state changes
+    const checkInterval = setInterval(() => {
+        const state = window.stateModule?.state;
+        if (state && state.factData && state.dimensions) {
+            updateFileRowCounts();
+            clearInterval(checkInterval); // Stop checking once we have data
+        }
+    }, 1000);
     
-    window.debugGmidHierarchy = function() {
-        debugHierarchy('gmid_display');
-    };
-    
-    window.getDimension = function(dimName) {
-        return getDimensionData(dimName);
-    };
-    
-    window.getrawFactBOMData = function() {
-        return state.rawFactBOMData;
-    };
-    
-    console.log("Debug commands available: window.debugHierarchies(), window.debugGmidHierarchy(), window.getDimension(dimName), window.getrawFactBOMData()");
-}
-
-
-/**
- * Update the list of available tables from the database
- * @param {Array} tables - Array of table names available in the database
- */
-function updateAvailableTables(tables) {
-    if (Array.isArray(tables)) {
-        state.availableTables = tables;
-        console.log(`Updated available tables: ${tables.length} tables found`);
-    }
-}
-
-
-/**
- * Updates the database connection status in the UI
- * @param {boolean} connected - Whether connected to database
- * @param {string} message - Status message
- */
-function updateConnectionStatus(connected, message) {
-    const connectionStatus = document.getElementById('connectionStatus');
-    if (connectionStatus) {
-        connectionStatus.innerHTML = connected ? 
-            `<i class="fas fa-check-circle"></i> ${message || 'Connected to Snowflake database'}` :
-            `<i class="fas fa-times-circle"></i> ${message || 'Not connected to database'}`;
-        
-        connectionStatus.className = `connection-status ${connected ? 'success' : 'error'}`;
-    }
-    
-    // Update state
-    state.database.connected = connected;
-}
-
-
-/**
- * Updates the table status in the UI
- * @param {string} tableName - The table name
- * @param {string} status - Status (loading, loaded, error)
- * @param {string} message - Optional status message
- */
-function updateTableStatus(tableName, status, message) {
-    const normalizedName = tableName.toLowerCase().replace(/[^a-z0-9_]/g, '');
-    const statusElement = document.getElementById(`${normalizedName}Status`);
-    
-    if (statusElement) {
-        statusElement.className = `table-status ${status}`;
-        statusElement.textContent = message || status.charAt(0).toUpperCase() + status.slice(1);
-    }
+    // Stop checking after 30 seconds regardless
+    setTimeout(() => {
+        clearInterval(checkInterval);
+    }, 30000);
 }
 
 
@@ -552,18 +635,12 @@ function updateTableStatus(tableName, status, message) {
 export default {
     state,
     initializeExpandedNodes,
+    compressData,
+    decompressData,
     saveStateToCache,
     restoreStateFromCache,
-    clearCache,
-    updateDatabaseConnection,
-    updateTableRowCounts,
+    shouldUseCache,
+    clearCache, 
     exposeDebugCommands,
-    getDimensionData,
-    getDimensionMapping,
-    isHierarchicalDimension,
-    debugHierarchy,
-    setupStateChangeDetection,
-    updateAvailableTables,
-    updateConnectionStatus,
-    updateTableStatus
+    setupStateChangeDetection
 };

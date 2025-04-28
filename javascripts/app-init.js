@@ -1,4 +1,4 @@
-// This module initializes the application
+// This module initialize the application
 
 // First import the state module since it's needed by all other modules
 import stateModule from './state.js';
@@ -52,9 +52,10 @@ function initializeApp() {
     console.log("Initializing BOM Analysis application...");
         
 
-    // STEP 4: Now we can initialize expanded nodes
+    // STEP 4: Now we can initialize expanded nodes & filter system
     try{
         core.initializeExpandedNodes();
+        filters.initializeFilterSystem();
     } catch (expandError)
     {
         console.error("Error initializing expanded nodes:", expandError);
@@ -109,7 +110,11 @@ function initializeApp() {
 
 
     // STEP 11: Initialize filters
-    filters.initializeFilterSystem();
+    // setTimeout(() => {
+    //     if (filters && filters.initializeFilters) {
+    //         filters.initializeFilters();
+    //     }
+    // }, 1000);
     
 
     // STEP 12: Set up tab switching
@@ -151,6 +156,16 @@ function initializeApp() {
         if (!elements.pivotTableHeader || !elements.pivotTableBody) {
             console.error("Pivot table elements not found!");
             return;
+        }
+        
+        // Apply filters if we have any active
+        const hasActiveFilters = state.filters && 
+            Object.values(state.filters).some(filter => filter && filter.length > 0);
+        
+        if (hasActiveFilters && data.preFilterData) {
+            // Use filtered data for pivot table generation
+            const filteredData = data.preFilterData(state.factData);
+            state.filteredData = filteredData;
         }
         
         // Refresh the pivot table

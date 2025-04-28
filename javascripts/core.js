@@ -1,3 +1,4 @@
+
 // This module now focuses only on core app functionality. There is no direct imports of other app modules to avoid circular dependencies
 
 const core = {
@@ -18,22 +19,14 @@ const core = {
      */
     getDomElements: function() {
         return {
-            // Database connection elements
-            connectionStatus: document.getElementById('connectionStatus'),
-            loadDataBtn: document.getElementById('loadDataBtn'),
-            reconnectBtn: document.getElementById('reconnectBtn'),
-            
-            // Table status indicators
-            // dimLegalEntityStatus: document.getElementById('dimLegalEntityStatus'),
-            // factBOMStatus: document.getElementById('factBOMStatus'),
-            // dimCostElementStatus: document.getElementById('dimCostElementStatus'),
-            // dimGMIDDisplayStatus: document.getElementById('dimGMIDDisplayStatus'),
-            // dimSmartCodeStatus: document.getElementById('dimSmartCodeStatus'),
-            // dimItemCostTypeStatus: document.getElementById('dimItemCostTypeStatus'),
-            // dimMaterialTypeStatus: document.getElementById('dimMaterialTypeStatus'),
+            // Directory picker
+            selectDirectoryBtn: document.getElementById('selectDirectoryBtn'),
+            directoryPath: document.getElementById('directoryPath'),
+            fileList: document.getElementById('fileList'),
             
             // App sections
             appContent: document.getElementById('appContent'),
+            fallbackUpload: document.getElementById('fallbackUpload'),
             loadingIndicator: document.getElementById('loadingIndicator'),
             
             // Tabs and content
@@ -49,12 +42,7 @@ const core = {
             
             // Pivot table
             pivotTableHeader: document.getElementById('pivotTableHeader'),
-            pivotTableBody: document.getElementById('pivotTableBody'),
-            
-            // Buttons
-            processFilesBtn: document.getElementById('processFilesBtn'),
-            uploadStatus: document.getElementById('uploadStatus'),
-            refreshButton: document.getElementById('refreshBtn')
+            pivotTableBody: document.getElementById('pivotTableBody')
         };
     },
 
@@ -85,6 +73,22 @@ const core = {
             smartcode: {
                 row: { 'ROOT': true },
                 column: { 'ROOT': true }
+            },
+            mc: {
+                row: { 'ROOT': true },
+                column: { 'ROOT': true }
+            },
+            year: {
+                row: { 'ROOT': true },
+                column: { 'ROOT': true }
+            },
+            item_cost_type: {
+                row: { 'ROOT': true },
+                column: { 'ROOT': true }
+            },
+            material_type: {
+                row: { 'ROOT': true },
+                column: { 'ROOT': true }
             }
         };
     
@@ -94,21 +98,6 @@ const core = {
                 const hierarchy = this.state.hierarchies[hierarchyName];
                 if (hierarchy && hierarchy.root) {
                     hierarchy.root.expanded = true;
-                    
-                    // Additionally expand first level children for cost_element hierarchy
-                    if (hierarchyName === 'cost_element' && hierarchy.root.children) {
-                        hierarchy.root.children.forEach(child => {
-                            const childId = typeof child === 'string' ? child : child.id;
-                            if (childId && hierarchy.nodesMap[childId]) {
-                                // Set the child node's expanded property to true
-                                hierarchy.nodesMap[childId].expanded = false;
-                                
-                                // Update the expandedNodes state tracking
-                                this.state.expandedNodes.cost_element.row[childId] = true;
-                                this.state.expandedNodes.cost_element.column[childId] = true;
-                            }
-                        });
-                    }
                 }
             });
         }
@@ -125,7 +114,7 @@ const core = {
     debugLog: function(message, object) {
         console.log(`DEBUG: ${message}`, object);
     },
-    
+
     /**
      * Update the application UI based on the connection status
      * @param {boolean} connected - Whether connected to database
