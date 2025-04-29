@@ -2,7 +2,7 @@
 import stateModule from './state.js';
 import ui from './ui.js'
 import filters from './filters.js';
-import pivotTable from './pivot-table.js';
+import pivotTable from './pivotTableEnhanced.js';
 
 
 // Get reference to application state

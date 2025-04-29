@@ -4,7 +4,7 @@
 import stateModule from './state.js';
 
 // Then import other modules
-import pivotTable from './pivot-table.js';
+import pivotTable from './pivotTableEnhanced.js';
 import core from './core.js';
 import data from './data.js';
 import filters from './filters.js';
