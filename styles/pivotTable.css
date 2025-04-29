@@ -358,3 +358,9 @@ th.cost-unit-header {
     text-align: center;
     border-bottom: 2px solid var(--primary-light);
 }
+
+/* Hide the Total column in the regular header and data rows, but not in the measure header row */
+.pivot-table-container table tbody tr td:nth-child(2),
+.pivot-table-container table thead tr:not(.measure-header-row) th:nth-child(2) {
+    display: none;
+}
