@@ -2703,3 +2703,10 @@ th.value-header {
         max-height: 50vh;
     }
 }
+
+/* not droppable element */
+.not-draggable {
+    opacity: 0.5;
+    cursor: not-allowed !important;
+    pointer-events: none;
+}

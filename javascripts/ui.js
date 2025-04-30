@@ -1,4 +1,3 @@
-
 // This module handles ui-centric tasks
 
 // Import signature
@@ -67,11 +66,19 @@ function renderAvailableFields(elements) {
             const fieldEl = document.createElement('div');
             // Set classes based on field type and hierarchical status
             fieldEl.className = `field dimension-field${field.hierarchical ? ' hierarchical' : ''}`;
-            fieldEl.setAttribute('draggable', 'true');
+            
+            // Only allow drag if the field can go in at least one dimension zone
+            const canDrag = field.draggableTo && (
+                field.draggableTo.includes('row') ||
+                field.draggableTo.includes('column') ||
+                field.draggableTo.includes('filter')
+            );
+            fieldEl.setAttribute('draggable', canDrag ? 'true' : 'false');
             fieldEl.setAttribute('data-field', field.id);
             fieldEl.setAttribute('data-type', field.type);
             fieldEl.setAttribute('data-hierarchical', field.hierarchical ? 'true' : 'false');
             fieldEl.setAttribute('data-draggable-to', field.draggableTo.join(','));
+            if (!canDrag) fieldEl.classList.add('not-draggable');
             
             // Create and add field label
             const fieldContent = document.createElement('span');
@@ -104,10 +111,14 @@ function renderAvailableFields(elements) {
         factFields.forEach(field => {
             const fieldEl = document.createElement('div');
             fieldEl.className = 'field fact-field';
-            fieldEl.setAttribute('draggable', 'true');
+            
+            // Only allow drag if the field can go in valueFields
+            const canDrag = field.draggableTo && field.draggableTo.includes('value');
+            fieldEl.setAttribute('draggable', canDrag ? 'true' : 'false');
             fieldEl.setAttribute('data-field', field.id);
             fieldEl.setAttribute('data-type', field.type);
             fieldEl.setAttribute('data-draggable-to', field.draggableTo.join(','));
+            if (!canDrag) fieldEl.classList.add('not-draggable');
             
             // Add measure name attribute if available
             if (field.measureName) {
@@ -584,8 +595,7 @@ function enhanceDragDropReordering() {
         document.getElementById('rowFields'),
         document.getElementById('columnFields'),
         document.getElementById('valueFields'),
-        document.getElementById('filterFields'),
-        document.getElementById('availableFields')
+        document.getElementById('filterFields')
     ];
     
     // Add dragover event listeners to each container for reordering
@@ -697,36 +707,51 @@ function getDropTarget(element) {
  */
 function handleDragOver(e) {
     const dropTarget = getDropTarget(e.target);
-    
+
     if (dropTarget) {
         const targetId = dropTarget.id;
         const dataTransfer = e.dataTransfer;
-        
-        // We can't access the dataTransfer data during dragover due to security
-        // So we check based on className or other visible attributes
+
         let dropAllowed = false;
-        
-        // Always allow dropping back to available fields
+
+        // Always allow dropping back to available fields (but only in correct section)
         if (targetId === 'availableFields') {
-            dropAllowed = true;
-        } 
-        // Allow dropping into appropriate zones based on element class
-        else if (e.target.classList) {
-            if ((targetId === 'rowFields' || 
-                 targetId === 'columnFields' || 
-                 targetId === 'filterFields') && 
-                dataTransfer.effectAllowed === 'move') {
-                dropAllowed = true;
-            } 
-            else if (targetId === 'valueFields' && 
-                     dataTransfer.effectAllowed === 'move') {
-                dropAllowed = true;
+            const dragging = document.querySelector('.dragging');
+            if (dragging) {
+                const fieldType = dragging.getAttribute('data-type');
+                if (fieldType === 'dimension' && e.target.closest('.field-category-header')?.textContent === 'Dimensions') {
+                    dropAllowed = true;
+                } else if (fieldType === 'fact' && e.target.closest('.field-category-header')?.textContent === 'Measures') {
+                    dropAllowed = true;
+                }
+            }
+        } else {
+            const dragging = document.querySelector('.dragging');
+            let fieldType = null;
+            if (dragging) {
+                fieldType = dragging.getAttribute('data-type');
+            }
+            if (targetId === 'valueFields') {
+                if (fieldType === 'fact') {
+                    dropAllowed = true;
+                }
+            } else if (
+                targetId === 'rowFields' ||
+                targetId === 'columnFields' ||
+                targetId === 'filterFields'
+            ) {
+                if (fieldType === 'dimension') {
+                    dropAllowed = true;
+                }
             }
         }
-        
+
         if (dropAllowed) {
             e.preventDefault();
             dataTransfer.dropEffect = 'move';
+        } else {
+            // Explicitly block forbidden drop
+            dataTransfer.dropEffect = 'none';
         }
     }
 }
@@ -741,20 +766,25 @@ function handleDragOver(e) {
  */
 function handleDrop(e) {
     e.preventDefault();
-    
-    // Find the drop target (the container)
+
     const dropTarget = getDropTarget(e.target);
-    
     if (!dropTarget) return;
-    
-    // Get field data from dataTransfer
+
     const fieldId = e.dataTransfer.getData('field');
     const fieldType = e.dataTransfer.getData('type');
     const isHierarchical = e.dataTransfer.getData('hierarchical') === 'true';
     const draggableTo = (e.dataTransfer.getData('draggableTo') || '').split(',');
     const sourceContainer = e.dataTransfer.getData('source');
     const targetContainer = dropTarget.id;
-    
+
+    // Strict control: dimensions only in row/column/filter, measures only in valueFields
+    if (
+        (targetContainer === 'valueFields' && fieldType !== 'fact') ||
+        ((targetContainer === 'rowFields' || targetContainer === 'columnFields' || targetContainer === 'filterFields') && fieldType !== 'dimension')
+    ) {
+        return;
+    }
+
     // Check if drop is allowed based on field type and target zone
     let dropAllowed = false;
     
