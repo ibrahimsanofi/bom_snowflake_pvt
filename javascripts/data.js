@@ -335,6 +335,11 @@ async function ingestData(elements, selectedFact = 'FACT_BOM') {
                 draggableTo: ['value']
             });
         });
+
+        // Handling root gmid filter bit here
+        if (state.dimensions.gmid_display) {
+            initializeRootGmidFilter(state.dimensions.gmid_display);
+        }
         
         // 6. Process dimension data to build hierarchies
         try {
@@ -391,44 +396,6 @@ async function ingestData(elements, selectedFact = 'FACT_BOM') {
     }
 }
 
-
-// window.generatePivotTable = function() {
-//     console.log("PIVOT GEN START - Original factData length:", stateModule.state.factData.length);
-    
-//     // Are we using filtered data?
-//     if (stateModule.state.filteredData && stateModule.state.filteredData.length > 0) {
-//         console.log("Using filteredData with length:", stateModule.state.filteredData.length);
-        
-//         // Check data types in filtered data
-//         if (stateModule.state.filteredData.length > 0) {
-//             const sample = stateModule.state.filteredData[0];
-//             console.log("COST_UNIT type check:", {
-//                 value: sample.COST_UNIT,
-//                 type: typeof sample.COST_UNIT
-//             });
-//         }
-        
-//         // Store original factData reference (not just length)
-//         const originalFactData = stateModule.state.factData;
-        
-//         // Replace factData with filteredData
-//         stateModule.state.factData = stateModule.state.filteredData;
-        
-//         // Generate pivot table
-//         console.log("Calling pivotTable.generatePivotTable with filtered data");
-//         pivotTable.generatePivotTable();
-        
-//         // Restore original factData
-//         console.log("Restoring original factData");
-//         stateModule.state.factData = originalFactData;
-//     } else {
-//         // Generate pivot table with original data
-//         console.log("Using original factData");
-//         pivotTable.generatePivotTable();
-//     }
-    
-//     console.log("PIVOT GEN COMPLETE");
-// };
 
 window.generatePivotTable = function() {
     console.log("PIVOT GEN START - Original factData length:", stateModule.state.factData.length);
@@ -2261,27 +2228,68 @@ function buildItemCostTypeHierarchy(data) {
     // Map to store all nodes by their ID for quick lookup
     const nodesMap = { 'ITEM_COST_TYPE_ROOT': root };
     
-    // Process each ITEM_COST_TYPE record
-    const uniqueCostTypes = new Set();
+    // Get unique material types from dimension data
+    const itemCostTypeMap = new Map();
+    
     data.forEach(item => {
-        if (!item.ITEM_COST_TYPE) return;
-        uniqueCostTypes.add(item.ITEM_COST_TYPE);
+        if (item && item.ITEM_COST_TYPE !== undefined) {
+            // Use description as label
+            const description = item.ITEM_COST_TYPE_DESC;
+            
+            // Store the material type and its description
+            itemCostTypeMap.set(item.ITEM_COST_TYPE, description);
+        }
     });
+
+    // Process each ITEM_COST_TYPE record
+    // const uniqueCostTypes = new Set();
+    // data.forEach(item => {
+    //     if (!item.ITEM_COST_TYPE) return;
+    //     uniqueCostTypes.add(item.ITEM_COST_TYPE);
+    // });
     
     // Create nodes for each cost type
-    uniqueCostTypes.forEach(costType => {
-        const nodeId = `ITEM_COST_TYPE_${costType}`;
+    // uniqueCostTypes.forEach(costType => {
+    //     const nodeId = `ITEM_COST_TYPE_${costType}`;
+    //     const nodeLabel = getItemCostTypeLabel(data, costType);
+
+    //     const node = {
+    //         id: nodeId,
+    //         label: nodeLabel,
+    //         children: [],
+    //         level: 1,
+    //         expanded: false,
+    //         isLeaf: true,
+    //         hasChildren: false,
+    //         path: ['ITEM_COST_TYPE_ROOT', nodeId],
+    //         factId: costType
+    //     };
+        
+    //     // Add to maps
+    //     nodesMap[nodeId] = node;
+        
+    //     // Add as child to root
+    //     root.children.push(nodeId);
+    //     root.hasChildren = true;
+    // });
+
+    itemCostTypeMap.forEach((description, itemCostTypeCode) => {
+        // Handle null values
+        const safeCode = itemCostTypeCode === null ? 'null' : itemCostTypeCode;
+        const nodeId = `ITEM_COST__TYPE_${safeCode}`;
         
         const node = {
             id: nodeId,
-            label: costType,
+            label: description || 'null',
+            itemCostTypeCode: itemCostTypeCode,
             children: [],
             level: 1,
             expanded: false,
             isLeaf: true,
             hasChildren: false,
             path: ['ITEM_COST_TYPE_ROOT', nodeId],
-            factId: costType
+            factId: itemCostTypeCode,
+            hierarchyName: 'item_cost_type'
         };
         
         // Add to maps
@@ -2308,13 +2316,14 @@ function buildItemCostTypeHierarchy(data) {
     };
 }
 
-function buildMaterialTypeHierarchy(materialTypeData) {
-    console.log(`Processing ${materialTypeData ? materialTypeData.length : 0} rows of MATERIAL_TYPE data...`);
+
+function buildMaterialTypeHierarchy(data) {
+    console.log(`Processing ${data ? data.length : 0} rows of MATERIAL_TYPE data...`);
     
     // Safety check
-    if (!materialTypeData || materialTypeData.length === 0) {
+    if (!data || data.length === 0) {
         console.warn("No material type data provided");
-        materialTypeData = [];
+        data = [];
     }
     
     // Create root node
@@ -2336,7 +2345,7 @@ function buildMaterialTypeHierarchy(materialTypeData) {
     // Get unique material types from dimension data
     const materialTypeMap = new Map();
     
-    materialTypeData.forEach(item => {
+    data.forEach(item => {
         if (item && item.MATERIAL_TYPE !== undefined) {
             // Use description as label if available, otherwise use the code
             const description = item.MATERIAL_TYPE_DESC || item.MATERIAL_TYPE;
@@ -2349,22 +2358,22 @@ function buildMaterialTypeHierarchy(materialTypeData) {
     console.log(`Found ${materialTypeMap.size} unique material types in dimension data`);
     
     // If no material types found in dimension data, try to get them from fact data
-    if (materialTypeMap.size === 0 && state.factData) {
-        console.log("No material types found in dimension data, using fact data");
+    // if (materialTypeMap.size === 0 && state.factData) {
+    //     console.log("No material types found in dimension data, using fact data");
         
-        const uniqueMaterialTypes = new Set();
-        state.factData.forEach(record => {
-            if (record && record.COMPONENT_MATERIAL_TYPE !== undefined) {
-                uniqueMaterialTypes.add(record.COMPONENT_MATERIAL_TYPE);
-            }
-        });
+    //     const uniqueMaterialTypes = new Set();
+    //     state.factData.forEach(record => {
+    //         if (record && record.COMPONENT_MATERIAL_TYPE !== undefined) {
+    //             uniqueMaterialTypes.add(record.COMPONENT_MATERIAL_TYPE);
+    //         }
+    //     });
         
-        console.log(`Found ${uniqueMaterialTypes.size} unique material types in fact data`);
+    //     console.log(`Found ${uniqueMaterialTypes.size} unique material types in fact data`);
         
-        uniqueMaterialTypes.forEach(mt => {
-            materialTypeMap.set(mt, mt); // Use code as description
-        });
-    }
+    //     uniqueMaterialTypes.forEach(mt => {
+    //         materialTypeMap.set(mt, mt); // Use code as description
+    //     });
+    // }
     
     // Create nodes for each material type
     materialTypeMap.forEach((description, materialTypeCode) => {
@@ -2399,10 +2408,9 @@ function buildMaterialTypeHierarchy(materialTypeData) {
     return {
         root: root,
         nodesMap: nodesMap,
-        flatData: materialTypeData
+        flatData: data
     };
 }
-
 
 function buildBusinessYearHierarchy(data) {
     console.log("Building YEAR hierarchy");
@@ -2476,7 +2484,6 @@ function buildBusinessYearHierarchy(data) {
 }
 
 
-
 /**
  * Builds a hierarchy for cost elements from dimension data
  * Uses PATH column to build the hierarchy structure
@@ -2497,7 +2504,6 @@ function buildCostElementHierarchy(data) {
         pathSeparator: '//'
     });
 }
-
 
 
 function diagnoseDimGmidData(data) {
@@ -3049,7 +3055,8 @@ function filterRecordsByLeHierarchy(records, leCode) {
  * @returns {Object} - Object containing root node, nodesMap, and original data
  */
 function buildGmidDisplayHierarchy(data) {
-    console.log("Processing GMID display hierarchy from DIM_GMID_DISPLAY data...");
+    // console.log("Processing GMID display hierarchy from DIM_GMID_DISPLAY data...");
+    console.log(`Building GMID display hierarchy from ${data ? data.length : 0} dimension records...`);
     
     // Ensure data is an array
     if (!data || !Array.isArray(data)) {
@@ -3071,6 +3078,21 @@ function buildGmidDisplayHierarchy(data) {
                 DISPLAY: simplified.DISPLAY
             };
         }));
+    }
+
+    // Filter root gmid here before hierarchy is built
+    // Filter data to include ONLY the selected ROOT_GMIDs
+    if (state.selectedRootGmids && state.selectedRootGmids.length > 0 && 
+        state.rootGmids && state.selectedRootGmids.length < state.rootGmids.length) {
+        
+        console.log(`Filtering GMID data to include only ${state.selectedRootGmids.length} selected ROOT_GMIDs`);
+        
+        // Keep only records where ROOT_GMID is in the selected list
+        data = data.filter(item => 
+            item.ROOT_GMID && state.selectedRootGmids.includes(item.ROOT_GMID)
+        );
+        
+        console.log(`Filtered to ${data.length} GMID records`);
     }
     
     // Create root node
@@ -3823,11 +3845,11 @@ function buildItemCostTypeMapping(itemCostTypeData, bomData) {
 
 /**
  * Builds mapping between DIM_MATERIAL_TYPE and FACT_BOM
- * @param {Array} materialTypeData - Material type dimension data
+ * @param {Array} data - Material type dimension data
  * @param {Array} bomData - BOM fact data
  * @returns {Object} - Mapping object
  */
-function buildMaterialTypeMapping(materialTypeData, bomData) {
+function buildMaterialTypeMapping(data, bomData) {
     console.log("Building MATERIAL_TYPE mapping");
     
     // Create mapping object
@@ -3843,8 +3865,8 @@ function buildMaterialTypeMapping(materialTypeData, bomData) {
     };
     
     // Build the mappings from dimension data
-    if (materialTypeData && materialTypeData.length > 0) {
-        materialTypeData.forEach(row => {
+    if (data && data.length > 0) {
+        data.forEach(row => {
             if (row.MATERIAL_TYPE) {
                 // Store material type details
                 mapping.materialTypeToDetails[row.MATERIAL_TYPE] = {
@@ -4407,6 +4429,374 @@ function preFilterData(originalData) {
 }
 
 
+/**
+ * Initialize Root GMID filter dropdown with checkbox-based UI
+ * @param {Array} gmidDisplayData - The GMID display dimension data
+ */
+function initializeRootGmidFilter(gmidDisplayData) {
+    console.log("Initializing improved Root GMID filter dropdown");
+    
+    // Extract unique ROOT_GMID values
+    const uniqueRootGmids = new Set();
+    
+    if (gmidDisplayData && gmidDisplayData.length > 0) {
+      gmidDisplayData.forEach(item => {
+        if (item.ROOT_GMID) {
+          uniqueRootGmids.add(item.ROOT_GMID);
+        }
+      });
+    }
+    
+    // Convert to array and sort
+    const rootGmids = Array.from(uniqueRootGmids).sort();
+    
+    // Store in state for reference
+    state.rootGmids = rootGmids;
+    console.log(`Found ${rootGmids.length} unique ROOT_GMID values`);
+    
+    // Initialize state.selectedRootGmids with all ROOT_GMIDs initially
+    state.selectedRootGmids = [...rootGmids];
+    
+    // Get the checkbox list container
+    const checkboxList = document.getElementById('rootGmidCheckboxList');
+    if (!checkboxList) {
+      console.error("Root GMID checkbox list element not found");
+      return;
+    }
+    
+    // Clear existing options
+    checkboxList.innerHTML = '';
+    
+    // Populate checkbox list
+    rootGmids.forEach(gmid => {
+      const checkboxOption = document.createElement('div');
+      checkboxOption.className = 'checkbox-option';
+      
+      const label = document.createElement('label');
+      
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.value = gmid;
+      checkbox.checked = true; // All checked by default
+      checkbox.dataset.gmid = gmid;
+      
+      const span = document.createElement('span');
+      span.textContent = gmid;
+      
+      label.appendChild(checkbox);
+      label.appendChild(span);
+      checkboxOption.appendChild(label);
+      checkboxList.appendChild(checkboxOption);
+      
+      // Add event listener to each checkbox
+      checkbox.addEventListener('change', function() {
+        updateSelectionText();
+      });
+    });
+    
+    // Initialize multiselect dropdown behavior
+    const dropdownControls = initializeMultiselectDropdown();
+    
+    // Apply button handler
+    const applyBtn = document.getElementById('applyRootGmidBtn');
+    if (applyBtn) {
+    applyBtn.addEventListener('click', applyRootGmidFilter);
+    }
+    
+    console.log("Improved Root GMID filter initialized");
+  }
+
+
+
+/**
+ * Initialize multiselect dropdown UI behaviors
+ * @returns {Object} Object with utility functions
+ */
+function initializeMultiselectDropdown() {
+    const multiselectButton = document.querySelector('.multiselect-button');
+    const multiselectDropdown = document.querySelector('.multiselect-dropdown');
+    const checkboxList = document.getElementById('rootGmidCheckboxList');
+    const selectAllBtn = document.querySelector('.select-all-btn');
+    const clearAllBtn = document.querySelector('.clear-all-btn');
+    const searchInput = document.querySelector('.search-input');
+    const selectionText = document.querySelector('.selection-text');
+    
+    // Toggle dropdown
+    multiselectButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      multiselectDropdown.classList.toggle('open');
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!multiselectDropdown.contains(e.target)) {
+        multiselectDropdown.classList.remove('open');
+      }
+    });
+    
+    // Prevent dropdown from closing when clicking inside
+    checkboxList.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+    
+    // Select all button
+    selectAllBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = true;
+      });
+      updateSelectionText();
+    });
+    
+    // Clear all button
+    clearAllBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+      });
+      updateSelectionText();
+    });
+    
+    // Search functionality
+    searchInput.addEventListener('input', (e) => {
+      const searchTerm = e.target.value.toLowerCase();
+      const options = checkboxList.querySelectorAll('.checkbox-option');
+      
+      options.forEach(option => {
+        const text = option.textContent.toLowerCase();
+        if (text.includes(searchTerm)) {
+          option.style.display = 'block';
+        } else {
+          option.style.display = 'none';
+        }
+      });
+    });
+    
+    // Initialize selection text
+    updateSelectionText();
+    
+    return {
+      updateSelectionText
+    };
+  }
+  
+  /**
+   * Update the selection text in the dropdown button
+   */
+  function updateSelectionText() {
+    const selectionText = document.querySelector('.selection-text');
+    if (!selectionText) return;
+    
+    const checkboxList = document.getElementById('rootGmidCheckboxList');
+    const checkedBoxes = checkboxList.querySelectorAll('input[type="checkbox"]:checked');
+    const totalBoxes = checkboxList.querySelectorAll('input[type="checkbox"]');
+    
+    if (checkedBoxes.length === 0) {
+      selectionText.textContent = 'Select Root GMIDs';
+    } else if (checkedBoxes.length === totalBoxes.length) {
+      selectionText.textContent = 'All Root GMIDs selected';
+    } else {
+      selectionText.innerHTML = `${checkedBoxes.length} selected <span class="selection-count">${checkedBoxes.length}/${totalBoxes.length}</span>`;
+    }
+  }
+  
+/**
+ * Update the selectedRootGmids array in the state based on checked checkboxes
+ */
+function updateSelectedRootGmids() {
+    const checkboxList = document.getElementById('rootGmidCheckboxList');
+    if (!checkboxList) return;
+
+    const checkedBoxes = checkboxList.querySelectorAll('input[type="checkbox"]:checked');
+
+    // Update selectedRootGmids with the values from checked checkboxes
+    state.selectedRootGmids = Array.from(checkedBoxes).map(checkbox => checkbox.value);
+
+    console.log(`Selected ${state.selectedRootGmids.length} ROOT_GMIDs`);
+
+    // Filter fact data based on selected ROOT_GMIDs
+    filterFactDataByRootGmids();
+}
+
+
+/**
+ * Filter FACT_BOM data based on selected ROOT_GMIDs
+ * This function should be called whenever selectedRootGmids changes
+ */
+function filterFactDataByRootGmids() {
+    console.log("Filtering FACT_BOM data by selected ROOT_GMIDs");
+
+    // Skip if no fact data or no selected ROOT_GMIDs
+    if (!state.factData || !state.factData.length || 
+        !state.selectedRootGmids || !state.selectedRootGmids.length) {
+        console.log("No filtering needed: missing data or no selections");
+        state.filteredFactData = null;
+        return;
+    }
+
+    // Skip if all ROOT_GMIDs are selected
+    if (state.rootGmids && state.selectedRootGmids.length === state.rootGmids.length) {
+        console.log("All ROOT_GMIDs selected, using original data");
+        state.filteredFactData = null;
+        return;
+    }
+
+    console.time('FilterFactData');
+    console.log(`Filtering ${state.factData.length} FACT_BOM records by ${state.selectedRootGmids.length} ROOT_GMIDs`);
+
+    // Filter the fact data to only include records with selected ROOT_GMIDs
+    state.filteredFactData = state.factData.filter(record => 
+        record.ROOT_GMID && state.selectedRootGmids.includes(record.ROOT_GMID)
+    );
+
+    console.log(`Filtered FACT_BOM data: ${state.factData.length} -> ${state.filteredFactData.length} records`);
+    console.timeEnd('FilterFactData');
+}
+
+
+/**
+ * Intercept generatePivotTable to use filtered fact data
+ * Add this to the Apply button click handler in initializeRootGmidFilter
+ */
+function setupFactDataInterception() {
+    // Store the original generatePivotTable function
+    if (!window.originalGeneratePivotTable && window.generatePivotTable) {
+      window.originalGeneratePivotTable = window.generatePivotTable;
+      
+      // Replace with our intercepting function
+      window.generatePivotTable = function() {
+        console.log("Intercepted generatePivotTable call to ensure filtered data is used");
+        
+        // Check if we have filtered data available
+        if (state.filteredFactData && state.filteredFactData.length > 0) {
+          console.log(`Using filtered data: ${state.filteredFactData.length} records`);
+          
+          // Store the original factData temporarily
+          const originalFactData = state.factData;
+          
+          // Replace with filtered data
+          state.factData = state.filteredFactData;
+          
+          // Call the original function
+          const result = window.originalGeneratePivotTable();
+          
+          // Restore original data
+          state.factData = originalFactData;
+          
+          return result;
+        } else {
+          console.log(`Using original data: ${state.factData.length} records`);
+          return window.originalGeneratePivotTable();
+        }
+      };
+      
+      console.log("Successfully intercepted pivot table generation");
+    }
+  }
+
+
+/**
+ * Update the applyRootGmidFilter function to handle both filtering
+ */
+function applyRootGmidFilter() {
+    // Update the selected ROOT_GMIDs
+    updateSelectedRootGmids();
+    
+    // Filter fact data based on selected ROOT_GMIDs
+    filterFactDataByRootGmids();
+    
+    // Rebuild GMID hierarchy based on filtered dimension data
+    const hierarchyRebuilt = rebuildGmidDisplayHierarchy();
+    
+    // Make sure interception is set up
+    setupFactDataInterception();
+    
+    // Refresh pivot table
+    if (window.generatePivotTable && typeof window.generatePivotTable === 'function') {
+        window.generatePivotTable();
+    }
+    
+    // Close dropdown
+    document.querySelector('.multiselect-dropdown').classList.remove('open');
+    
+    // Log information
+    console.log(`Applied filter with ${state.selectedRootGmids.length} selected ROOT_GMIDs`);
+    console.log(`Hierarchy was ${hierarchyRebuilt ? 'rebuilt' : 'not rebuilt'}`);
+    
+    // If the filteredFactData is null (all ROOT_GMIDs selected), restore original hierarchy
+    if (!state.filteredFactData && state._originalGmidHierarchy) {
+        restoreOriginalGmidHierarchy();
+    }
+  }
+
+
+  /**
+ * Rebuild the GMID display hierarchy based on selected ROOT_GMIDs
+ * This ensures both the hierarchy and fact data are filtered
+ */
+function rebuildGmidDisplayHierarchy() {
+    console.log("Rebuilding GMID display hierarchy based on selected ROOT_GMIDs");
+    
+    // Skip if no dimension data or no selected ROOT_GMIDs
+    if (!state.dimensions.gmid_display || !state.dimensions.gmid_display.length || 
+        !state.selectedRootGmids || !state.selectedRootGmids.length) {
+      console.log("Cannot rebuild hierarchy: missing data or no selections");
+      return false;
+    }
+    
+    // Skip if all ROOT_GMIDs are selected - no need to rebuild
+    if (state.rootGmids && state.selectedRootGmids.length === state.rootGmids.length) {
+      console.log("All ROOT_GMIDs selected, using original hierarchy");
+      return false;
+    }
+    
+    console.time('RebuildHierarchy');
+    
+    // Get the original dimension data
+    const originalDimData = state.dimensions.gmid_display;
+    console.log(`Filtering ${originalDimData.length} GMID dimension records by ${state.selectedRootGmids.length} ROOT_GMIDs`);
+    
+    // Filter dimension data based on selected ROOT_GMIDs
+    const filteredDimData = originalDimData.filter(item => 
+      item.ROOT_GMID && state.selectedRootGmids.includes(item.ROOT_GMID)
+    );
+    
+    console.log(`Filtered GMID dimension data: ${originalDimData.length} -> ${filteredDimData.length} records`);
+    
+    // Temporarily store original hierarchy
+    const originalHierarchy = state.hierarchies.gmid_display;
+    
+    // Build new hierarchy using filtered dimension data
+    state.hierarchies.gmid_display = buildGmidDisplayHierarchy(filteredDimData);
+    
+    console.log(`Rebuilt GMID hierarchy with filtered data (${filteredDimData.length} records)`);
+    
+    // Store a reference to the filtered/rebuilt hierarchy for restoration if needed
+    state._filteredGmidHierarchy = state.hierarchies.gmid_display;
+    state._originalGmidHierarchy = originalHierarchy;
+    
+    console.timeEnd('RebuildHierarchy');
+    return true;
+  }
+
+
+/**
+ * Restore the original GMID hierarchy if needed
+ */
+function restoreOriginalGmidHierarchy() {
+    if (state._originalGmidHierarchy) {
+      console.log("Restoring original GMID hierarchy");
+      state.hierarchies.gmid_display = state._originalGmidHierarchy;
+      return true;
+    }
+    return false;
+  }
+
+
+
+
 // Export signature
 export default {
     // Data processing
@@ -4462,6 +4852,10 @@ export default {
     diagnoseDimGmidData,
     ingestData,
     processHierarchicalFields,
-    preFilterData
+    preFilterData,
+
+    // root gmid filter
+    initializeRootGmidFilter,
+    updateSelectedRootGmids
 
   };

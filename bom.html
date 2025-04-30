@@ -43,6 +43,172 @@
             color: #d32f2f !important;
         }
     </style>
+    <!-- CSS for improved multiselect dropdown -->
+    <style>
+        .connection-actions {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          width: 100%;
+        }
+        
+        .left-buttons {
+          display: flex;
+          gap: 10px;
+        }
+        
+        .root-gmid-control {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+        
+        .filter-label {
+          font-weight: 500;
+          white-space: nowrap;
+        }
+        
+        .multiselect-dropdown {
+          position: relative;
+          min-width: 200px;
+        }
+        
+        .multiselect-button {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          width: 100%;
+          padding: 8px 12px;
+          background-color: #fff;
+          border: 1px solid #ccc;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 14px;
+          height: 36px;
+          text-align: left;
+        }
+        
+        .multiselect-button:hover {
+          border-color: #999;
+        }
+        
+        .multiselect-button .fa-chevron-down {
+          margin-left: 8px;
+          transition: transform 0.2s;
+        }
+        
+        .multiselect-dropdown.open .fa-chevron-down {
+          transform: rotate(180deg);
+        }
+        
+        .multiselect-dropdown-content {
+          display: none;
+          position: absolute;
+          top: calc(100% + 5px);
+          left: 0;
+          right: 0;
+          background-color: #fff;
+          border: 1px solid #ccc;
+          border-radius: 4px;
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+          z-index: 1000;
+          max-height: 300px;
+          overflow-y: auto;
+        }
+        
+        .multiselect-dropdown.open .multiselect-dropdown-content {
+          display: block;
+        }
+        
+        .search-container {
+          padding: 8px;
+          border-bottom: 1px solid #eee;
+        }
+        
+        .search-input {
+          width: 100%;
+          padding: 6px 8px;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          font-size: 13px;
+        }
+        
+        .select-actions {
+          display: flex;
+          padding: 8px;
+          gap: 8px;
+          border-bottom: 1px solid #eee;
+        }
+        
+        .select-actions button {
+          flex: 1;
+          padding: 4px 8px;
+          font-size: 12px;
+          border: 1px solid #ddd;
+          border-radius: 4px;
+          background-color: #f8f9fa;
+          cursor: pointer;
+        }
+        
+        .select-actions button:hover {
+          background-color: #e9ecef;
+        }
+        
+        .checkbox-list {
+          max-height: 200px;
+          overflow-y: auto;
+        }
+        
+        .checkbox-option {
+          padding: 6px 8px;
+          border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .checkbox-option:last-child {
+          border-bottom: none;
+        }
+        
+        .checkbox-option label {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin: 0;
+          cursor: pointer;
+          width: 100%;
+          font-weight: normal;
+        }
+        
+        .checkbox-option input[type="checkbox"] {
+          margin: 0;
+        }
+        
+        #applyRootGmidBtn {
+          height: 36px;
+          padding: 0 15px;
+          font-size: 14px;
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+        }
+        
+        .selection-count {
+          background-color: #e9ecef;
+          border-radius: 10px;
+          padding: 2px 6px;
+          font-size: 12px;
+          margin-left: 5px;
+        }
+        
+        /* Ensure dropdown is visible and positioned correctly */
+        .card-body {
+          position: relative;
+          overflow: visible;
+        }
+        
+        .database-connection-container {
+          overflow: visible;
+        }
+    </style>
 </head>
 <body>
     <header class="app-header">
@@ -89,14 +255,48 @@
                 </div>
                 
                 <div class="connection-actions">
-                    <button id="loadDataBtn" class="btn btn-primary">
+                    <div class="left-buttons">
+                      <button id="loadDataBtn" class="btn btn-primary">
                         <i class="fas fa-database"></i> Load Data
-                    </button>
-                    <button id="reconnectBtn" class="btn btn-outline">
+                      </button>
+                      <button id="reconnectBtn" class="btn btn-outline">
                         <i class="fas fa-sync"></i> Reconnect
-                    </button>
+                      </button>
+                    </div>
+                    
+                    <div class="root-gmid-control">
+                      <div class="filter-label">Root GMID:</div>
+                      <div class="multiselect-dropdown">
+                        <button class="multiselect-button">
+                          <span class="selection-text">Select Root GMIDs</span>
+                          <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <div class="multiselect-dropdown-content">
+                          <div class="search-container">
+                            <input type="text" placeholder="Search GMIDs..." class="search-input">
+                          </div>
+                          <div class="select-actions">
+                            <button class="select-all-btn">Select All</button>
+                            <button class="clear-all-btn">Clear All</button>
+                          </div>
+                          <div class="checkbox-list" id="rootGmidCheckboxList">
+                            <!-- Checkboxes will be added here dynamically -->
+                            <div class="checkbox-option">
+                              <label>
+                                <input type="checkbox" value="Loading..."> 
+                                <span>Loading options...</span>
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <button id="applyRootGmidBtn" class="btn btn-primary">
+                        <i class="fas fa-check"></i> Apply
+                      </button>
+                    </div>
                 </div>
             </div>
+            
         </div>
 
         <!-- Filtering segment -->
@@ -144,6 +344,12 @@
                 </div>
                 
                 <div class="tab-controls">
+                    <button id="showBtn" class="btn btn-outline">
+                        <i class="fas fa-download"></i> Show Pivot Table
+                    </button>
+                    <button id="resetBtn" class="btn btn-outline">
+                        <i class="fas fa-sync-alt"></i> Reset UI
+                    </button>
                     <button id="exportBtn" class="btn btn-outline">
                         <i class="fas fa-download"></i> Export
                     </button>

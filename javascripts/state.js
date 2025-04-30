@@ -12,6 +12,9 @@ const state = {
     filteredData: [],             // Array to store filtered fact data
     dimensions: {},               // Object to store dimension metadata
     hierarchies: {},              // Object to store hierarchy definitions
+    selectedRootGmids: [],          // Array to store selected ROOT_GMID values
+    rootGmids: [],                  // Array to store all available ROOT_GMID values
+    filteredFactData: null,
     
     // Filter state
     filters: {                    // Filter state object
