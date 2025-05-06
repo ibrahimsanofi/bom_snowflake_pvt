@@ -1,7 +1,7 @@
 
 import stateModule from './state.js';
 import ui from './ui.js'
-import filters from './filters.js';
+// import filters from './filters.js';
 import pivotTable from './pivotTableEnhanced.js';
 
 
@@ -205,6 +205,7 @@ async function ingestData(elements, selectedFact = 'FACT_BOM') {
         const dimNames = await fetchDimensionNamesForFact(selectedFact);
         console.log(`Loading ${dimNames.length} dimensions for ${selectedFact}`);
         
+
         // 2. Build available files list (used for UI)
         state.availableFiles = [];
         dimNames.forEach(dim => {
@@ -225,6 +226,7 @@ async function ingestData(elements, selectedFact = 'FACT_BOM') {
             type: 'fact'
         });
         
+
         // 3. Load dimension data
         console.log("Loading dimension data from database...");
         state.dimensions = {};
@@ -268,6 +270,7 @@ async function ingestData(elements, selectedFact = 'FACT_BOM') {
         // Wait for all dimension data to load
         await Promise.all(dimensionPromises);
         
+
         // 4. Load fact data
         console.log(`Loading fact data from ${selectedFact}...`);
         ui.updateTableStatus(selectedFact, 'loading');
@@ -304,6 +307,7 @@ async function ingestData(elements, selectedFact = 'FACT_BOM') {
             throw new Error("No dimension data was properly loaded");
         }
         
+
         // 5. Generate available fields
         state.availableFields = [];
         
@@ -337,10 +341,11 @@ async function ingestData(elements, selectedFact = 'FACT_BOM') {
         });
 
         // Handling root gmid filter bit here
-        if (state.dimensions.gmid_display) {
-            initializeRootGmidFilter(state.dimensions.gmid_display);
-        }
+        // if (state.dimensions.gmid_display) {
+        //     initializeRootGmidFilter(state.dimensions.gmid_display);
+        // }
         
+
         // 6. Process dimension data to build hierarchies
         try {
             //
@@ -364,16 +369,18 @@ async function ingestData(elements, selectedFact = 'FACT_BOM') {
         ui.setDefaultFields();
         ui.renderFieldContainers(elements, state);
         
+
         // 8. Initialize mappings AFTER data loading is complete
         console.log("Initializing mappings now that data is loaded");
         initializeMappings();
         
+
         // 9. Set up filters
-        setTimeout(() => {
-            if (filters && filters.initializeFilters) {
-                filters.initializeFilters();
-            }
-        }, 1000);
+        // setTimeout(() => {
+        //     if (filters && filters.initializeFilters) {
+        //         filters.initializeFilters();
+        //     }
+        // }, 1000);
         
         // Show success message
         console.log('Data loaded successfully from Snowflake database.', 'success', elements);
@@ -1235,29 +1242,11 @@ function logMappingDetails() {
         
         // Log GMID to Display mapping details
         console.log(`GMID mapping: ${Object.keys(gmidMapping.gmidToDisplay || {}).length} GMIDs`);
-        
-        // Sample a few mappings
-        // const gmidKeys = Object.keys(gmidMapping.gmidToDisplay || {}).slice(0, 3);
-        // if (gmidKeys.length > 0) {
-        //     console.log("Sample GMID mappings:");
-        //     gmidKeys.forEach(key => {
-        //         console.log(`  ${key} -> ${JSON.stringify(gmidMapping.gmidToDisplay[key])}`);
-        //     });
-        // }
-        
+                
         // Log ROOT_GMID to ROOT_DISPLAY mapping details
         const rootGmidCount = Object.keys(gmidMapping.rootGmidToDisplay || {}).length;
         console.log(`Root GMID mapping: ${rootGmidCount} root GMIDs`);
-        
-        // Sample a few root mappings
-        // const rootGmidKeys = Object.keys(gmidMapping.rootGmidToDisplay || {}).slice(0, 3);
-        // if (rootGmidKeys.length > 0) {
-        //     console.log("Sample Root GMID mappings:");
-        //     rootGmidKeys.forEach(key => {
-        //         console.log(`  ${key} -> ${gmidMapping.rootGmidToDisplay[key]}`);
-        //     });
-        // }
-        
+                
         // Check if any COMPONENT_GMIDs in fact data are unmapped
         const unmappedGmids = new Set();
         state.factData.slice(0, 5).forEach(record => {
@@ -1274,19 +1263,6 @@ function logMappingDetails() {
         if (gmidMapping.nodeToChildGmids) {
             const nodesWithChildren = Object.keys(gmidMapping.nodeToChildGmids).length;
             console.log(`GMID node relationships: ${nodesWithChildren} nodes with children`);
-            
-            // Sample a few node-to-children relationships
-            // const nodeKeys = Object.keys(gmidMapping.nodeToChildGmids).slice(0, 2);
-            // if (nodeKeys.length > 0) {
-            //     console.log("Sample node-to-children relationships:");
-            //     nodeKeys.forEach(key => {
-            //         const childCount = gmidMapping.nodeToChildGmids[key].length;
-            //         console.log(`  Node ${key} has ${childCount} children`);
-            //         if (childCount > 0 && childCount <= 3) {
-            //             console.log(`    Child GMIDs: ${gmidMapping.nodeToChildGmids[key].join(', ')}`);
-            //         }
-            //     });
-            // }
         }
     }
     
@@ -1294,30 +1270,12 @@ function logMappingDetails() {
     if (state.mappings && state.mappings.businessYear) {
         const yearMapping = state.mappings.businessYear;
         console.log(`Business Year mapping: ${Object.keys(yearMapping || {}).length} years`);
-        
-        // Sample a few mappings
-        // const yearKeys = Object.keys(yearMapping || {}).slice(0, 3);
-        // if (yearKeys.length > 0) {
-        //     console.log("Sample Business Year mappings:");
-        //     yearKeys.forEach(key => {
-        //         console.log(`  ${key} -> ${JSON.stringify(yearMapping[key])}`);
-        //     });
-        // }
     }
     
     // Check Item Cost Type mapping (if available)
     if (state.mappings && state.mappings.itemCostType) {
         const ictMapping = state.mappings.itemCostType;
         console.log(`Item Cost Type mapping: ${Object.keys(ictMapping || {}).length} types`);
-        
-        // Sample a few mappings
-        // const ictKeys = Object.keys(ictMapping || {}).slice(0, 3);
-        // if (ictKeys.length > 0) {
-        //     console.log("Sample Item Cost Type mappings:");
-        //     ictKeys.forEach(key => {
-        //         console.log(`  ${key} -> ${JSON.stringify(ictMapping[key])}`);
-        //     });
-        // }
     }
     
     // Check Component Material Type mapping (if available)
@@ -2241,38 +2199,6 @@ function buildItemCostTypeHierarchy(data) {
         }
     });
 
-    // Process each ITEM_COST_TYPE record
-    // const uniqueCostTypes = new Set();
-    // data.forEach(item => {
-    //     if (!item.ITEM_COST_TYPE) return;
-    //     uniqueCostTypes.add(item.ITEM_COST_TYPE);
-    // });
-    
-    // Create nodes for each cost type
-    // uniqueCostTypes.forEach(costType => {
-    //     const nodeId = `ITEM_COST_TYPE_${costType}`;
-    //     const nodeLabel = getItemCostTypeLabel(data, costType);
-
-    //     const node = {
-    //         id: nodeId,
-    //         label: nodeLabel,
-    //         children: [],
-    //         level: 1,
-    //         expanded: false,
-    //         isLeaf: true,
-    //         hasChildren: false,
-    //         path: ['ITEM_COST_TYPE_ROOT', nodeId],
-    //         factId: costType
-    //     };
-        
-    //     // Add to maps
-    //     nodesMap[nodeId] = node;
-        
-    //     // Add as child to root
-    //     root.children.push(nodeId);
-    //     root.hasChildren = true;
-    // });
-
     itemCostTypeMap.forEach((description, itemCostTypeCode) => {
         // Handle null values
         const safeCode = itemCostTypeCode === null ? 'null' : itemCostTypeCode;
@@ -2691,7 +2617,8 @@ function processDimensionHierarchies(dimensions, factData) {
     // Process GMID hierarchy
     if (dimensions && dimensions.gmid_display && dimensions.gmid_display.length > 0) {
         // Build GMID hierarchy with the original function signature
-        hierarchies.gmid_display = buildGmidDisplayHierarchy(dimensions.gmid_display);
+        // hierarchies.gmid_display = buildGmidDisplayHierarchy(dimensions.gmid_display);
+        hierarchies.gmid_display = buildFilteredGmidDisplayHierarchy(dimensions.gmid_display);
         // Precompute descendant factIds for GMID hierarchy
         precomputeDescendantFactIds(hierarchies.gmid_display, 'COMPONENT_GMID');
     }
@@ -3054,206 +2981,394 @@ function filterRecordsByLeHierarchy(records, leCode) {
  * @param {Object} config - Configuration options (optional)
  * @returns {Object} - Object containing root node, nodesMap, and original data
  */
-function buildGmidDisplayHierarchy(data) {
-    // console.log("Processing GMID display hierarchy from DIM_GMID_DISPLAY data...");
-    console.log(`Building GMID display hierarchy from ${data ? data.length : 0} dimension records...`);
+// function buildGmidDisplayHierarchy(data) {
+//     // console.log("Processing GMID display hierarchy from DIM_GMID_DISPLAY data...");
+//     console.log(`Building GMID display hierarchy from ${data ? data.length : 0} dimension records...`);
     
-    // Ensure data is an array
-    if (!data || !Array.isArray(data)) {
-        console.error("DIM_GMID_DISPLAY data is not an array");
-        data = [];
-    }
+//     // Ensure data is an array
+//     if (!data || !Array.isArray(data)) {
+//         console.error("DIM_GMID_DISPLAY data is not an array");
+//         data = [];
+//     }
     
-    // Verify we have data to process
-    if (data.length === 0) {
-        console.error("No data to process in DIM_GMID_DISPLAY");
-    } else {
-        // Debug: Log the first few rows to check column structure
-        console.log("First rows of data:", data.slice(0, 3).map(row => {
-            const simplified = {...row};
-            // Only include important columns in log to keep it readable
-            return {
-                COMPONENT_GMID: simplified.COMPONENT_GMID,
-                PATH_GMID: simplified.PATH_GMID,
-                DISPLAY: simplified.DISPLAY
-            };
-        }));
-    }
+//     // Verify we have data to process
+//     if (data.length === 0) {
+//         console.error("No data to process in DIM_GMID_DISPLAY");
+//     } else {
+//         // Debug: Log the first few rows to check column structure
+//         console.log("First rows of data:", data.slice(0, 3).map(row => {
+//             const simplified = {...row};
+//             // Only include important columns in log to keep it readable
+//             return {
+//                 COMPONENT_GMID: simplified.COMPONENT_GMID,
+//                 PATH_GMID: simplified.PATH_GMID,
+//                 DISPLAY: simplified.DISPLAY
+//             };
+//         }));
+//     }
 
-    // Filter root gmid here before hierarchy is built
-    // Filter data to include ONLY the selected ROOT_GMIDs
-    if (state.selectedRootGmids && state.selectedRootGmids.length > 0 && 
-        state.rootGmids && state.selectedRootGmids.length < state.rootGmids.length) {
+//     // Filter root gmid here before hierarchy is built
+//     // Filter data to include ONLY the selected ROOT_GMIDs
+//     if (state.selectedRootGmids && state.selectedRootGmids.length > 0 && 
+//         state.rootGmids && state.selectedRootGmids.length < state.rootGmids.length) {
         
-        console.log(`Filtering GMID data to include only ${state.selectedRootGmids.length} selected ROOT_GMIDs`);
+//         console.log(`Filtering GMID data to include only ${state.selectedRootGmids.length} selected ROOT_GMIDs`);
         
-        // Keep only records where ROOT_GMID is in the selected list
-        data = data.filter(item => 
-            item.ROOT_GMID && state.selectedRootGmids.includes(item.ROOT_GMID)
-        );
+//         // Keep only records where ROOT_GMID is in the selected list
+//         data = data.filter(item => 
+//             item.ROOT_GMID && state.selectedRootGmids.includes(item.ROOT_GMID)
+//         );
         
-        console.log(`Filtered to ${data.length} GMID records`);
+//         console.log(`Filtered to ${data.length} GMID records`);
+//     }
+    
+//     // Create root node
+//     const rootNode = { 
+//         id: 'ROOT', 
+//         label: 'All GMIDs', 
+//         children: [], 
+//         level: 0, 
+//         path: ['ROOT'],
+//         expanded: true,
+//         isLeaf: false,
+//         hasChildren: false
+//     };
+    
+//     // Map to store all nodes by their ID for quick lookup
+//     const nodesMap = { 'ROOT': rootNode };
+    
+//     // Debug: Keep track of how many nodes we're creating at each level
+//     const levelCounts = { 0: 1 }; // Root node
+    
+//     // Process each row in the data
+//     data.forEach((item, index) => {
+//         if (!item) {
+//             console.warn(`Skipping null item at index ${index}`);
+//             return;
+//         }
+        
+//         // Handle missing required fields
+//         if (!item.PATH_GMID || !item.DISPLAY) {
+//             // console.warn(`Skipping item at index ${index} due to missing PATH_GMID or DISPLAY`);
+//             return;
+//         }
+        
+//         // Split the PATH_GMID and DISPLAY columns by their respective delimiters
+//         const pathSegments = item.PATH_GMID.split('/');
+//         const displaySegments = item.DISPLAY.split('//');
+        
+//         // Validate that we have matching segments
+//         if (pathSegments.length !== displaySegments.length) {
+//             // console.warn(`Mismatched segments for item at index ${index}. PATH_GMID has ${pathSegments.length} segments but DISPLAY has ${displaySegments.length} segments.`);
+//             return;
+//         }
+        
+//         // Determine the GMID for this row
+//         let gmid;
+//         if (pathSegments[pathSegments.length - 1] === '#') {
+//             // When leaf segment is '#', use the entire PATH_GMID as COMPONENT_GMID
+//             gmid = item.PATH_GMID;
+//         } else {
+//             // Otherwise, use the COMPONENT_GMID value
+//             gmid = item.COMPONENT_GMID || "Unknown GMID";
+//         }
+        
+//         // Track the maximum level
+//         const maxLevel = pathSegments.length;
+        
+//         let currentNode = rootNode;
+//         let currentPath = ['ROOT'];
+        
+//         // Process each level
+//         for (let i = 0; i < maxLevel; i++) {
+//             const pathSegment = pathSegments[i];
+//             const displaySegment = displaySegments[i];
+            
+//             // Skip if segment is empty
+//             if (!displaySegment || displaySegment.trim() === '') {
+//                 continue;
+//             }
+            
+//             // Create a unique node ID for this segment that's safe for DOM
+//             // Using the path segment as part of the ID ensures uniqueness
+//             const safeId = pathSegment.replace(/[^a-zA-Z0-9]/g, '_');
+//             const nodeId = `LEVEL_${i+1}_${safeId}`;
+            
+//             // Track nodes created at this level
+//             levelCounts[i+1] = (levelCounts[i+1] || 0) + 1;
+            
+//             // Check if we already have a node for this segment
+//             if (!nodesMap[nodeId]) {
+//                 // Create a new node
+//                 const isLastLevel = i === maxLevel - 1;
+//                 const newNode = {
+//                     id: nodeId,
+//                     label: displaySegment.trim(),  // Using the DISPLAY segment as the label
+//                     levelNum: i + 1,
+//                     levelValue: pathSegment.trim(),  // Store the PATH_GMID segment for reference
+//                     children: [],
+//                     level: i + 1,
+//                     path: [...currentPath, nodeId],
+//                     expanded: i < 2, // Auto-expand first two levels
+//                     isLeaf: isLastLevel,
+//                     hasChildren: false,
+//                     // If this is the last level, associate with the GMID for filtering
+//                     factId: isLastLevel ? gmid : null
+//                 };
+                
+//                 nodesMap[nodeId] = newNode;
+                
+//                 // Add to parent's children
+//                 currentNode.children.push(newNode);
+//                 currentNode.isLeaf = false;
+//                 currentNode.hasChildren = true;
+//             } else if (i === maxLevel - 1 && currentNode.id === nodesMap[nodeId].path[nodesMap[nodeId].path.length - 2]) {
+//                 // If this node already exists but is now a leaf at this level under the same parent,
+//                 // we need to handle potential multiple GMIDs mapping to the same node
+//                 const existingNode = nodesMap[nodeId];
+                
+//                 // If the node doesn't already have a factId, set it
+//                 if (!existingNode.factId) {
+//                     existingNode.factId = gmid;
+//                     existingNode.isLeaf = true;
+//                 } 
+//                 // If it already has a factId but this is a different GMID,
+//                 // we need to track both GMIDs
+//                 else if (existingNode.factId !== gmid) {
+//                     // Convert factId to array if it isn't already
+//                     if (!Array.isArray(existingNode.factId)) {
+//                         existingNode.factId = [existingNode.factId];
+//                     }
+//                     // Add this GMID if it's not already in the array
+//                     if (!existingNode.factId.includes(gmid)) {
+//                         existingNode.factId.push(gmid);
+//                     }
+//                 }
+                
+//                 // Mark as non-leaf if it has children
+//                 if (existingNode.children && existingNode.children.length > 0) {
+//                     existingNode.isLeaf = false;
+//                 }
+//             }
+            
+//             // Update current node and path for next level
+//             currentNode = nodesMap[nodeId];
+//             currentPath = [...currentPath, nodeId];
+//         }
+//     });
+    
+//     // Debug: Log how many nodes we created at each level
+//     console.log("Nodes created per level:", levelCounts);
+//     console.log("Total nodes in hierarchy:", Object.keys(nodesMap).length);
+    
+//     // Sort nodes at each level
+//     function sortHierarchyNodes(node) {
+//         if (node.children && node.children.length > 0) {
+//             // Sort children by label
+//             node.children.sort((a, b) => {
+//                 return a.label.localeCompare(b.label);
+//             });
+            
+//             // Recursively sort children's children
+//             node.children.forEach(child => sortHierarchyNodes(child));
+//         }
+//     }
+    
+//     sortHierarchyNodes(rootNode);
+    
+//     return {
+//         root: rootNode,
+//         nodesMap: nodesMap,
+//         flatData: data
+//     };
+// }
+
+
+/**
+ * Enhanced version of buildGmidDisplayHierarchy that filters by selected Root GMIDs
+ * This function should replace or be added to data.js
+ * 
+ * @param {Array} data - The GMID display dimension data
+ * @param {Array} selectedRootGmids - Array of selected ROOT_GMID values
+ * @returns {Object} - Hierarchy object with root, nodesMap and original data
+ */
+function buildFilteredGmidDisplayHierarchy(data, selectedRootGmids = null) {
+console.log(`Building GMID display hierarchy${selectedRootGmids ? ' with ROOT_GMID filtering' : ''}...`);
+
+// Check if we should apply ROOT_GMID filtering
+const applyRootGmidFilter = selectedRootGmids && 
+                            Array.isArray(selectedRootGmids) && 
+                            selectedRootGmids.length > 0;
+
+if (applyRootGmidFilter) {
+    console.log(`Filtering GMID hierarchy to include only ${selectedRootGmids.length} selected ROOT_GMIDs`);
+    
+    // Filter the dimension data to only include records with selected ROOT_GMIDs
+    data = data.filter(item => item.ROOT_GMID && selectedRootGmids.includes(item.ROOT_GMID));
+    
+    console.log(`Filtered to ${data.length} GMID dimension records`);
+}
+
+// Create root node
+const rootNode = { 
+    id: 'ROOT', 
+    label: 'All GMIDs', 
+    children: [], 
+    level: 0, 
+    path: ['ROOT'],
+    expanded: true,
+    isLeaf: false,
+    hasChildren: false
+};
+
+// Map to store all nodes by their ID for quick lookup
+const nodesMap = { 'ROOT': rootNode };
+
+// Debug: Keep track of how many nodes we're creating at each level
+const levelCounts = { 0: 1 }; // Root node
+
+// Process each row in the data
+data.forEach((item, index) => {
+    if (!item) {
+    console.warn(`Skipping null item at index ${index}`);
+    return;
     }
     
-    // Create root node
-    const rootNode = { 
-        id: 'ROOT', 
-        label: 'All GMIDs', 
-        children: [], 
-        level: 0, 
-        path: ['ROOT'],
-        expanded: true,
-        isLeaf: false,
-        hasChildren: false
-    };
+    // Handle missing required fields
+    if (!item.PATH_GMID || !item.DISPLAY) {
+    return;
+    }
     
-    // Map to store all nodes by their ID for quick lookup
-    const nodesMap = { 'ROOT': rootNode };
+    // Split the PATH_GMID and DISPLAY columns by their respective delimiters
+    const pathSegments = item.PATH_GMID.split('/');
+    const displaySegments = item.DISPLAY.split('//');
     
-    // Debug: Keep track of how many nodes we're creating at each level
-    const levelCounts = { 0: 1 }; // Root node
+    // Validate that we have matching segments
+    if (pathSegments.length !== displaySegments.length) {
+    return;
+    }
     
-    // Process each row in the data
-    data.forEach((item, index) => {
-        if (!item) {
-            console.warn(`Skipping null item at index ${index}`);
-            return;
+    // Determine the GMID for this row
+    let gmid;
+    if (pathSegments[pathSegments.length - 1] === '#') {
+    // When leaf segment is '#', use the entire PATH_GMID as COMPONENT_GMID
+    gmid = item.PATH_GMID;
+    } else {
+    // Otherwise, use the COMPONENT_GMID value
+    gmid = item.COMPONENT_GMID || "Unknown GMID";
+    }
+    
+    // Track the maximum level
+    const maxLevel = pathSegments.length;
+    
+    let currentNode = rootNode;
+    let currentPath = ['ROOT'];
+    
+    // Process each level
+    for (let i = 0; i < maxLevel; i++) {
+    const pathSegment = pathSegments[i];
+    const displaySegment = displaySegments[i];
+    
+    // Skip if segment is empty
+    if (!displaySegment || displaySegment.trim() === '') {
+        continue;
+    }
+    
+    // Create a unique node ID for this segment that's safe for DOM
+    // Using the path segment as part of the ID ensures uniqueness
+    const safeId = pathSegment.replace(/[^a-zA-Z0-9]/g, '_');
+    const nodeId = `LEVEL_${i+1}_${safeId}`;
+    
+    // Track nodes created at this level
+    levelCounts[i+1] = (levelCounts[i+1] || 0) + 1;
+    
+    // Check if we already have a node for this segment
+    if (!nodesMap[nodeId]) {
+        // Create a new node
+        const isLastLevel = i === maxLevel - 1;
+        const newNode = {
+        id: nodeId,
+        label: displaySegment.trim(),  // Using the DISPLAY segment as the label
+        levelNum: i + 1,
+        levelValue: pathSegment.trim(),  // Store the PATH_GMID segment for reference
+        children: [],
+        level: i + 1,
+        path: [...currentPath, nodeId],
+        expanded: i < 2, // Auto-expand first two levels
+        isLeaf: isLastLevel,
+        hasChildren: false,
+        // Store ROOT_GMID for filtering
+        rootGmid: item.ROOT_GMID,
+        // If this is the last level, associate with the GMID for filtering
+        factId: isLastLevel ? gmid : null
+        };
+        
+        nodesMap[nodeId] = newNode;
+        
+        // Add to parent's children
+        currentNode.children.push(newNode);
+        currentNode.isLeaf = false;
+        currentNode.hasChildren = true;
+    } else if (i === maxLevel - 1 && currentNode.id === nodesMap[nodeId].path[nodesMap[nodeId].path.length - 2]) {
+        // If this node already exists but is now a leaf at this level under the same parent,
+        // we need to handle potential multiple GMIDs mapping to the same node
+        const existingNode = nodesMap[nodeId];
+        
+        // If the node doesn't already have a factId, set it
+        if (!existingNode.factId) {
+        existingNode.factId = gmid;
+        existingNode.isLeaf = true;
+        } 
+        // If it already has a factId but this is a different GMID,
+        // we need to track both GMIDs
+        else if (existingNode.factId !== gmid) {
+        // Convert factId to array if it isn't already
+        if (!Array.isArray(existingNode.factId)) {
+            existingNode.factId = [existingNode.factId];
+        }
+        // Add this GMID if it's not already in the array
+        if (!existingNode.factId.includes(gmid)) {
+            existingNode.factId.push(gmid);
+        }
         }
         
-        // Handle missing required fields
-        if (!item.PATH_GMID || !item.DISPLAY) {
-            // console.warn(`Skipping item at index ${index} due to missing PATH_GMID or DISPLAY`);
-            return;
+        // Mark as non-leaf if it has children
+        if (existingNode.children && existingNode.children.length > 0) {
+        existingNode.isLeaf = false;
         }
-        
-        // Split the PATH_GMID and DISPLAY columns by their respective delimiters
-        const pathSegments = item.PATH_GMID.split('/');
-        const displaySegments = item.DISPLAY.split('//');
-        
-        // Validate that we have matching segments
-        if (pathSegments.length !== displaySegments.length) {
-            // console.warn(`Mismatched segments for item at index ${index}. PATH_GMID has ${pathSegments.length} segments but DISPLAY has ${displaySegments.length} segments.`);
-            return;
-        }
-        
-        // Determine the GMID for this row
-        let gmid;
-        if (pathSegments[pathSegments.length - 1] === '#') {
-            // When leaf segment is '#', use the entire PATH_GMID as COMPONENT_GMID
-            gmid = item.PATH_GMID;
-        } else {
-            // Otherwise, use the COMPONENT_GMID value
-            gmid = item.COMPONENT_GMID || "Unknown GMID";
-        }
-        
-        // Track the maximum level
-        const maxLevel = pathSegments.length;
-        
-        let currentNode = rootNode;
-        let currentPath = ['ROOT'];
-        
-        // Process each level
-        for (let i = 0; i < maxLevel; i++) {
-            const pathSegment = pathSegments[i];
-            const displaySegment = displaySegments[i];
-            
-            // Skip if segment is empty
-            if (!displaySegment || displaySegment.trim() === '') {
-                continue;
-            }
-            
-            // Create a unique node ID for this segment that's safe for DOM
-            // Using the path segment as part of the ID ensures uniqueness
-            const safeId = pathSegment.replace(/[^a-zA-Z0-9]/g, '_');
-            const nodeId = `LEVEL_${i+1}_${safeId}`;
-            
-            // Track nodes created at this level
-            levelCounts[i+1] = (levelCounts[i+1] || 0) + 1;
-            
-            // Check if we already have a node for this segment
-            if (!nodesMap[nodeId]) {
-                // Create a new node
-                const isLastLevel = i === maxLevel - 1;
-                const newNode = {
-                    id: nodeId,
-                    label: displaySegment.trim(),  // Using the DISPLAY segment as the label
-                    levelNum: i + 1,
-                    levelValue: pathSegment.trim(),  // Store the PATH_GMID segment for reference
-                    children: [],
-                    level: i + 1,
-                    path: [...currentPath, nodeId],
-                    expanded: i < 2, // Auto-expand first two levels
-                    isLeaf: isLastLevel,
-                    hasChildren: false,
-                    // If this is the last level, associate with the GMID for filtering
-                    factId: isLastLevel ? gmid : null
-                };
-                
-                nodesMap[nodeId] = newNode;
-                
-                // Add to parent's children
-                currentNode.children.push(newNode);
-                currentNode.isLeaf = false;
-                currentNode.hasChildren = true;
-            } else if (i === maxLevel - 1 && currentNode.id === nodesMap[nodeId].path[nodesMap[nodeId].path.length - 2]) {
-                // If this node already exists but is now a leaf at this level under the same parent,
-                // we need to handle potential multiple GMIDs mapping to the same node
-                const existingNode = nodesMap[nodeId];
-                
-                // If the node doesn't already have a factId, set it
-                if (!existingNode.factId) {
-                    existingNode.factId = gmid;
-                    existingNode.isLeaf = true;
-                } 
-                // If it already has a factId but this is a different GMID,
-                // we need to track both GMIDs
-                else if (existingNode.factId !== gmid) {
-                    // Convert factId to array if it isn't already
-                    if (!Array.isArray(existingNode.factId)) {
-                        existingNode.factId = [existingNode.factId];
-                    }
-                    // Add this GMID if it's not already in the array
-                    if (!existingNode.factId.includes(gmid)) {
-                        existingNode.factId.push(gmid);
-                    }
-                }
-                
-                // Mark as non-leaf if it has children
-                if (existingNode.children && existingNode.children.length > 0) {
-                    existingNode.isLeaf = false;
-                }
-            }
-            
-            // Update current node and path for next level
-            currentNode = nodesMap[nodeId];
-            currentPath = [...currentPath, nodeId];
-        }
+    }
+    
+    // Update current node and path for next level
+    currentNode = nodesMap[nodeId];
+    currentPath = [...currentPath, nodeId];
+    }
+});
+
+// Debug: Log how many nodes we created at each level
+console.log("Nodes created per level:", levelCounts);
+console.log("Total nodes in hierarchy:", Object.keys(nodesMap).length);
+
+// Sort nodes at each level
+function sortHierarchyNodes(node) {
+    if (node.children && node.children.length > 0) {
+    // Sort children by label
+    node.children.sort((a, b) => {
+        return a.label.localeCompare(b.label);
     });
     
-    // Debug: Log how many nodes we created at each level
-    console.log("Nodes created per level:", levelCounts);
-    console.log("Total nodes in hierarchy:", Object.keys(nodesMap).length);
-    
-    // Sort nodes at each level
-    function sortHierarchyNodes(node) {
-        if (node.children && node.children.length > 0) {
-            // Sort children by label
-            node.children.sort((a, b) => {
-                return a.label.localeCompare(b.label);
-            });
-            
-            // Recursively sort children's children
-            node.children.forEach(child => sortHierarchyNodes(child));
-        }
+    // Recursively sort children's children
+    node.children.forEach(child => sortHierarchyNodes(child));
     }
-    
-    sortHierarchyNodes(rootNode);
-    
-    return {
-        root: rootNode,
-        nodesMap: nodesMap,
-        flatData: data
-    };
+}
+
+sortHierarchyNodes(rootNode);
+
+// Return the hierarchy
+return {
+    root: rootNode,
+    nodesMap: nodesMap,
+    flatData: data
+};
 }
 
 
@@ -4433,78 +4548,78 @@ function preFilterData(originalData) {
  * Initialize Root GMID filter dropdown with checkbox-based UI
  * @param {Array} gmidDisplayData - The GMID display dimension data
  */
-function initializeRootGmidFilter(gmidDisplayData) {
-    console.log("Initializing improved Root GMID filter dropdown");
+// function initializeRootGmidFilter(gmidDisplayData) {
+//     console.log("Initializing improved Root GMID filter dropdown");
     
-    // Extract unique ROOT_GMID values
-    const uniqueRootGmids = new Set();
+//     // Extract unique ROOT_GMID values
+//     const uniqueRootGmids = new Set();
     
-    if (gmidDisplayData && gmidDisplayData.length > 0) {
-      gmidDisplayData.forEach(item => {
-        if (item.ROOT_GMID) {
-          uniqueRootGmids.add(item.ROOT_GMID);
-        }
-      });
-    }
+//     if (gmidDisplayData && gmidDisplayData.length > 0) {
+//       gmidDisplayData.forEach(item => {
+//         if (item.ROOT_GMID) {
+//           uniqueRootGmids.add(item.ROOT_GMID);
+//         }
+//       });
+//     }
     
-    // Convert to array and sort
-    const rootGmids = Array.from(uniqueRootGmids).sort();
+//     // Convert to array and sort
+//     const rootGmids = Array.from(uniqueRootGmids).sort();
     
-    // Store in state for reference
-    state.rootGmids = rootGmids;
-    console.log(`Found ${rootGmids.length} unique ROOT_GMID values`);
+//     // Store in state for reference
+//     state.rootGmids = rootGmids;
+//     console.log(`Found ${rootGmids.length} unique ROOT_GMID values`);
     
-    // Initialize state.selectedRootGmids with all ROOT_GMIDs initially
-    state.selectedRootGmids = [...rootGmids];
+//     // Initialize state.selectedRootGmids with all ROOT_GMIDs initially
+//     state.selectedRootGmids = [...rootGmids];
     
-    // Get the checkbox list container
-    const checkboxList = document.getElementById('rootGmidCheckboxList');
-    if (!checkboxList) {
-      console.error("Root GMID checkbox list element not found");
-      return;
-    }
+//     // Get the checkbox list container
+//     const checkboxList = document.getElementById('rootGmidCheckboxList');
+//     if (!checkboxList) {
+//       console.error("Root GMID checkbox list element not found");
+//       return;
+//     }
     
-    // Clear existing options
-    checkboxList.innerHTML = '';
+//     // Clear existing options
+//     checkboxList.innerHTML = '';
     
-    // Populate checkbox list
-    rootGmids.forEach(gmid => {
-      const checkboxOption = document.createElement('div');
-      checkboxOption.className = 'checkbox-option';
+//     // Populate checkbox list
+//     rootGmids.forEach(gmid => {
+//       const checkboxOption = document.createElement('div');
+//       checkboxOption.className = 'checkbox-option';
       
-      const label = document.createElement('label');
+//       const label = document.createElement('label');
       
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.value = gmid;
-      checkbox.checked = true; // All checked by default
-      checkbox.dataset.gmid = gmid;
+//       const checkbox = document.createElement('input');
+//       checkbox.type = 'checkbox';
+//       checkbox.value = gmid;
+//       checkbox.checked = true; // All checked by default
+//       checkbox.dataset.gmid = gmid;
       
-      const span = document.createElement('span');
-      span.textContent = gmid;
+//       const span = document.createElement('span');
+//       span.textContent = gmid;
       
-      label.appendChild(checkbox);
-      label.appendChild(span);
-      checkboxOption.appendChild(label);
-      checkboxList.appendChild(checkboxOption);
+//       label.appendChild(checkbox);
+//       label.appendChild(span);
+//       checkboxOption.appendChild(label);
+//       checkboxList.appendChild(checkboxOption);
       
-      // Add event listener to each checkbox
-      checkbox.addEventListener('change', function() {
-        updateSelectionText();
-      });
-    });
+//       // Add event listener to each checkbox
+//       checkbox.addEventListener('change', function() {
+//         updateSelectionText();
+//       });
+//     });
     
-    // Initialize multiselect dropdown behavior
-    const dropdownControls = initializeMultiselectDropdown();
+//     // Initialize multiselect dropdown behavior
+//     const dropdownControls = initializeMultiselectDropdown();
     
-    // Apply button handler
-    const applyBtn = document.getElementById('applyRootGmidBtn');
-    if (applyBtn) {
-    applyBtn.addEventListener('click', applyRootGmidFilter);
-    }
+//     // Apply button handler
+//     const applyBtn = document.getElementById('applyRootGmidBtn');
+//     if (applyBtn) {
+//     applyBtn.addEventListener('click', applyRootGmidFilter);
+//     }
     
-    console.log("Improved Root GMID filter initialized");
-  }
+//     console.log("Improved Root GMID filter initialized");
+//   }
 
 
 
@@ -4512,95 +4627,95 @@ function initializeRootGmidFilter(gmidDisplayData) {
  * Initialize multiselect dropdown UI behaviors
  * @returns {Object} Object with utility functions
  */
-function initializeMultiselectDropdown() {
-    const multiselectButton = document.querySelector('.multiselect-button');
-    const multiselectDropdown = document.querySelector('.multiselect-dropdown');
-    const checkboxList = document.getElementById('rootGmidCheckboxList');
-    const selectAllBtn = document.querySelector('.select-all-btn');
-    const clearAllBtn = document.querySelector('.clear-all-btn');
-    const searchInput = document.querySelector('.search-input');
-    const selectionText = document.querySelector('.selection-text');
+// function initializeMultiselectDropdown() {
+//     const multiselectButton = document.querySelector('.multiselect-button');
+//     const multiselectDropdown = document.querySelector('.multiselect-dropdown');
+//     const checkboxList = document.getElementById('rootGmidCheckboxList');
+//     const selectAllBtn = document.querySelector('.select-all-btn');
+//     const clearAllBtn = document.querySelector('.clear-all-btn');
+//     const searchInput = document.querySelector('.search-input');
+//     const selectionText = document.querySelector('.selection-text');
     
-    // Toggle dropdown
-    multiselectButton.addEventListener('click', (e) => {
-      e.stopPropagation();
-      multiselectDropdown.classList.toggle('open');
-    });
+//     // Toggle dropdown
+//     multiselectButton.addEventListener('click', (e) => {
+//       e.stopPropagation();
+//       multiselectDropdown.classList.toggle('open');
+//     });
     
-    // Close dropdown when clicking outside
-    document.addEventListener('click', (e) => {
-      if (!multiselectDropdown.contains(e.target)) {
-        multiselectDropdown.classList.remove('open');
-      }
-    });
+//     // Close dropdown when clicking outside
+//     document.addEventListener('click', (e) => {
+//       if (!multiselectDropdown.contains(e.target)) {
+//         multiselectDropdown.classList.remove('open');
+//       }
+//     });
     
-    // Prevent dropdown from closing when clicking inside
-    checkboxList.addEventListener('click', (e) => {
-      e.stopPropagation();
-    });
+//     // Prevent dropdown from closing when clicking inside
+//     checkboxList.addEventListener('click', (e) => {
+//       e.stopPropagation();
+//     });
     
-    // Select all button
-    selectAllBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
-      checkboxes.forEach(checkbox => {
-        checkbox.checked = true;
-      });
-      updateSelectionText();
-    });
+//     // Select all button
+//     selectAllBtn.addEventListener('click', (e) => {
+//       e.stopPropagation();
+//       const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
+//       checkboxes.forEach(checkbox => {
+//         checkbox.checked = true;
+//       });
+//       updateSelectionText();
+//     });
     
-    // Clear all button
-    clearAllBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
-      checkboxes.forEach(checkbox => {
-        checkbox.checked = false;
-      });
-      updateSelectionText();
-    });
+//     // Clear all button
+//     clearAllBtn.addEventListener('click', (e) => {
+//       e.stopPropagation();
+//       const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
+//       checkboxes.forEach(checkbox => {
+//         checkbox.checked = false;
+//       });
+//       updateSelectionText();
+//     });
     
-    // Search functionality
-    searchInput.addEventListener('input', (e) => {
-      const searchTerm = e.target.value.toLowerCase();
-      const options = checkboxList.querySelectorAll('.checkbox-option');
+//     // Search functionality
+//     searchInput.addEventListener('input', (e) => {
+//       const searchTerm = e.target.value.toLowerCase();
+//       const options = checkboxList.querySelectorAll('.checkbox-option');
       
-      options.forEach(option => {
-        const text = option.textContent.toLowerCase();
-        if (text.includes(searchTerm)) {
-          option.style.display = 'block';
-        } else {
-          option.style.display = 'none';
-        }
-      });
-    });
+//       options.forEach(option => {
+//         const text = option.textContent.toLowerCase();
+//         if (text.includes(searchTerm)) {
+//           option.style.display = 'block';
+//         } else {
+//           option.style.display = 'none';
+//         }
+//       });
+//     });
     
-    // Initialize selection text
-    updateSelectionText();
+//     // Initialize selection text
+//     updateSelectionText();
     
-    return {
-      updateSelectionText
-    };
-  }
+//     return {
+//       updateSelectionText
+//     };
+//   }
   
   /**
    * Update the selection text in the dropdown button
    */
-  function updateSelectionText() {
-    const selectionText = document.querySelector('.selection-text');
-    if (!selectionText) return;
+//   function updateSelectionText() {
+//     const selectionText = document.querySelector('.selection-text');
+//     if (!selectionText) return;
     
-    const checkboxList = document.getElementById('rootGmidCheckboxList');
-    const checkedBoxes = checkboxList.querySelectorAll('input[type="checkbox"]:checked');
-    const totalBoxes = checkboxList.querySelectorAll('input[type="checkbox"]');
+//     const checkboxList = document.getElementById('rootGmidCheckboxList');
+//     const checkedBoxes = checkboxList.querySelectorAll('input[type="checkbox"]:checked');
+//     const totalBoxes = checkboxList.querySelectorAll('input[type="checkbox"]');
     
-    if (checkedBoxes.length === 0) {
-      selectionText.textContent = 'Select Root GMIDs';
-    } else if (checkedBoxes.length === totalBoxes.length) {
-      selectionText.textContent = 'All Root GMIDs selected';
-    } else {
-      selectionText.innerHTML = `${checkedBoxes.length} selected <span class="selection-count">${checkedBoxes.length}/${totalBoxes.length}</span>`;
-    }
-  }
+//     if (checkedBoxes.length === 0) {
+//       selectionText.textContent = 'Select Root GMIDs';
+//     } else if (checkedBoxes.length === totalBoxes.length) {
+//       selectionText.textContent = 'All Root GMIDs selected';
+//     } else {
+//       selectionText.innerHTML = `${checkedBoxes.length} selected <span class="selection-count">${checkedBoxes.length}/${totalBoxes.length}</span>`;
+//     }
+//   }
   
 /**
  * Update the selectedRootGmids array in the state based on checked checkboxes
@@ -4821,7 +4936,8 @@ export default {
     buildLegalEntityHierarchy,
     buildSmartCodeHierarchy,
     buildCostElementHierarchy,
-    buildGmidDisplayHierarchy,
+    // buildGmidDisplayHierarchy,
+    buildFilteredGmidDisplayHierarchy,
     buildMaterialTypeHierarchy,
     buildManagementCentreHierarchy,
     buildItemCostTypeHierarchy,
@@ -4855,7 +4971,7 @@ export default {
     preFilterData,
 
     // root gmid filter
-    initializeRootGmidFilter,
+    // initializeRootGmidFilter,
     updateSelectedRootGmids
 
   };

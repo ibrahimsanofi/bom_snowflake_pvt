@@ -7,9 +7,11 @@
     
     <!-- Styling section -->
     <link rel="stylesheet" href="./styles/styles.css">
+    <link rel="stylesheet" href="./styles/filter-styles.css">
     <link rel="stylesheet" href="./styles/pivotTable.css">
 
     <script src="./javascripts/pivotTableUtils.js"></script>
+    <!-- <script src="./javascripts/pivot-fixes.js"></script> -->
 
     <!-- Third-party libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
@@ -17,11 +19,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
 
-    <script src="./javascripts/path-based-filter-system.js"></script>
+    <!-- <script src="./javascripts/refined-filter-system.js"></script> -->
 
     <!-- Import our modular application -->
     <script type="module" src="./javascripts/app-init.js"></script>
-    <script type="module" src="./javascripts/filter-renderer-init.js"></script>
+    <!-- <script type="module" src="./javascripts/filter-renderer-init.js"></script> -->
     
     
     <style id="pivot-value-styles">
@@ -211,6 +213,21 @@
     </style>
 </head>
 <body>
+    <script>
+        // Call after pivot table is generated
+        document.addEventListener('DOMContentLoaded', function() {
+                // Wait for pivot table to be generated
+                setTimeout(applyPivotTableFixes, 1000);
+                
+                // Also apply fixes whenever pivot table is refreshed
+                const refreshBtn = document.getElementById('refreshBtn');
+                if (refreshBtn) {
+                    refreshBtn.addEventListener('click', function() {
+                    setTimeout(applyPivotTableFixes, 500);
+                });
+                }
+            });
+    </script>
     <header class="app-header">
         <div class="logo-container">
             <i class="fas fa-table-cells fa-2x"></i>
@@ -263,37 +280,6 @@
                         <i class="fas fa-sync"></i> Reconnect
                       </button>
                     </div>
-                    
-                    <div class="root-gmid-control">
-                      <div class="filter-label">Root GMID:</div>
-                      <div class="multiselect-dropdown">
-                        <button class="multiselect-button">
-                          <span class="selection-text">Select Root GMIDs</span>
-                          <i class="fas fa-chevron-down"></i>
-                        </button>
-                        <div class="multiselect-dropdown-content">
-                          <div class="search-container">
-                            <input type="text" placeholder="Search GMIDs..." class="search-input">
-                          </div>
-                          <div class="select-actions">
-                            <button class="select-all-btn">Select All</button>
-                            <button class="clear-all-btn">Clear All</button>
-                          </div>
-                          <div class="checkbox-list" id="rootGmidCheckboxList">
-                            <!-- Checkboxes will be added here dynamically -->
-                            <div class="checkbox-option">
-                              <label>
-                                <input type="checkbox" value="Loading..."> 
-                                <span>Loading options...</span>
-                              </label>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <button id="applyRootGmidBtn" class="btn btn-primary">
-                        <i class="fas fa-check"></i> Apply
-                      </button>
-                    </div>
                 </div>
             </div>
             
@@ -316,12 +302,7 @@
             
             <div class="card-body" id="filterContent">
                 <!-- Filter content will be dynamically generated here -->
-            </div>
-            
-            <div class="filter-actions">
-                <button id="applyFiltersBtn" class="apply-filters-btn">
-                    <i class="fas fa-check"></i> Apply Filters
-                </button>
+                
             </div>
         </div>
         
@@ -782,11 +763,5 @@
             refreshButton.addEventListener('click', window.refreshPivotTable);
         }
     </script>
-
-
-    <!-- Load our filter integration fixes -->
-    <script type="module" src="./javascripts/filter-renderer-init.js"></script>
-    
-    
 </body>
 </html>

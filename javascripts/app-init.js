@@ -7,8 +7,10 @@ import stateModule from './state.js';
 import pivotTable from './pivotTableEnhanced.js';
 import core from './core.js';
 import data from './data.js';
-import filters from './filters.js';
+// import filters from './filters.js';
 import ui from './ui.js';
+import { initializeFilterSystem } from './pivot-filtering-system.js';
+
 
 let isConnectingToDatabase = false; // Flag global
 
@@ -57,7 +59,8 @@ function initializeApp() {
     // STEP 4: Now we can initialize expanded nodes & filter system
     try{
         core.initializeExpandedNodes();
-        filters.initializeFilterSystem();
+        // filters.initializeFilterSystem();
+       
     } catch (expandError)
     {
         console.error("Error initializing expanded nodes:", expandError);
@@ -86,7 +89,7 @@ function initializeApp() {
         state: state,
         core: core,
         data: data,
-        filters: filters,
+        // filters: filters,
         ui: ui,
         pivotTable: pivotTable,
         
@@ -97,6 +100,9 @@ function initializeApp() {
     
     // STEP 7: Initialize UI
     ui.initDragAndDrop();
+
+    // Initialize filtering system
+    initializeFilterSystem();
     
 
     // STEP 8: Set up database connection
@@ -113,10 +119,13 @@ function initializeApp() {
 
     // STEP 11: Initialize filters
     // setTimeout(() => {
-    //     if (filters && filters.initializeFilters) {
-    //         filters.initializeFilters();
-    //     }
+    //     // if (filters && filters.initializeFilters) {
+    //     //     filters.initializeFilters();
+    //     // }
+    //     EnhancedFilterRenderer.createFilterComponent();
     // }, 1000);
+
+
     
 
     // STEP 12: Set up tab switching

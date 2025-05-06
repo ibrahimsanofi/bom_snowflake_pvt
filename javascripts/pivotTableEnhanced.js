@@ -386,15 +386,15 @@ const pivotTable = {
 
 
     filterByGmidDisplay: function(records, node) {
-        console.log(`GMID Filtering for node: ${node._id}, label: ${node.label}`);
-        console.log(`Node properties:`, JSON.stringify({
-            id: node._id,
-            label: node.label,
-            level: node.level,
-            levelValue: node.levelValue,
-            factId: node.factId,
-            path: node.path
-        }));
+        // console.log(`GMID Filtering for node: ${node._id}, label: ${node.label}`);
+        // console.log(`Node properties:`, JSON.stringify({
+        //     id: node._id,
+        //     label: node.label,
+        //     level: node.level,
+        //     levelValue: node.levelValue,
+        //     factId: node.factId,
+        //     path: node.path
+        // }));
         
         // For root node, return all records
         if (node._id === 'ROOT' || node.label === 'All GMIDs') {
@@ -403,7 +403,7 @@ const pivotTable = {
         
         // For leaf nodes with factId, filter directly by COMPONENT_GMID
         if (node.factId) {
-            console.log(`Filtering by factId: ${node.factId}`);
+            // console.log(`Filtering by factId: ${node.factId}`);
             
             if (Array.isArray(node.factId)) {
                 // Handle multiple GMIDs case
@@ -411,14 +411,14 @@ const pivotTable = {
                 const result = records.filter(record => 
                     record.COMPONENT_GMID && factIdSet.has(record.COMPONENT_GMID));
                 
-                console.log(`Filtered by factId (array): ${result.length} records found from ${records.length}`);
+                // console.log(`Filtered by factId (array): ${result.length} records found from ${records.length}`);
                 return result;
             } else {
                 // Single GMID case
                 const result = records.filter(record => 
                     record.COMPONENT_GMID === node.factId);
                 
-                console.log(`Filtered by factId (single): ${result.length} records found from ${records.length}`);
+                // console.log(`Filtered by factId (single): ${result.length} records found from ${records.length}`);
                 return result;
             }
         }
@@ -426,7 +426,7 @@ const pivotTable = {
         // For non-leaf nodes, filter by level and value in PATH_GMID
         if (node.levelValue) {
             const levelNum = node.level;
-            console.log(`Filtering by levelValue: ${node.levelValue} at level ${levelNum}`);
+            // console.log(`Filtering by levelValue: ${node.levelValue} at level ${levelNum}`);
             
             // Find all records where this node's levelValue matches a segment in PATH_GMID
             const result = records.filter(record => {
@@ -443,13 +443,13 @@ const pivotTable = {
                 return pathSegments.includes(node.levelValue);
             });
             
-            console.log(`Filtered by levelValue: ${result.length} records found from ${records.length}`);
+            // console.log(`Filtered by levelValue: ${result.length} records found from ${records.length}`);
             return result;
         }
         
         // If we get here, try finding any descendants by using the path
         if (node.path) {
-            console.log(`Attempting path-based filtering`);
+            // console.log(`Attempting path-based filtering`);
             
             // Get path components
             const pathParts = node.path.filter(p => p !== 'ROOT');
@@ -461,7 +461,7 @@ const pivotTable = {
                 }).filter(Boolean);
                 
                 if (pathValues.length > 0) {
-                    console.log(`Path values: ${pathValues.join(', ')}`);
+                    // console.log(`Path values: ${pathValues.join(', ')}`);
                     
                     // Find records where PATH_GMID contains any of these values
                     const result = records.filter(record => {
@@ -472,14 +472,14 @@ const pivotTable = {
                             pathSegments.includes(value));
                     });
                     
-                    console.log(`Filtered by path: ${result.length} records found from ${records.length}`);
+                    // console.log(`Filtered by path: ${result.length} records found from ${records.length}`);
                     return result;
                 }
             }
         }
         
         // If no criteria matched, log a warning and return all records
-        console.warn(`No filtering criteria found for GMID node: ${node.label}`);
+        // console.warn(`No filtering criteria found for GMID node: ${node.label}`);
         return records;
     },
 
@@ -1269,21 +1269,6 @@ const pivotTable = {
         // Continue with the standard table rendering
         this.renderStandardTable(elements, useMultiDimension);
     },
-    
-    /**
-     * Check if the pivot table has a time hierarchy
-     */
-    // hasTimeHierarchy: function() {
-    //     const { pivotData } = this.state;
-    //     if (!pivotData || !pivotData.columns) return false;
-        
-    //     // Check if any column has a TIME dimension
-    //     return pivotData.columns.some(col => 
-    //         col.hierarchyField === 'TIME' || 
-    //         col.hierarchyField === 'DIM_TIME' ||
-    //         (col._id && (col._id.includes('_Q') || col._id.includes('_M') || col._id.includes('_Y')))
-    //     );
-    // },
 
 
     /**
