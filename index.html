@@ -101,20 +101,47 @@
     </header>
     
     <main class="content">
-        <div class="button-container">
-            <a href="bom.html" class="nav-button">BOM</a>
-            <a href="revenue.html" class="nav-button">Revenue</a>
+        <div class="button-container" id="cardContainer">
         </div>
     </main>
 
     <script>
-        // JavaScript can be added here for enhanced functionality
-        document.querySelectorAll('.nav-button').forEach(button => {
-            button.addEventListener('click', function(e) {
-                // Optional: Add click animations or tracking here
-                console.log(`Navigating to ${this.getAttribute('href')}`);
+        fetch('http://localhost:3000/api/get_fact_names')
+            .then(response => response.text())
+            .then(text => {
+                const cards = text
+                    .split('\n')
+                    .filter(Boolean)
+                    .map(line => {
+                        try {
+                            const obj = JSON.parse(line);
+                            const table = obj.TABLE_NAME || obj.table_name || Object.values(obj)[0];
+                            return table ? { label: table, href: table + '.html' } : null;
+                        } catch {
+                            return null;
+                        }
+                    })
+                    .filter(Boolean);
+
+                const container = document.getElementById('cardContainer');
+                container.innerHTML = '';
+                cards.forEach(card => {
+                    const a = document.createElement('a');
+                    a.href = card.href;
+                    a.className = 'nav-button';
+                    a.textContent = card.label;
+                    container.appendChild(a);
+                });
+                container.querySelectorAll('.nav-button').forEach(button => {
+                    button.addEventListener('click', function(e) {
+                        console.log(`Navigating to ${this.getAttribute('href')}`);
+                    });
+                });
+            })
+            .catch(err => {
+                document.getElementById('cardContainer').innerHTML = '<div>Erreur de chargement des cartes</div>';
+                console.error(err);
             });
-        });
     </script>
 </body>
 </html>

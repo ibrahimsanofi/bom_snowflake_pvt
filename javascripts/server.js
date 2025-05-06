@@ -9,8 +9,6 @@ const PORT = 3000;
 app.use(cors()); 
 app.use(express.json());
 
-const TABLE_NAME_REGEX = /^[A-Za-z][A-Za-z0-9_]*$/;
-
 /**
  * Route générique pour récupérer toutes les lignes d'une table.
  * Usage: GET /api/data/:table
@@ -19,10 +17,6 @@ const TABLE_NAME_REGEX = /^[A-Za-z][A-Za-z0-9_]*$/;
 app.get('/api/data/:table', async (req, res) => {
   const rawTable = req.params.table;
 
-  // Vérification du format du nom de table
-  if (!TABLE_NAME_REGEX.test(rawTable)) {
-    return res.status(400).json({ error: `Nom de table invalide: ${rawTable}` });
-  }
 
   const tableName = rawTable.toUpperCase();
 
