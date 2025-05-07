@@ -270,3 +270,61 @@ tr.all-zeros-row,
     .hierarchy-cell[data-level="3"] { padding-left: 48px; }
     .hierarchy-cell[data-level="4"] { padding-left: 62px; }
 }
+
+/* Make all data cells have white background */
+.table-modern tbody td:not(.hierarchy-cell) {
+    background-color: white !important;
+}
+
+/* Ensure all numeric cells are right-aligned */
+.value-cell {
+    text-align: right !important;
+    padding-right: 10px !important;
+}
+
+/* Preserve the colored hierarchy cells */
+.hierarchy-cell {
+    background-color: white !important;
+}
+
+/* Remove any background color from non-zero values */
+.value-cell:not(.zero-value) {
+    background-color: white !important;
+    font-weight: 700;
+}
+
+/* Override the alternating row styles */
+.table-modern tbody tr:nth-child(even):not(.empty-row) td:not(.hierarchy-cell) {
+    background-color: white !important;
+}
+
+/* Override any other background colors for value cells */
+.value-cell.numeric,
+.value-cell.zero,
+.value-cell.negative {
+    background-color: white !important;
+}
+
+/* Additional CSS for multiple measures */
+.measure-header {
+    background-color: #f0f5ff;
+    border-bottom: 1px solid #ccc;
+    text-align: center;
+    font-weight: bold;
+}
+
+.value-column {
+    background-color: #e6f0ff;
+    text-align: center;
+}
+
+/* Ensure all cells have white background except headers */
+tbody td:not(.hierarchy-cell) {
+    background-color: white !important;
+}
+
+/* Ensure all numeric values are right-aligned */
+.value-cell {
+    text-align: right !important;
+    padding-right: 10px !important;
+}
