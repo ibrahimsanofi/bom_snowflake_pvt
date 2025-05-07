@@ -213,21 +213,6 @@
     </style>
 </head>
 <body>
-    <script>
-        // Call after pivot table is generated
-        document.addEventListener('DOMContentLoaded', function() {
-                // Wait for pivot table to be generated
-                setTimeout(applyPivotTableFixes, 1000);
-                
-                // Also apply fixes whenever pivot table is refreshed
-                const refreshBtn = document.getElementById('refreshBtn');
-                if (refreshBtn) {
-                    refreshBtn.addEventListener('click', function() {
-                    setTimeout(applyPivotTableFixes, 500);
-                });
-                }
-            });
-    </script>
     <header class="app-header">
         <div class="logo-container">
             <i class="fas fa-table-cells fa-2x"></i>

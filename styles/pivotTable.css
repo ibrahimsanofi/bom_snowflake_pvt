@@ -14,6 +14,13 @@
     --warning: #f59e0b;
     --danger: #ef4444;
     
+    /* Region Colors */
+    --region-all: #f3f4f6;
+    --region-east: #f9a8d4;
+    --region-north: #93c5fd;
+    --region-south: #a7f3d0;
+    --region-west: #fde68a;
+    
     /* Neutral Colors */
     --bg-light: #f8fafc;
     --bg-card: #ffffff;
@@ -66,66 +73,63 @@ th {
     position: relative;
 }
 
-/* ---------- 3. SPECIFIC LAYOUT HANDLING ---------- */
-/* First layout - with hierarchies in row and column zones */
-
-/* Row headers */
-th.hierarchy-header {
-    text-align: left;
-    background-color: #f1f5f9;
-    font-weight: 600;
+/* ---------- 3. HIERARCHY STYLING (NEW) ---------- */
+/* Hierarchy Cell - Base Styling */
+.hierarchy-cell {
+    display: flex;
+    align-items: center;
     position: sticky;
     left: 0;
     z-index: 10;
+    background-color: var(--bg-light);
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--border-light);
 }
 
-/* Column section headers */
-th.section-header {
-    text-align: center;
-    background-color: #f1f5f9;
-    border-bottom: 2px solid var(--border-dark);
-    font-weight: 600;
+/* Region/Node Styling - Different colors for different levels */
+.hierarchy-cell[data-level="0"] {
+    background-color: var(--region-all);
+    padding-left: 8px;
 }
 
-/* Company/Entity column headers */
-th.entity-header {
-    text-align: center;
-    background-color: var(--primary-light);
-    font-weight: 500;
-    white-space: nowrap;
+.hierarchy-cell[data-level="1"] {
+    background-color: var(--region-east);
+    padding-left: 28px;
 }
 
-/* Measure headers */
-th.measure-header {
-    text-align: center;
-    background-color: #e6f0ff;
-    font-weight: 500;
-    font-size: 0.8rem;
+.hierarchy-cell[data-level="2"] {
+    background-color: var(--region-north);
+    padding-left: 48px;
 }
 
-/* Selectable column headers (checkboxes) */
-th.selectable {
-    text-align: center;
-    padding: 0.25rem;
+.hierarchy-cell[data-level="3"] {
+    background-color: var(--region-south);
+    padding-left: 68px;
 }
 
-/* Expand/collapse controls */
+.hierarchy-cell[data-level="4"] {
+    background-color: var(--region-west);
+    padding-left: 88px;
+}
+
+/* Expand/Collapse Icon */
 .expand-collapse {
     display: inline-flex;
     justify-content: center;
     align-items: center;
     width: 16px;
     height: 16px;
-    cursor: pointer;
-    margin-right: 0.5rem;
-    border: 1px solid #d1d5db;
+    margin-right: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.2);
     border-radius: 3px;
     background-color: white;
-    text-align: center;
-    line-height: 14px;
+    cursor: pointer;
+    font-weight: bold;
     flex-shrink: 0;
+    position: relative;
 }
 
+/* Expand/Collapse Icon States */
 .expand-collapse.collapsed:before {
     content: "+";
     color: #10b981;
@@ -140,139 +144,111 @@ th.selectable {
     font-size: 14px;
 }
 
-/* Row styling */
-tr:hover td {
-    background-color: #f8fafc;
+/* Leaf Node (no children) */
+.leaf-node {
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+    display: inline-block;
+    flex-shrink: 0;
 }
 
-tr:nth-child(even) {
-    background-color: rgba(248, 250, 252, 0.5);
-}
-
-/* Material type rows */
-.material-row td:first-child {
-    padding-left: 1rem;
+/* Dimension Label */
+.dimension-label {
     font-weight: 500;
+    white-space: nowrap;
+    color: var(--text-dark);
 }
 
-/* Hierarchy level indentation */
-.indent-level-0 { padding-left: 0.5rem !important; }
-.indent-level-1 { padding-left: 1.5rem !important; }
-.indent-level-2 { padding-left: 2.5rem !important; }
-.indent-level-3 { padding-left: 3.5rem !important; }
-.indent-level-4 { padding-left: 4.5rem !important; }
+/* Row hover effect */
+tr:hover .hierarchy-cell {
+    filter: brightness(0.95);
+}
 
-/* Value cells */
+/* ---------- 4. VALUE CELLS ---------- */
+/* Value cell styling */
 .value-cell {
     text-align: right;
     font-family: var(--font-mono);
     background-color: white;
+    padding-right: 12px;
+    font-variant-numeric: tabular-nums;
 }
 
 .value-cell.numeric {
     text-align: right;
-    font-family: var(--font-mono);
 }
 
 .value-cell.zero {
     color: var(--text-light);
+    opacity: 0.5;
 }
 
 .value-cell.negative {
     color: var(--danger);
 }
 
-/* Styling for numeric values */
-.numeric-value {
-    text-align: right;
-    font-family: var(--font-mono);
-}
-
-/* ---------- 4. SPECIAL CASES ---------- */
-/* Layout 2 - Simplified with only row hierarchy */
-
-/* Hide duplicate columns */
-.hide-duplicate-columns th:nth-child(2),
-.hide-duplicate-columns td:nth-child(2) {
-    display: none;
-}
-
-/* Style the hierarchy column properly */
-.hierarchy-cell {
-    display: flex;
-    align-items: center;
-    padding: 0.5rem;
-    text-align: left;
-    position: sticky;
-    left: 0;
-    background-color: #f9fafb;
-    z-index: 10;
-    white-space: nowrap;
+/* Additional styles to highlight non-zero values */
+.value-cell:not(.zero-value) {
+    background-color: rgba(227, 242, 253, 0.7);
     font-weight: 500;
 }
 
-/* Parent items in hierarchy */
-.parent-item {
+/* ---------- 5. HEADER STYLING ---------- */
+/* Center measure headers */
+.table-modern th:not(.hierarchy-cell) {
+    text-align: center;
     font-weight: 600;
+    vertical-align: middle;
 }
 
-/* Leaf items in hierarchy */
-.leaf-item {
-    font-weight: 400;
-}
-
-/* Better hover effects for rows */
-tr:hover .hierarchy-cell {
+/* Style the first header row (measure name) */
+.table-modern thead tr:first-child th {
+    text-align: center;
+    font-weight: 600;
     background-color: #f1f5f9;
+    border-bottom: 2px solid #cbd5e1;
 }
 
-tr:hover .value-cell {
+/* Column header fixes */
+th.column-header {
+    text-align: center;
+    position: relative;
+    padding: 0.4rem 0.6rem;
+    white-space: nowrap;
+}
+
+/* ---------- 6. LAYOUT AND SPACING ---------- */
+/* Reduce cell height */
+.table-modern th, 
+.table-modern td {
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
+    line-height: 1.05;
+}
+
+/* Fix overall table styling */
+.table-modern {
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 1px solid #e2e8f0;
+    width: 100%;
+    max-width: 100%;
+    margin-bottom: 1rem;
+    background-color: white;
+    border-radius: 0.375rem;
+    overflow: hidden;
+}
+
+/* Improve readability for alternating rows */
+.table-modern tbody tr:nth-child(even):not(.empty-row) {
     background-color: #f8fafc;
 }
 
-/* ---------- 5. NEGATIVE VALUES ---------- */
-/* Apply distinct styling to negative values */
-.negative-value {
-    color: var(--danger);
-}
-
-/* ---------- 6. CHECKBOX STYLING ---------- */
-/* Checkbox container */
-.checkbox-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-/* Checkbox styling */
-input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    border: 1px solid var(--border-dark);
-    border-radius: 3px;
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    background-color: white;
-    cursor: pointer;
-    position: relative;
-}
-
-input[type="checkbox"]:checked {
-    background-color: var(--primary);
-    border-color: var(--primary);
-}
-
-input[type="checkbox"]:checked::after {
-    content: '';
-    position: absolute;
-    width: 5px;
-    height: 10px;
-    border: solid white;
-    border-width: 0 2px 2px 0;
-    top: 1px;
-    left: 5px;
-    transform: rotate(45deg);
+/* Hide rows and columns with all zeros */
+tr.all-zeros-row,
+.all-zeros-column {
+    display: none;
 }
 
 /* ---------- 7. RESPONSIVE ADJUSTMENTS ---------- */
@@ -287,171 +263,10 @@ input[type="checkbox"]:checked::after {
         height: 14px;
         margin-right: 0.25rem;
     }
+    
+    .hierarchy-cell[data-level="0"] { padding-left: 6px; }
+    .hierarchy-cell[data-level="1"] { padding-left: 20px; }
+    .hierarchy-cell[data-level="2"] { padding-left: 34px; }
+    .hierarchy-cell[data-level="3"] { padding-left: 48px; }
+    .hierarchy-cell[data-level="4"] { padding-left: 62px; }
 }
-
-/* ---------- 8. CUSTOM CLASSES FOR YOUR SCENARIO ---------- */
-
-/* View 1: For Hierarchy in Rows and Columns */
-.pivot-view-combined .hierarchy-cell {
-    background-color: #f9fafb;
-    position: sticky;
-    left: 0;
-    z-index: 10;
-}
-
-.pivot-view-combined .total-column {
-    background-color: #f1f5f9;
-    font-weight: 600;
-}
-
-/* View 2: For Hierarchy in Rows Only */
-.pivot-view-rows-only .total-column,
-.pivot-view-rows-only .value-column {
-    width: 150px; /* Set a fixed width for these columns */
-}
-
-/* When values are exactly the same, hide the duplicate column */
-.pivot-view-rows-only.hide-duplicates .total-column {
-    display: none;
-}
-
-/* Specifically target the numeric values that are not zero */
-td.numeric-value:not(.zero-value) {
-    font-weight: 500;
-}
-
-/* Alternating color handling for the second layout */
-.pivot-view-rows-only tr:nth-child(odd) {
-    background-color: rgba(249, 250, 251, 0.5);
-}
-
-.pivot-view-rows-only tr:nth-child(even) {
-    background-color: white;
-}
-
-/* Apply zebra striping to cells not just rows */
-.pivot-view-rows-only tr:nth-child(odd) td {
-    background-color: rgba(249, 250, 251, 0.5);
-}
-
-.pivot-view-rows-only tr:nth-child(even) td {
-    background-color: white;
-}
-
-/* Keep header cells with consistent styling */
-.pivot-view-rows-only th {
-    background-color: #f1f5f9;
-    text-align: center;
-}
-
-/* Fix for expanding/collapsing items */
-.pivot-view-rows-only .hierarchy-cell {
-    display: flex;
-    align-items: center;
-}
-
-/* Add specific styling for the Cost Unit header */
-th.cost-unit-header {
-    background-color: #e6f0ff;
-    font-weight: 600;
-    color: var(--primary-dark);
-    text-align: center;
-    border-bottom: 2px solid var(--primary-light);
-}
-
-/* Hide the Total column in the regular header and data rows, but not in the measure header row */
-.pivot-table-container table tbody tr td:nth-child(2),
-.pivot-table-container table thead tr:not(.measure-header-row) th:nth-child(2) {
-    display: none;
-}
-
-/* Center measure headers */
-.table-modern th:not(.hierarchy-cell) {
-    text-align: center !important;
-    font-weight: 600 !important;
-    vertical-align: middle !important;
-  }
-  
-  /* Right-align all value cells */
-  .table-modern td:not(.hierarchy-cell) {
-    text-align: right !important;
-    padding-right: 12px !important;
-    white-space: nowrap !important;
-  }
-  
-  /* Hide empty row below headers */
-  .table-modern tbody tr:first-child:not([data-row-id]),
-  .table-modern tbody tr:first-child:empty,
-  .table-modern tbody tr:first-child.empty-row {
-    display: none !important;
-  }
-  
-  /* Fix alignment for hierarchy cells */
-  .hierarchy-cell {
-    text-align: left !important;
-    padding-left: 8px !important;
-  }
-  
-  /* Value cell specific styling */
-  .value-cell {
-    text-align: right !important;
-    padding-right: 12px !important;
-    font-variant-numeric: tabular-nums !important; /* For better number alignment */
-  }
-  
-  /* Style the first header row (measure name) */
-  .table-modern thead tr:first-child th {
-    text-align: center !important;
-    font-weight: 600 !important;
-    background-color: #f1f5f9 !important;
-    border-bottom: 2px solid #cbd5e1 !important;
-  }
-  
-  /* Style for numeric values */
-  .numeric-value {
-    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace !important;
-    font-variant-numeric: tabular-nums !important;
-    color: black;
-  }
-  
-  /* Highlight row on hover */
-  .table-modern tbody tr:hover {
-    background-color: rgba(59, 130, 246, 0.05) !important;
-  }
-  
-  /* Zero values styling - make them lighter */
-  .zero-value {
-    color: #94a3b8 !important;
-    font-weight: normal !important;
-  }
-  
-  /* Styling for larger values */
-  .large-value {
-    font-weight: 600 !important;
-    color: #0c4a6e !important;
-  }
-  
-  /* Styling for totals row */
-  .table-modern tr.total-row td {
-    font-weight: 600 !important;
-    border-top: 2px solid #cbd5e1 !important;
-    background-color: #f8fafc !important;
-  }
-  
-  /* Improved readability for alternating rows */
-  .table-modern tbody tr:nth-child(even):not(.empty-row) {
-    background-color: #f8fafc !important;
-  }
-  
-  /* Fix overall table styling */
-  .table-modern {
-    border-collapse: separate !important;
-    border-spacing: 0 !important;
-    border: 1px solid #e2e8f0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    margin-bottom: 1rem !important;
-    background-color: white !important;
-    border-radius: 0.375rem !important;
-    overflow: hidden !important;
-  }

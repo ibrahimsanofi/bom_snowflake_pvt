@@ -444,7 +444,7 @@ window.generatePivotTable = function() {
 
 
 function processHierarchicalFields(fieldIds, axisType) {
-    console.log(`Processing hierarchical fields: ${fieldIds.join(', ')} for ${axisType}`);
+    // console.log(`Processing hierarchical fields: ${fieldIds.join(', ')} for ${axisType}`);
     
     const result = {
         flatRows: [],
@@ -460,11 +460,11 @@ function processHierarchicalFields(fieldIds, axisType) {
         }
         
         // Print field details for debugging
-        console.log(`Processing field: ${field.id}, type: ${field.type}`);
+        // console.log(`Processing field: ${field.id}, type: ${field.type}`);
         
         // Get dimension name (lowercase without DIM_ prefix)
         const dimName = field.id.replace('DIM_', '').toLowerCase();
-        console.log(`Processing dimension: ${dimName}`);
+        // console.log(`Processing dimension: ${dimName}`);
         
         // Check if hierarchy exists
         if (!state.hierarchies || !state.hierarchies[dimName]) {
@@ -478,7 +478,7 @@ function processHierarchicalFields(fieldIds, axisType) {
             return;
         }
         
-        console.log(`Found hierarchy for ${dimName} with root node: ${hierarchy.root.label}`);
+        // console.log(`Found hierarchy for ${dimName} with root node: ${hierarchy.root.label}`);
         
         // Store the field for reference
         result.hierarchyFields.push(field);
@@ -510,7 +510,7 @@ function processHierarchicalFields(fieldIds, axisType) {
             flattenedNodes = [hierarchy.root]; // At least include the root
         }
         
-        console.log(`Flattened ${flattenedNodes.length} nodes for ${dimName}`);
+        // console.log(`Flattened ${flattenedNodes.length} nodes for ${dimName}`);
         
         // Dimension-specific processing
         if (dimName === 'material_type') {
@@ -672,7 +672,7 @@ function processHierarchicalFields(fieldIds, axisType) {
         }
     });
     
-    console.log(`Processed ${fieldIds.length} fields. Result contains ${result.flatRows.length} rows.`);
+    // console.log(`Processed ${fieldIds.length} fields. Result contains ${result.flatRows.length} rows.`);
     return result;
 }
 
@@ -1328,7 +1328,7 @@ function logMappingDetails() {
                         maxDescendants = Math.max(maxDescendants, node.descendantFactIds.length);
                     }
                 });
-                console.log(`    ${nodesWithDescendants} nodes have precomputed descendant factIds (max: ${maxDescendants})`);
+                // console.log(`    ${nodesWithDescendants} nodes have precomputed descendant factIds (max: ${maxDescendants})`);
             }
         });
     }

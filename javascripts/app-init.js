@@ -7,7 +7,6 @@ import stateModule from './state.js';
 import pivotTable from './pivotTableEnhanced.js';
 import core from './core.js';
 import data from './data.js';
-// import filters from './filters.js';
 import ui from './ui.js';
 import { initializeFilterSystem } from './pivot-filtering-system.js';
 

@@ -705,70 +705,98 @@ function getDropTarget(element) {
  * 
  * @param {DragEvent} e - The drag over event
  */
+// function handleDragOver(e) {
+//     const dropTarget = getDropTarget(e.target);
+
+//     if (dropTarget) {
+//         const targetId = dropTarget.id;
+//         const dataTransfer = e.dataTransfer;
+
+//         let dropAllowed = false;
+
+//         // Always allow dropping back to available fields (but only in correct section)
+//         if (targetId === 'availableFields') {
+//             const dragging = document.querySelector('.dragging');
+//             if (dragging) {
+//                 const fieldType = dragging.getAttribute('data-type');
+//                 if (fieldType === 'dimension' && e.target.closest('.field-category-header')?.textContent === 'Dimensions') {
+//                     dropAllowed = true;
+//                 } else if (fieldType === 'fact' && e.target.closest('.field-category-header')?.textContent === 'Measures') {
+//                     dropAllowed = true;
+//                 }
+//             }
+//         } else {
+//             const dragging = document.querySelector('.dragging');
+//             let fieldType = null;
+//             if (dragging) {
+//                 fieldType = dragging.getAttribute('data-type');
+//             }
+//             if (targetId === 'valueFields') {
+//                 if (fieldType === 'fact') {
+//                     dropAllowed = true;
+//                 }
+//             } else if (
+//                 targetId === 'rowFields' ||
+//                 targetId === 'columnFields' ||
+//                 targetId === 'filterFields'
+//             ) {
+//                 if (fieldType === 'dimension') {
+//                     dropAllowed = true;
+//                 }
+//             }
+//         }
+
+//         if (dropAllowed) {
+//             e.preventDefault();
+//             dataTransfer.dropEffect = 'move';
+//         } else {
+//             // Explicitly block forbidden drop
+//             dataTransfer.dropEffect = 'none';
+//         }
+//     }
+// }
 function handleDragOver(e) {
     const dropTarget = getDropTarget(e.target);
-    if (!dropTarget) return;
 
-    const dataTransfer = e.dataTransfer;
-    const targetId    = dropTarget.id;
-    const dragging    = document.querySelector('.dragging');
-    if (!dragging) return;
+    if (dropTarget) {
+        const targetId = dropTarget.id;
+        const dataTransfer = e.dataTransfer;
 
-    const fieldType = dragging.getAttribute('data-type');  // 'dimension' ou 'fact'
-    const fieldId   = dragging.getAttribute('data-field');
-    const field     = state.availableFields.find(f => f.id === fieldId);
+        let dropAllowed = false;
 
-    // ─── Bloc de sécurité pour valueFields ─────────────────
-    if (targetId === 'valueFields') {
-        if (fieldType !== 'fact') {
-            // Interdire immédiatement le drop pour tous les non-facts
+        // Always allow dropping back to available fields
+        if (targetId === 'availableFields') {
+            dropAllowed = true;
+        } else {
+            const dragging = document.querySelector('.dragging');
+            let fieldType = null;
+            if (dragging) {
+                fieldType = dragging.getAttribute('data-type');
+            }
+            if (targetId === 'valueFields') {
+                if (fieldType === 'fact') {
+                    dropAllowed = true;
+                }
+            } else if (
+                targetId === 'rowFields' ||
+                targetId === 'columnFields' ||
+                targetId === 'filterFields'
+            ) {
+                if (fieldType === 'dimension') {
+                    dropAllowed = true;
+                }
+            }
+        }
+
+        if (dropAllowed) {
             e.preventDefault();
+            dataTransfer.dropEffect = 'move';
+        } else {
+            // Explicitly block forbidden drop
             dataTransfer.dropEffect = 'none';
-            return;
         }
-    }
-
-    let dropAllowed = false;
-
-    // ─── Available Fields ───────────────────────────────────
-    if (targetId === 'availableFields') {
-        const category    = e.target.closest('[data-section]');
-        const sectionType = category?.getAttribute('data-section');
-        if (fieldType === 'dimension' && sectionType === 'dimension') {
-            dropAllowed = true;
-        } else if (fieldType === 'fact' && sectionType === 'fact') {
-            dropAllowed = true;
-        }
-    }
-
-    // ─── Measure fields (Value) ────────────────────────────
-    else if (targetId === 'valueFields') {
-        if (fieldType === 'fact' && field?.draggableTo?.includes('value')) {
-            dropAllowed = true;
-        }
-    }
-
-    // ─── Dimension fields (Rows / Columns / Filters) ───────
-    else if (['rowFields','columnFields','filterFields'].includes(targetId)) {
-        const zone = targetId === 'rowFields'    ? 'row'
-                   : targetId === 'columnFields' ? 'column'
-                                                   : 'filter';
-        if (fieldType === 'dimension' && field?.draggableTo?.includes(zone)) {
-            dropAllowed = true;
-        }
-    }
-
-    // ─── Appliquer la règle finale ──────────────────────────
-    if (dropAllowed) {
-        e.preventDefault();
-        dataTransfer.dropEffect = 'move';
-    } else {
-        // pas besoin de preventDefault ici : on ne veut pas autoriser
-        dataTransfer.dropEffect = 'none';
     }
 }
-
-
 
 
 /**
@@ -778,6 +806,119 @@ function handleDragOver(e) {
  * 
  * @param {DragEvent} e - The drop event
  */
+// function handleDrop(e) {
+//     e.preventDefault();
+
+//     const dropTarget = getDropTarget(e.target);
+//     if (!dropTarget) return;
+
+//     const fieldId = e.dataTransfer.getData('field');
+//     const fieldType = e.dataTransfer.getData('type');
+//     const isHierarchical = e.dataTransfer.getData('hierarchical') === 'true';
+//     const draggableTo = (e.dataTransfer.getData('draggableTo') || '').split(',');
+//     const sourceContainer = e.dataTransfer.getData('source');
+//     const targetContainer = dropTarget.id;
+
+//     // Strict control: dimensions only in row/column/filter, measures only in valueFields
+//     if (
+//         (targetContainer === 'valueFields' && fieldType !== 'fact') ||
+//         ((targetContainer === 'rowFields' || targetContainer === 'columnFields' || targetContainer === 'filterFields') && fieldType !== 'dimension')
+//     ) {
+//         return;
+//     }
+
+//     // Check if drop is allowed based on field type and target zone
+//     let dropAllowed = false;
+    
+//     if (targetContainer === 'availableFields') {
+//         // Always allow dropping back to available fields
+//         dropAllowed = true;
+//     } else if ((targetContainer === 'rowFields' || 
+//                 targetContainer === 'columnFields' || 
+//                 targetContainer === 'filterFields') && 
+//                fieldType === 'dimension' && 
+//                draggableTo.includes(targetContainer.replace('Fields', ''))) {
+//         dropAllowed = true;
+//     } else if (targetContainer === 'valueFields' && 
+//                fieldType === 'fact' && 
+//                draggableTo.includes('value')) {
+//         dropAllowed = true;
+//     }
+    
+//     // If dropping in the same container, update order but don't change containers
+//     if (sourceContainer === targetContainer) {
+//         if (dropAllowed) {
+//             // Update the order without changing containers
+//             updateFieldOrder();
+//         }
+//         return;
+//     } else if (!dropAllowed) {
+//         return;
+//     }
+    
+//     // Check for duplicates before proceeding
+//     if (targetContainer !== 'availableFields') {
+//         // Check if the field already exists in the target zone
+//         const isDuplicate = checkForDuplicate(fieldId, targetContainer);
+//         if (isDuplicate) {
+//             console.log(`Field ${fieldId} already exists in ${targetContainer}, skipping addition`);
+//             return;
+//         }
+//     }
+    
+//     // Remove from source container's state array
+//     if (sourceContainer === 'availableFields') {
+//         // No need to remove from available fields - it's always there
+//     } else if (sourceContainer === 'rowFields') {
+//         state.rowFields = state.rowFields.filter(f => f !== fieldId);
+//     } else if (sourceContainer === 'columnFields') {
+//         state.columnFields = state.columnFields.filter(f => f !== fieldId);
+//     } else if (sourceContainer === 'valueFields') {
+//         state.valueFields = state.valueFields.filter(f => f !== fieldId);
+//     } else if (sourceContainer === 'filterFields') {
+//         state.filterFields = state.filterFields.filter(f => f !== fieldId);
+//     }
+    
+//     // Add to target container's state array in the correct position
+//     if (targetContainer === 'availableFields') {
+//         // No need to add to available fields - fields are always in the available zone
+//     } else {
+//         // Insert at the correct position
+//         insertFieldAtPosition(fieldId, targetContainer);
+//     }
+
+//     // Update the UI
+//     const elements = {
+//         rowFields: document.getElementById('rowFields'),
+//         columnFields: document.getElementById('columnFields'),
+//         valueFields: document.getElementById('valueFields'),
+//         filterFields: document.getElementById('filterFields')
+//     };
+    
+//     // If we added a hierarchical field, initialize its expansion state
+//     if (isHierarchical && targetContainer !== 'availableFields') {
+//         const zone = targetContainer.replace('Fields', '');
+//         core.debugLog("Dropped hierarchical field", {fieldId, zone});
+        
+//         // Only handle row and column zones
+//         if (zone === 'row' || zone === 'column') {
+//             initializeHierarchyExpansion(fieldId, zone);
+//         }
+//     }
+
+//     if (targetContainer === 'filterFields' && window.renderFilterControls) {
+//         console.log('Field dropped into filter zone, rendering filters');
+//         window.renderFilterControls();
+//     }
+    
+//     // Render the updated field containers
+//     renderFieldContainers(elements, state);
+    
+//     // Regenerate the pivot table
+//     // if (window.generatePivotTable) {
+//     //     window.generatePivotTable();
+//     // }
+// }
 function handleDrop(e) {
     e.preventDefault();
 
@@ -787,23 +928,36 @@ function handleDrop(e) {
     const fieldId = e.dataTransfer.getData('field');
     const fieldType = e.dataTransfer.getData('type');
     const isHierarchical = e.dataTransfer.getData('hierarchical') === 'true';
-    const draggableTo = (e.dataTransfer.getData('draggableTo') || '').split(',');
     const sourceContainer = e.dataTransfer.getData('source');
     const targetContainer = dropTarget.id;
 
-    const field = state.availableFields.find(f => f.id === fieldId);
-
-    if (
-        (targetContainer === 'valueFields' && (fieldType !== 'fact' || !field || !Array.isArray(field.draggableTo) || !field.draggableTo.includes('value'))) ||
-        (
-            (targetContainer === 'rowFields' && (fieldType !== 'dimension' || !field || !Array.isArray(field.draggableTo) || !field.draggableTo.includes('row'))) ||
-            (targetContainer === 'columnFields' && (fieldType !== 'dimension' || !field || !Array.isArray(field.draggableTo) || !field.draggableTo.includes('column'))) ||
-            (targetContainer === 'filterFields' && (fieldType !== 'dimension' || !field || !Array.isArray(field.draggableTo) || !field.draggableTo.includes('filter')))
-        )
-    ) {
+    // Check if drop is allowed based on field type and target zone
+    let dropAllowed = false;
+    
+    if (targetContainer === 'availableFields') {
+        // Always allow dropping back to available fields
+        dropAllowed = true;
+    } else if ((targetContainer === 'rowFields' || 
+                targetContainer === 'columnFields' || 
+                targetContainer === 'filterFields') && 
+               fieldType === 'dimension') {
+        dropAllowed = true;
+    } else if (targetContainer === 'valueFields' && 
+               fieldType === 'fact') {
+        dropAllowed = true;
+    }
+    
+    // If dropping in the same container, update order but don't change containers
+    if (sourceContainer === targetContainer) {
+        if (dropAllowed) {
+            // Update the order without changing containers
+            updateFieldOrder();
+        }
+        return;
+    } else if (!dropAllowed) {
         return;
     }
-
+    
     // Check for duplicates before proceeding
     if (targetContainer !== 'availableFields') {
         // Check if the field already exists in the target zone
@@ -815,9 +969,7 @@ function handleDrop(e) {
     }
     
     // Remove from source container's state array
-    if (sourceContainer === 'availableFields') {
-        // No need to remove from available fields - it's always there
-    } else if (sourceContainer === 'rowFields') {
+    if (sourceContainer === 'rowFields') {
         state.rowFields = state.rowFields.filter(f => f !== fieldId);
     } else if (sourceContainer === 'columnFields') {
         state.columnFields = state.columnFields.filter(f => f !== fieldId);
@@ -828,9 +980,7 @@ function handleDrop(e) {
     }
     
     // Add to target container's state array in the correct position
-    if (targetContainer === 'availableFields') {
-        // No need to add to available fields - fields are always in the available zone
-    } else {
+    if (targetContainer !== 'availableFields') {
         // Insert at the correct position
         insertFieldAtPosition(fieldId, targetContainer);
     }
@@ -840,7 +990,8 @@ function handleDrop(e) {
         rowFields: document.getElementById('rowFields'),
         columnFields: document.getElementById('columnFields'),
         valueFields: document.getElementById('valueFields'),
-        filterFields: document.getElementById('filterFields')
+        filterFields: document.getElementById('filterFields'),
+        availableFields: document.getElementById('availableFields')
     };
     
     // If we added a hierarchical field, initialize its expansion state
@@ -861,11 +1012,12 @@ function handleDrop(e) {
     
     // Render the updated field containers
     renderFieldContainers(elements, state);
+    renderAvailableFields(elements);
     
     // Regenerate the pivot table
-    // if (window.generatePivotTable) {
-    //     window.generatePivotTable();
-    // }
+    if (window.generatePivotTable) {
+        window.generatePivotTable();
+    }
 }
 
 
@@ -1573,4 +1725,4 @@ export default {
     showStatus,
     updateTableStatus
 
-};
+  };
