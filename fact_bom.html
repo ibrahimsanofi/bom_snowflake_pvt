@@ -17,6 +17,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
+
     <!-- Import our modular application -->
     <script type="module" src="./javascripts/app-init.js"></script>
     
@@ -742,6 +743,73 @@
         if (refreshButton) {
             refreshButton.addEventListener('click', window.refreshPivotTable);
         }
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Setup for Database Connection collapsible
+            const collapseConnectionInfoBtn = document.getElementById('collapseConnectionInfo');
+            const connectionCardBody = collapseConnectionInfoBtn.closest('.card').querySelector('.card-body');
+            
+            collapseConnectionInfoBtn.addEventListener('click', function() {
+                // Toggle the card body
+                toggleCollapsible(connectionCardBody, collapseConnectionInfoBtn);
+            });
+            
+            // Setup for Filter Panel collapsible
+            const toggleFilterContentBtn = document.getElementById('toggleFilterContent');
+            const filterContent = document.getElementById('filterContent');
+            
+            toggleFilterContentBtn.addEventListener('click', function() {
+                toggleCollapsible(filterContent, toggleFilterContentBtn);
+            });
+            
+            // Setup for Activity Log collapsible
+            const collapseActivityLogBtn = document.getElementById('collapseActivityLog');
+            const activityLogBody = collapseActivityLogBtn.closest('.card').querySelector('.card-body');
+            
+            collapseActivityLogBtn.addEventListener('click', function() {
+                toggleCollapsible(activityLogBody, collapseActivityLogBtn);
+            });
+            
+            // Setup for Instructions Panel collapsible
+            const collapseInstructionsBtn = document.getElementById('collapseInstructions');
+            const instructionsBody = collapseInstructionsBtn.closest('.card').querySelector('.card-body');
+            
+            collapseInstructionsBtn.addEventListener('click', function() {
+                toggleCollapsible(instructionsBody, collapseInstructionsBtn);
+            });
+            
+            // Helper function to toggle collapsible elements
+            function toggleCollapsible(contentElement, buttonElement) {
+                // Toggle the display of the content
+                if (contentElement.style.display === 'none') {
+                    contentElement.style.display = 'block';
+                    // Change icon to up arrow
+                    const icon = buttonElement.querySelector('i');
+                    if (icon) {
+                        icon.classList.remove('fa-chevron-down');
+                        icon.classList.add('fa-chevron-up');
+                    }
+                } else {
+                    contentElement.style.display = 'none';
+                    // Change icon to down arrow
+                    const icon = buttonElement.querySelector('i');
+                    if (icon) {
+                        icon.classList.remove('fa-chevron-up');
+                        icon.classList.add('fa-chevron-down');
+                    }
+                }
+            }
+            
+            // Set initial states if needed e.g. if some panels are desired to start collapsed:
+            // filterContent.style.display = 'none';
+            // const filterIcon = toggleFilterContentBtn.querySelector('i');
+            // if (filterIcon) {
+            //     filterIcon.classList.remove('fa-chevron-up');
+            //     filterIcon.classList.add('fa-chevron-down');
+            // }
+        });
     </script>
 </body>
 </html>

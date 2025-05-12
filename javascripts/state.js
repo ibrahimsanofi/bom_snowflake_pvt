@@ -136,7 +136,7 @@ function initializeExpandedNodes() {
         });
     }
     
-    console.log("Initialized hierarchy expansion states:", state.expandedNodes);
+    console.log("✅ Status: Initialized hierarchy expansion states:", state.expandedNodes);
 }
 
 
@@ -167,9 +167,9 @@ function saveStateToCache() {
         // Store directly without compression first as a fallback
         try {
             localStorage.setItem('pivotTableMinimal', JSON.stringify(cacheMetadata));
-            console.log("Minimal state cached successfully");
+            console.log("✅ Status: Minimal state cached successfully");
         } catch (error) {
-            console.warn("Failed to store even minimal state:", error);
+            console.warn("⚠️ Warning: Failed to store even minimal state:", error);
         }
         
         // Try to store field configurations separately
@@ -179,13 +179,13 @@ function saveStateToCache() {
                     availableFields: state.availableFields,
                     timestamp: Date.now()
                 }));
-                console.log("Field configurations cached successfully");
+                console.log("✅ Status: Field configurations cached successfully");
             }
         } catch (fieldsError) {
-            console.warn("Failed to store field configurations:", fieldsError);
+            console.warn("⚠️ Warning: Failed to store field configurations:", fieldsError);
         }
     } catch (error) {
-        console.error("Error preparing cache:", error);
+        console.error("❌ Alert! Error preparing cache:", error);
         // Try to clean up any potentially corrupted cache
         clearCache();
     }
@@ -205,10 +205,10 @@ function restoreStateFromCache() {
             if (compressedMetadata) {
                 const decompressedData = decompressData(compressedMetadata);
                 metadata = JSON.parse(decompressedData);
-                console.log("Restored compressed metadata");
+                console.log("✅ Status: Restored compressed metadata");
             }
         } catch (compressionError) {
-            console.warn("Error decompressing metadata, trying uncompressed:", compressionError);
+            console.warn("⚠️ Warning: Error decompressing metadata, trying uncompressed:", compressionError);
         }
         
         // Fallback to uncompressed
@@ -216,7 +216,7 @@ function restoreStateFromCache() {
             const metadataJson = localStorage.getItem('pivotTableMetadata');
             if (metadataJson) {
                 metadata = JSON.parse(metadataJson);
-                console.log("Restored uncompressed metadata");
+                console.log("✅ Status: Restored uncompressed metadata");
             }
         }
         
@@ -225,13 +225,13 @@ function restoreStateFromCache() {
             const minimalJson = localStorage.getItem('pivotTableMinimal');
             if (minimalJson) {
                 metadata = JSON.parse(minimalJson);
-                console.log("Restored minimal metadata");
+                console.log("✅ Status: Restored minimal metadata");
             }
         }
         
         // If no metadata found at all
         if (!metadata) {
-            console.log("No cached metadata found");
+            console.log("✅ Status: No cached metadata found");
             return false;
         }
         
@@ -240,7 +240,7 @@ function restoreStateFromCache() {
         const MAX_CACHE_AGE = 24 * 60 * 60 * 1000; // 24 hours
         
         if (cacheAge > MAX_CACHE_AGE) {
-            console.log("Cache is too old, not using");
+            console.log("✅ Status: Cache is too old, not using");
             clearCache();
             return false;
         }
@@ -248,13 +248,13 @@ function restoreStateFromCache() {
         // Restore filter state if available
         if (metadata.filters) {
             state.filters = metadata.filters;
-            console.log("Restored filter state from cache");
+            console.log("✅ Status: Restored filter state from cache");
         }
         
         // Restore expansion states if available
         if (metadata.expandedNodes) {
             state.expandedNodes = metadata.expandedNodes;
-            console.log("Restored expansion states from cache");
+            console.log("✅ Status: Restored expansion states from cache");
         }
         
         // Restore field selections if available
@@ -263,7 +263,7 @@ function restoreStateFromCache() {
             state.columnFields = metadata.fieldConfig.columnFields || [];
             state.valueFields = metadata.fieldConfig.valueFields || [];
             state.filterFields = metadata.fieldConfig.filterFields || [];
-            console.log("Restored field selections from cache");
+            console.log("✅ Status: Restored field selections from cache");
         }
         
         // Try to restore available fields
@@ -275,10 +275,10 @@ function restoreStateFromCache() {
                 if (compressedFields) {
                     const decompressedFields = decompressData(compressedFields);
                     fieldsData = JSON.parse(decompressedFields);
-                    console.log("Restored compressed fields");
+                    console.log("✅ Status: Restored compressed fields");
                 }
             } catch (compressedFieldsError) {
-                console.warn("Error decompressing fields:", compressedFieldsError);
+                console.warn("⚠️ Warning: Error decompressing fields:", compressedFieldsError);
             }
             
             // Fallback to uncompressed
@@ -286,21 +286,21 @@ function restoreStateFromCache() {
                 const fieldsJson = localStorage.getItem('pivotTableFields');
                 if (fieldsJson) {
                     fieldsData = JSON.parse(fieldsJson);
-                    console.log("Restored uncompressed fields");
+                    console.log("✅ Status: Restored uncompressed fields");
                 }
             }
             
             if (fieldsData && fieldsData.availableFields) {
                 state.availableFields = fieldsData.availableFields;
-                console.log("Restored available fields from cache");
+                console.log("✅ Status: Restored available fields from cache");
             }
         } catch (fieldsError) {
-            console.warn("Could not restore field configurations:", fieldsError);
+            console.warn("⚠️ Warning: Could not restore field configurations:", fieldsError);
         }
         
         return true;
     } catch (error) {
-        console.error("Error restoring cache:", error);
+        console.error("❌ Alert! Error restoring cache:", error);
         return false;
     }
 }
@@ -317,9 +317,9 @@ function clearCache() {
         localStorage.removeItem('pivotTableFields');
         localStorage.removeItem('pivotTableFields_compressed');
         localStorage.removeItem('pivotTableMinimal');
-        console.log("Cache cleared completely");
+        console.log("✅ Status: Cache cleared completely");
     } catch (error) {
-        console.error("Error clearing cache:", error);
+        console.error("❌ Alert! Error clearing cache:", error);
     }
 }
 
@@ -334,7 +334,7 @@ function compressData(input) {
     
     // Add size limit to prevent stack overflow
     if (input.length > 1000000) {
-        console.warn("Input too large for compression, truncating to prevent overflow");
+        console.warn("⚠️ Warning: Input too large for compression, truncating to prevent overflow");
         input = input.substring(0, 1000000);
     }
     
@@ -373,7 +373,7 @@ function compressData(input) {
         // Base64 encode for safer storage
         return btoa(compressedStr);
     } catch (e) {
-        console.error("Compression failed:", e);
+        console.error("❌ Alert! Compression failed:", e);
         return ""; // Return empty string on failure
     }
 }
@@ -467,7 +467,7 @@ async function shouldUseCache(files) {
                 cacheTimestamp = metadata.timestamp || 0;
             }
         } catch (error) {
-            console.warn("Error checking cache timestamp:", error);
+            console.warn("⚠️ Warning: Error checking cache timestamp:", error);
             return false;
         }
         
@@ -477,7 +477,7 @@ async function shouldUseCache(files) {
         const isCacheNewer = cacheTimestamp > latestFileTime;
         const isCacheRecent = cacheTimestamp > minimumTimestamp;
         
-        console.log("Cache evaluation:", {
+        console.log("✅ Status: Cache evaluation:", {
             latestFileTime,
             cacheTimestamp,
             isCacheNewer,
@@ -487,7 +487,7 @@ async function shouldUseCache(files) {
         
         return isCacheNewer && isCacheRecent;
     } catch (error) {
-        console.error("Error determining cache usage:", error);
+        console.error("❌ Alert! Error determining cache usage:", error);
         return false;
     }
 }
@@ -540,7 +540,7 @@ function debugHierarchy(hierarchyName, state) {
     
     // 1. Check if hierarchy exists in state
     if (!state.hierarchies || !state.hierarchies[hierarchyName]) {
-        console.error(`Hierarchy '${hierarchyName}' does not exist in state.hierarchies`);
+        console.error(`❌ Alert! Hierarchy '${hierarchyName}' does not exist in state.hierarchies`);
         return;
     }
     
@@ -548,7 +548,7 @@ function debugHierarchy(hierarchyName, state) {
     
     // 2. Validate root node
     if (!hierarchy.root) {
-        console.error(`Hierarchy '${hierarchyName}' has no root node`);
+        console.error(`❌ Alert! Hierarchy '${hierarchyName}' has no root node`);
         return;
     }
     
@@ -556,7 +556,7 @@ function debugHierarchy(hierarchyName, state) {
     
     // 3. Check nodesMap
     if (!hierarchy.nodesMap) {
-        console.error(`Hierarchy '${hierarchyName}' has no nodesMap`);
+        console.error(`❌ Alert! Hierarchy '${hierarchyName}' has no nodesMap`);
         return;
     }
     
@@ -567,7 +567,7 @@ function debugHierarchy(hierarchyName, state) {
     console.log("Checking expansion states...");
     
     if (!state.expandedNodes || !state.expandedNodes[hierarchyName]) {
-        console.error(`No expansion state found for '${hierarchyName}'`);
+        console.error(`❌ Alert! No expansion state found for '${hierarchyName}'`);
     } else {
         const rowExpansions = state.expandedNodes[hierarchyName].row || {};
         const columnExpansions = state.expandedNodes[hierarchyName].column || {};

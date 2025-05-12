@@ -53,7 +53,7 @@ const core = {
      */
     initializeExpandedNodes: function() {
         if (!this.state) {
-            console.warn('State not initialized when calling initializeExpandedNodes');
+            console.warn('⚠️ Warning: State not initialized when calling initializeExpandedNodes');
             return;
         }
         
@@ -102,7 +102,7 @@ const core = {
             });
         }
         
-        console.log("Initialized hierarchy expansion states:", this.state.expandedNodes);
+        console.log("✅ Status: Initialized hierarchy expansion states:", this.state.expandedNodes);
     },
 
     

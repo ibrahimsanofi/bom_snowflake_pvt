@@ -33,7 +33,7 @@ function showStatus(message, type, elements) {
     if (elements && elements.uploadStatus) {
         elements.uploadStatus.innerHTML = `<div class="status-bar status-${type}">${message}</div>`;
     } else {
-        console.log(`Status (${type}): ${message}`);
+        console.log(`✅ Status: Status (${type}): ${message}`);
     }
 }
 
@@ -806,119 +806,6 @@ function handleDragOver(e) {
  * 
  * @param {DragEvent} e - The drop event
  */
-// function handleDrop(e) {
-//     e.preventDefault();
-
-//     const dropTarget = getDropTarget(e.target);
-//     if (!dropTarget) return;
-
-//     const fieldId = e.dataTransfer.getData('field');
-//     const fieldType = e.dataTransfer.getData('type');
-//     const isHierarchical = e.dataTransfer.getData('hierarchical') === 'true';
-//     const draggableTo = (e.dataTransfer.getData('draggableTo') || '').split(',');
-//     const sourceContainer = e.dataTransfer.getData('source');
-//     const targetContainer = dropTarget.id;
-
-//     // Strict control: dimensions only in row/column/filter, measures only in valueFields
-//     if (
-//         (targetContainer === 'valueFields' && fieldType !== 'fact') ||
-//         ((targetContainer === 'rowFields' || targetContainer === 'columnFields' || targetContainer === 'filterFields') && fieldType !== 'dimension')
-//     ) {
-//         return;
-//     }
-
-//     // Check if drop is allowed based on field type and target zone
-//     let dropAllowed = false;
-    
-//     if (targetContainer === 'availableFields') {
-//         // Always allow dropping back to available fields
-//         dropAllowed = true;
-//     } else if ((targetContainer === 'rowFields' || 
-//                 targetContainer === 'columnFields' || 
-//                 targetContainer === 'filterFields') && 
-//                fieldType === 'dimension' && 
-//                draggableTo.includes(targetContainer.replace('Fields', ''))) {
-//         dropAllowed = true;
-//     } else if (targetContainer === 'valueFields' && 
-//                fieldType === 'fact' && 
-//                draggableTo.includes('value')) {
-//         dropAllowed = true;
-//     }
-    
-//     // If dropping in the same container, update order but don't change containers
-//     if (sourceContainer === targetContainer) {
-//         if (dropAllowed) {
-//             // Update the order without changing containers
-//             updateFieldOrder();
-//         }
-//         return;
-//     } else if (!dropAllowed) {
-//         return;
-//     }
-    
-//     // Check for duplicates before proceeding
-//     if (targetContainer !== 'availableFields') {
-//         // Check if the field already exists in the target zone
-//         const isDuplicate = checkForDuplicate(fieldId, targetContainer);
-//         if (isDuplicate) {
-//             console.log(`Field ${fieldId} already exists in ${targetContainer}, skipping addition`);
-//             return;
-//         }
-//     }
-    
-//     // Remove from source container's state array
-//     if (sourceContainer === 'availableFields') {
-//         // No need to remove from available fields - it's always there
-//     } else if (sourceContainer === 'rowFields') {
-//         state.rowFields = state.rowFields.filter(f => f !== fieldId);
-//     } else if (sourceContainer === 'columnFields') {
-//         state.columnFields = state.columnFields.filter(f => f !== fieldId);
-//     } else if (sourceContainer === 'valueFields') {
-//         state.valueFields = state.valueFields.filter(f => f !== fieldId);
-//     } else if (sourceContainer === 'filterFields') {
-//         state.filterFields = state.filterFields.filter(f => f !== fieldId);
-//     }
-    
-//     // Add to target container's state array in the correct position
-//     if (targetContainer === 'availableFields') {
-//         // No need to add to available fields - fields are always in the available zone
-//     } else {
-//         // Insert at the correct position
-//         insertFieldAtPosition(fieldId, targetContainer);
-//     }
-
-//     // Update the UI
-//     const elements = {
-//         rowFields: document.getElementById('rowFields'),
-//         columnFields: document.getElementById('columnFields'),
-//         valueFields: document.getElementById('valueFields'),
-//         filterFields: document.getElementById('filterFields')
-//     };
-    
-//     // If we added a hierarchical field, initialize its expansion state
-//     if (isHierarchical && targetContainer !== 'availableFields') {
-//         const zone = targetContainer.replace('Fields', '');
-//         core.debugLog("Dropped hierarchical field", {fieldId, zone});
-        
-//         // Only handle row and column zones
-//         if (zone === 'row' || zone === 'column') {
-//             initializeHierarchyExpansion(fieldId, zone);
-//         }
-//     }
-
-//     if (targetContainer === 'filterFields' && window.renderFilterControls) {
-//         console.log('Field dropped into filter zone, rendering filters');
-//         window.renderFilterControls();
-//     }
-    
-//     // Render the updated field containers
-//     renderFieldContainers(elements, state);
-    
-//     // Regenerate the pivot table
-//     // if (window.generatePivotTable) {
-//     //     window.generatePivotTable();
-//     // }
-// }
 function handleDrop(e) {
     e.preventDefault();
 
@@ -963,7 +850,7 @@ function handleDrop(e) {
         // Check if the field already exists in the target zone
         const isDuplicate = checkForDuplicate(fieldId, targetContainer);
         if (isDuplicate) {
-            console.log(`Field ${fieldId} already exists in ${targetContainer}, skipping addition`);
+            console.log(`✅ Status: Field ${fieldId} already exists in ${targetContainer}, skipping addition`);
             return;
         }
     }
@@ -1006,7 +893,7 @@ function handleDrop(e) {
     }
 
     if (targetContainer === 'filterFields' && window.renderFilterControls) {
-        console.log('Field dropped into filter zone, rendering filters');
+        console.log('✅ Status: Field dropped into filter zone, rendering filters');
         window.renderFilterControls();
     }
     
@@ -1157,7 +1044,7 @@ console.log = function(...args) {
 
 // Function to initialize the enhanced console logger
 function initializeEnhancedConsole() {
-    console.log("Initializing enhanced console logging...");
+    console.log("✅ Status: Initializing enhanced console logging...");
     
     // Store the original console methods
     const originalConsoleLog = console.log;
@@ -1194,7 +1081,7 @@ function initializeEnhancedConsole() {
         addToProcessingStatus('Warning: ' + arguments[0], 'warning');
     };
     
-    console.log("Enhanced console logging initialized");
+    console.log("✅ Status: Enhanced console logging initialized");
 }
 
 

@@ -1,9 +1,9 @@
 // This module initialize the application
 
-// First import the state module since it's needed by all other modules
+// State module is imported since it's needed by all other modules
 import stateModule from './state.js';
 
-// Then import other modules
+// Other relevant modules are imported too
 import pivotTable from './pivotTableEnhanced.js';
 import core from './core.js';
 import data from './data.js';
@@ -14,7 +14,7 @@ import { initializeFilterSystem } from './pivot-filtering-system.js';
 let isConnectingToDatabase = false; // Flag global
 
 /**
- * Initialize the application. This should be called when the DOM is loaded
+ * This function initializes the application. It is called when the DOM is loaded
  */
 function initializeApp() {
     
@@ -25,35 +25,31 @@ function initializeApp() {
     core.setState(state);
 
     // Make state accessible globally for debugging
-    window.appState = state;
-    
+    window.appState = state;    
 
     // STEP 2: Get DOM elements
     const elements = core.getDomElements();
 
     // Immediate fix for persistent loading indicator
     window.addEventListener('DOMContentLoaded', function() {
-        console.log("DOM loaded - applying immediate loading screen fix");
+        console.log("✅ Status: DOM loaded - applying immediate loading screen fix");
         
         // Force hide loading indicator after 2 seconds
         setTimeout(function() {
           const appContent = document.getElementById('appContent');
           if (appContent) {
-            console.log("Forcing app content to display");
+            console.warn("⚠️ Warning: Forcing app content to display");
             appContent.style.display = 'block';
           }
         }, 2000);
-    });
-    
-
+    });   
     
     // STEP 3:  Set up console enhancements
     ui.initializeEnhancedConsole();
     ui.setupConsoleInterception();
     ui.setupActivityLogControls();
 
-    console.log("Initializing BOM Analysis application...");
-        
+    console.log("✅ Status: Initializing BOM Analysis application...");        
 
     // STEP 4: Now we can initialize expanded nodes & filter system
     try{
@@ -62,12 +58,10 @@ function initializeApp() {
        
     } catch (expandError)
     {
-        console.error("Error initializing expanded nodes:", expandError);
-    }    
-    
+        console.error("❌ Alert! Error initializing expanded nodes:", expandError);
+    }        
 
     // STEP 5: Initialize pivot table with proper element references
-    // Create a wrapper for generatePivotTable that automatically gets elements
     const originalGeneratePivotTable = pivotTable.generatePivotTable;
 
     pivotTable.generatePivotTable = function() {
@@ -80,8 +74,7 @@ function initializeApp() {
     };
     
     // Initialize pivot table
-    pivotTable.init(state);
-    
+    pivotTable.init(state);    
 
     // STEP 6: Make modules available globally
     window.App = {
@@ -97,37 +90,24 @@ function initializeApp() {
     };
 
     
-    // STEP 7: Initialize UI
+    // STEP 7: 
+    // Initialize UI
     ui.initDragAndDrop();
 
     // Initialize filtering system
-    initializeFilterSystem();
-    
+    initializeFilterSystem();    
 
-    // STEP 8: Set up database connection
+    // Set up database connection
     setupDatabaseConnection(elements);
 
+    // Fetch records from the database
+    loadDataFromDatabase(elements);    
 
-    // STEP 9: Fetch records from the database
-    loadDataFromDatabase(elements);
-    
-
-    // STEP 10: Add console listener for row count updates
+    // Add console listener for row count updates
     ui.setupRowCountUpdates();
-
-
-    // STEP 11: Initialize filters
-    // setTimeout(() => {
-    //     // if (filters && filters.initializeFilters) {
-    //     //     filters.initializeFilters();
-    //     // }
-    //     EnhancedFilterRenderer.createFilterComponent();
-    // }, 1000);
-
-
     
 
-    // STEP 12: Set up tab switching
+    // STEP 8: Set up tab switching
     if (elements.tabs && elements.tabs.length > 0) {
         elements.tabs.forEach(tab => {
             tab.addEventListener('click', () => {
@@ -153,8 +133,7 @@ function initializeApp() {
         });
     }
 
-
-    // STEP 13: Add a simple refresh function that can be called from the UI
+    // STEP 9: Add a simple refresh function that can be called from the UI
     window.refreshPivotTable = function() {
         // Get the pivot table elements
         const elements = {
@@ -164,7 +143,7 @@ function initializeApp() {
         
         // Check if we have valid elements
         if (!elements.pivotTableHeader || !elements.pivotTableBody) {
-            console.error("Pivot table elements not found!");
+            console.error("❌ Alert! Pivot table elements not found!");
             return;
         }
         
@@ -183,27 +162,25 @@ function initializeApp() {
             pivotTable.generatePivotTable(elements);
         }
         
-        console.log("Pivot table refreshed");
+        console.log("✅ Status: Pivot table refreshed");
     };
 
-
-    // STEP 14: For data refresh:
+    // STEP 10: For data refresh:
     const refreshButton = document.querySelector('#refreshBtn');
     if (refreshButton) {
         refreshButton.addEventListener('click', window.refreshPivotTable);
     }
     
 
-    // STEP 15: Add handler for load data button
+    // STEP 11: Add handler for load data button
     const loadDataBtn = document.getElementById('loadDataBtn');
     if (loadDataBtn) {
         loadDataBtn.addEventListener('click', function() {
             loadDataFromDatabase(elements);
         });
-    }
+    }    
     
-    
-    // STEP 16: Add handler for reconnect button
+    // STEP 12: Add handler for reconnect button
     const reconnectBtn = document.getElementById('reconnectBtn');
     if (reconnectBtn) {
         reconnectBtn.addEventListener('click', function() {
@@ -211,7 +188,7 @@ function initializeApp() {
         });
     }
 
-    console.log("Application initialization complete");
+    console.log("✅ Status: Application initialization complete");
 }
 
 
@@ -220,64 +197,66 @@ function initializeApp() {
  * @param {Object} elements - DOM elements
  */
 function setupDatabaseConnection(elements) {
-    if (isConnectingToDatabase) {
-        console.log('Connexion déjà en cours, attente...');
-        return;
-    }
-    isConnectingToDatabase = true;
-    try {
-        // Update connection status to connecting
-        updateConnectionStatus('connecting', 'Connecting to Snowflake database...');
+    try{
+        if (isConnectingToDatabase) {
+                console.log('⏳ Status: Connection already in progress, waiting...');
+                return;
+        }
 
-        // Check if the backend server is available
-        fetch('http://localhost:3000/api/get_bom_dim')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`Server returned ${response.status}`);
-            }
-            return response.text();
-        })
-        .then(text => {
-            // Successfully connected to the server
-            updateConnectionStatus('success', 'Connected to Snowflake database');
-            
-            // Parse the dimension names
-            const availableDimensions = text
-                .split('\n')
-                .filter(Boolean)
-                .map(line => {
-                    try {
-                        const obj = JSON.parse(line);
-                        const key = Object.keys(obj).find(k => typeof obj[k] === 'string');
-                        return obj[key];
-                    } catch {
-                        return null;
-                    }
-                })
-                .filter(Boolean);
-            
-            console.log(`Available dimensions: ${availableDimensions.join(', ')}`);
-            
-            // Store available tables in state
-            if (window.App && window.App.state) {
-                window.App.state.availableTables = availableDimensions;
-            }
-            
-            // Update UI
-            updateTableStatuses(availableDimensions, 'waiting');
-            isConnectingToDatabase = false;
-        })
-        .catch(error => {
-            console.error('Connection error:', error);
-            updateConnectionStatus('error', 'Failed to connect to database server');
-            isConnectingToDatabase = false;
-        });
+        isConnectingToDatabase = true;
 
-    } catch(error) {
-        console.error('Error setting up database connection:', error);
+        try {
+            // Update connection status to connecting
+            updateConnectionStatus('connecting', 'Connecting to Snowflake database...');
+
+            // Check if the backend server is available
+            fetch('http://localhost:3000/api/get_bom_dim')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Server returned ${response.status}`);
+                }
+                return response.text();
+            })
+            .then(text => {
+                // Successfully connected to the server
+                updateConnectionStatus('success', 'Connected to Snowflake database');
+                
+                // Parse the dimension names
+                const availableDimensions = text
+                    .split('\n')
+                    .filter(Boolean)
+                    .map(line => {
+                        try {
+                            const obj = JSON.parse(line);
+                            const key = Object.keys(obj).find(k => typeof obj[k] === 'string');
+                            return obj[key];
+                        } catch {
+                            return null;
+                        }
+                    })
+                    .filter(Boolean);
+                
+                console.log(`✅ Status: Available dimensions: ${availableDimensions.join(', ')}`);
+                
+                // Store available tables in state
+                if (window.App && window.App.state) {
+                    window.App.state.availableTables = availableDimensions;
+                }
+                
+                // Update UI
+                updateTableStatuses(availableDimensions, 'waiting');
+                isConnectingToDatabase = false;
+        })
+        } catch(error) {
+                
+            }
+        }
+    catch(error){
+        console.error('❌ Alert! Error setting up database connection:', error);
+        updateConnectionStatus('error', 'Error setting up database connection')
         updateConnectionStatus('error', 'Error setting up database connection');
         isConnectingToDatabase = false;
-    }
+    };
 }
 
 
@@ -286,10 +265,10 @@ function setupDatabaseConnection(elements) {
  * @param {Object} elements - DOM elements
  */
 function loadDataFromDatabase(elements) {
-    console.log("Starting data loading from Snowflake database");
+    console.log("✅ Status: Starting data loading from Snowflake database");
     data.ingestData(elements);
-    console.log("Snowflake data loading completed successfully");
-    console.log('Drag and drop tasks can start.');
+    console.log("✅ Status: Snowflake data loading completed successfully");
+    console.log('✅ Status: Drag and drop tasks can start.');
 }
 
 
@@ -347,7 +326,7 @@ function updateConnectionStatus(status, message) {
     }
 
     //
-    console.log(message);
+    console.log(`✅ Status: ${message}`);
 }
 
 

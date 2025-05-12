@@ -2710,3 +2710,200 @@ th.value-header {
     cursor: not-allowed !important;
     pointer-events: none;
 }
+
+/* Enhanced Column Hierarchy Styling */
+
+/* Style column headers with hierarchy */
+th.column-header {
+    text-align: center;
+    position: relative;
+    padding: 0.4rem 0.6rem !important; /* Reduced height */
+    white-space: nowrap;
+  }
+  
+  /* Add proper indentation for column headers */
+  th.column-header[data-level="0"] { padding-top: 8px !important; }
+  th.column-header[data-level="1"] { padding-top: 8px !important; border-top: 2px solid #e5e7eb; }
+  th.column-header[data-level="2"] { padding-top: 8px !important; border-top: 2px solid #e5e7eb; }
+  th.column-header[data-level="3"] { padding-top: 8px !important; border-top: 2px solid #e5e7eb; }
+  th.column-header[data-level="4"] { padding-top: 8px !important; border-top: 2px solid #e5e7eb; }
+  
+  /* Column header expand/collapse control positioning */
+  th.column-header .expand-collapse {
+    position: relative;
+    top: -1px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 4px;
+  }
+  
+  /* Column label styling */
+  th.column-header .column-label {
+    display: inline-block;
+    vertical-align: middle;
+    font-weight: 500;
+  }
+  
+  /* Visual distinction between levels */
+  th.column-header[data-level="0"] {
+    background-color: #f1f5f9 !important;
+    font-weight: 600;
+    z-index: 5;
+  }
+  
+  th.column-header[data-level="1"] {
+    background-color: #f8fafc !important;
+    z-index: 4;
+  }
+  
+  th.column-header[data-level="2"] {
+    background-color: #f9fafb !important;
+    z-index: 3;
+  }
+  
+  th.column-header[data-level="3"] {
+    background-color: #fbfcfd !important;
+    z-index: 2;
+  }
+  
+  /* Parent visual indicator for columns */
+  th.column-header.has-children::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    height: 2px;
+    background-color: var(--primary);
+    opacity: 0.3;
+  }
+  
+  /* Highlight active column on hover */
+  th.column-header:hover {
+    background-color: #e6f0ff !important;
+  }
+  
+  /* Better column grouping */
+  th.column-header[data-parent-id]:not([data-parent-id=""]) {
+    border-left: 1px solid #e5e7eb;
+    border-right: 1px solid #e5e7eb;
+  }
+  
+  /* Top level columns need more distinction */
+  thead tr:first-child th.column-header {
+    border-bottom: 2px solid #cbd5e1;
+  }
+  
+  /* Reduced height for all table cells */
+  .pivot-table-container table th,
+  .pivot-table-container table td {
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
+    line-height: 1.2;
+  }
+  
+  /* Column grouping */
+  .column-group {
+    border-bottom: 2px solid var(--primary-light);
+  }
+  
+  /* Make expand/collapse controls more visible in columns */
+  th.column-header .expand-collapse {
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    background-color: white;
+  }
+  
+  /* Child columns should be visually grouped */
+  th.column-header[data-parent-id]:not([data-parent-id=""]) {
+    position: relative;
+  }
+  
+  th.column-header[data-parent-id]:not([data-parent-id=""]):before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 2px;
+    width: 100%;
+    background-color: #e5e7eb;
+  }
+  
+  /* Fix for multi-level columns */
+  .column-header-row th[colspan] {
+    text-align: center;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  /* Support for deeper hierarchy levels */
+  .indent-level-5 { padding-left: 88px !important; }
+  .indent-level-6 { padding-left: 104px !important; }
+  .indent-level-7 { padding-left: 120px !important; }
+  .indent-level-8 { padding-left: 136px !important; }
+  .indent-level-9 { padding-left: 152px !important; }
+  .indent-level-10 { padding-left: 168px !important; }
+
+
+  /* Smooth transition styles for collapsible elements */
+.card-body {
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    overflow: hidden;
+}
+
+.card-body.collapsed {
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    opacity: 0;
+    overflow: hidden;
+}
+
+.card-body.expanded {
+    max-height: 1000px; /* A large value that should accommodate most contents */
+    opacity: 1;
+}
+
+/* Style for the collapse/expand buttons */
+.btn-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    color: #666;
+    transition: color 0.2s ease;
+}
+
+.btn-icon:hover {
+    color: #333;
+}
+
+.btn-icon i {
+    transition: transform 0.3s ease;
+}
+
+.btn-icon i.fa-chevron-up {
+    transform: rotate(0deg);
+}
+
+.btn-icon i.fa-chevron-down {
+    transform: rotate(180deg);
+}
+
+/* Additional styling for cards with collapsible content */
+.card {
+    margin-bottom: 1rem;
+    border-radius: 0.25rem;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    transition: box-shadow 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+/* Cursor style for card headers with collapsible content */
+.card-header {
+    cursor: pointer;
+    user-select: none;
+}

@@ -43,7 +43,7 @@ async function fetchDimensionNames() {
             })
             .filter(Boolean);
             
-        console.log(`Fetched ${dims.length} dimension names from server`);
+        console.log(`✅ Status: Fetched ${dims.length} dimension names from server`);
         return dims;
     } catch (error) {
         console.error('❌ Error fetching dimension names:', error);
@@ -60,7 +60,7 @@ async function fetchDimensionNames() {
 async function fetchDatabaseData(databaseObjectName) {
     const url = `${ENDPOINTS.GET_DATA}${databaseObjectName}`; 
     try {
-        console.log(`Fetching data for ${databaseObjectName}...`);
+        console.log(`⏳ Status: Fetching data for ${databaseObjectName}...`);
         const response = await fetch(url, {
             headers: { 'Accept': 'application/x-ndjson' }
         });
@@ -149,7 +149,7 @@ async function fetchDimensionNamesForFact(factTable) {
             })
             .filter(Boolean);
             
-        console.log(`Found ${dims.length} dimensions for fact table: ${factTable}`);
+        // console.log(`Found ${dims.length} dimensions for fact table: ${factTable}`);
         return dims;
     } catch (error) {
         console.error('❌ Error fetching dimension names for fact:', error);
@@ -182,7 +182,7 @@ async function fetchFactTableNames() {
             })
             .filter(Boolean);
             
-        console.log(`Fetched ${facts.length} fact table names from server`);
+        // console.log(`Fetched ${facts.length} fact table names from server`);
         return facts;
     } catch (error) {
         console.error('❌ Error fetching fact table names:', error);
@@ -198,12 +198,12 @@ async function fetchFactTableNames() {
  * @returns {Promise<void>}
  */
 async function ingestData(elements, selectedFact = 'FACT_BOM') {
-    console.log('Loading data from Snowflake database server...', 'info', elements);
+    console.log('⏳ Status: Loading data from Snowflake database server...', 'info', elements);
     
     try {        
         // 1. Get dimensions related to the selected fact table
         const dimNames = await fetchDimensionNamesForFact(selectedFact);
-        console.log(`Loading ${dimNames.length} dimensions for ${selectedFact}`);
+        // console.log(`Loading ${dimNames.length} dimensions for ${selectedFact}`);
         
 
         // 2. Build available files list (used for UI)
@@ -228,7 +228,7 @@ async function ingestData(elements, selectedFact = 'FACT_BOM') {
         
 
         // 3. Load dimension data
-        console.log("Loading dimension data from database...");
+        console.log("⏳ Status: Loading dimension data from database...");
         state.dimensions = {};
         
         // Initialize dimensions to empty objects to prevent null reference issues
@@ -258,7 +258,7 @@ async function ingestData(elements, selectedFact = 'FACT_BOM') {
                 
                 // Update status
                 ui.updateTableStatus(dim, 'loaded', data.length);
-                console.log(`Loaded dimension ${dim}: ${data.length} rows`);
+                console.log(`✅ Status: Loaded dimension ${dim}: ${data.length} rows`);
                 return true;
             } catch (err) {
                 console.error(`Error loading dimension ${dim}:`, err);
@@ -272,7 +272,7 @@ async function ingestData(elements, selectedFact = 'FACT_BOM') {
         
 
         // 4. Load fact data
-        console.log(`Loading fact data from ${selectedFact}...`);
+        console.log(`⏳ Status: Loading fact data from ${selectedFact}...`);
         ui.updateTableStatus(selectedFact, 'loading');
         
         const { data: factData, error: factError } = await fetchDatabaseData(selectedFact);
@@ -285,12 +285,12 @@ async function ingestData(elements, selectedFact = 'FACT_BOM') {
         // Store fact data
         state.factData = factData;
         ui.updateTableStatus(selectedFact, 'loaded', factData.length);
-        console.log(`Loaded fact data ${selectedFact}: ${factData.length} rows`);
+        console.log(`✅ Status: Loaded fact data ${selectedFact}: ${factData.length} rows`);
         
 
         // Confirm fact data is cached before moving on
         if(state.factData.length > 0){
-            console.log("Sample BOM data:", state.factData[0]);
+            console.log("✅ Status: Sample BOM data:", state.factData[0]);
         }
 
         // Verify data is loaded before proceeding
@@ -351,10 +351,10 @@ async function ingestData(elements, selectedFact = 'FACT_BOM') {
             //
             //await processDimensionHierarchies();
             //ensureHierarchicalMarkings();
-            console.log("Building Dimension hierarchies...");
+            console.log("⏳ Status: Building Dimension hierarchies...");
             const hierarchies = processDimensionHierarchies(state.dimensions, state.factData);
             state.hierarchies = hierarchies || {};
-            console.log("Dimension hierarchies built:", Object.keys(state.hierarchies));
+            console.log("✅ Status: Dimension hierarchies built:", Object.keys(state.hierarchies));
         } catch (hierError){
             console.error("Error building hierarchies:", hierError);
             // Initialize empty hierarchies
@@ -371,7 +371,7 @@ async function ingestData(elements, selectedFact = 'FACT_BOM') {
         
 
         // 8. Initialize mappings AFTER data loading is complete
-        console.log("Initializing mappings now that data is loaded");
+        console.log("⏳ Status: Initializing mappings now that data is loaded");
         initializeMappings();
         
 
@@ -383,7 +383,7 @@ async function ingestData(elements, selectedFact = 'FACT_BOM') {
         // }, 1000);
         
         // Show success message
-        console.log('Data loaded successfully from Snowflake database.', 'success', elements);
+        console.log('✅ Status: Data loaded successfully from Snowflake database.', 'success', elements);
         state.loading = false;
 
         return true;
@@ -409,16 +409,16 @@ window.generatePivotTable = function() {
     
     // Are we using filtered data?
     if (stateModule.state.filteredData && stateModule.state.filteredData.length > 0) {
-        console.log("Using filteredData with length:", stateModule.state.filteredData.length);
+        console.log("⏳ Status: Using filteredData with length:", stateModule.state.filteredData.length);
         
         // Check data types in filtered data
-        if (stateModule.state.filteredData.length > 0) {
-            const sample = stateModule.state.filteredData[0];
-            console.log("COST_UNIT type check:", {
-                value: sample.COST_UNIT,
-                type: typeof sample.COST_UNIT
-            });
-        }
+        // if (stateModule.state.filteredData.length > 0) {
+        //     const sample = stateModule.state.filteredData[0];
+        //     console.log("COST_UNIT type check:", {
+        //         value: sample.COST_UNIT,
+        //         type: typeof sample.COST_UNIT
+        //     });
+        // }
         
         // Store original factData reference (not just length)
         const originalFactData = stateModule.state.factData;
@@ -427,24 +427,24 @@ window.generatePivotTable = function() {
         stateModule.state.factData = stateModule.state.filteredData;
         
         // Generate pivot table
-        console.log("Calling pivotTable.generatePivotTable with filtered data");
+        console.log("⏳ Status: Calling pivotTable.generatePivotTable with filtered data");
         pivotTable.generatePivotTable();
         
         // Restore original factData
-        console.log("Restoring original factData");
+        console.log("✅ Status: Restoring original factData");
         stateModule.state.factData = originalFactData;
     } else {
         // Generate pivot table with original data
-        console.log("Using original factData");
+        console.log("✅ Status: Using original factData");
         pivotTable.generatePivotTable();
     }
     
-    console.log("PIVOT GEN COMPLETE");
+    console.log("✅ Status: PIVOT GEN COMPLETE");
 };
 
 
 function processHierarchicalFields(fieldIds, axisType) {
-    // console.log(`Processing hierarchical fields: ${fieldIds.join(', ')} for ${axisType}`);
+    console.log(`⏳ Status: Processing hierarchical fields: ${fieldIds.join(', ')} for ${axisType}`);
     
     const result = {
         flatRows: [],
@@ -1043,7 +1043,7 @@ function preservingFilterByMultipleDimensions(data, rowDef) {
  * Builds mappings between dimension tables and fact table
  */
 function initializeMappings() {
-    console.log("Starting dimension mappings initialization");
+    console.log("⏳ Status: Starting dimension mappings initialization");
     
     // Initialize state.mappings object if it doesn't exist
     if (!state.mappings) {
@@ -1052,10 +1052,10 @@ function initializeMappings() {
     
     // 1. Initialize legal entity mapping
     if (state.dimensions && state.dimensions.le && state.factData) {
-        console.log("Initializing Legal Entity mapping");
+        console.log("⏳ Status: Initializing Legal Entity mapping");
         state.mappings.legalEntity = buildLegalEntityMapping(state.dimensions.le, state.factData);
         
-        console.log("Legal Entity Mapping initialized with", 
+        console.log("✅ Status: Legal Entity Mapping initialized with", 
             Object.keys(state.mappings.legalEntity.leToDetails || {}).length, "entities mapped");
     } else {
         console.warn("Cannot initialize legal entity mapping: missing dimension or fact data");
@@ -1063,10 +1063,10 @@ function initializeMappings() {
     
     // 2. Initialize cost element mapping
     if (state.dimensions && state.dimensions.cost_element && state.factData) {
-        console.log("Initializing Cost Element mapping");
+        console.log("⏳ Status: Initializing Cost Element mapping");
         state.mappings.costElement = buildCostElementMapping(state.dimensions.cost_element, state.factData);
         
-        console.log("Cost Element Mapping initialized with", 
+        console.log("✅ Status: Cost Element Mapping initialized with", 
             Object.keys(state.mappings.costElement.costElementToDetails || {}).length, "elements mapped");
     } else {
         console.warn("Cannot initialize cost element mapping: missing dimension or fact data");
@@ -1074,10 +1074,10 @@ function initializeMappings() {
     
     // 3. Initialize smart code mapping
     if (state.dimensions && state.dimensions.smartcode && state.factData) {
-        console.log("Initializing Smart Code mapping");
+        console.log("⏳ Status: Initializing Smart Code mapping");
         state.mappings.smartCode = buildSmartCodeMapping(state.dimensions.smartcode, state.factData);
         
-        console.log("Smart Code Mapping initialized with", 
+        console.log("✅ Status: Smart Code Mapping initialized with", 
             Object.keys(state.mappings.smartCode.smartCodeToDetails || {}).length, "smart codes mapped");
     } else {
         console.warn("Cannot initialize smart code mapping: missing dimension or fact data");
@@ -1085,10 +1085,10 @@ function initializeMappings() {
     
     // 4. Initialize GMID display mapping
     if (state.dimensions && state.dimensions.gmid_display && state.factData) {
-        console.log("Initializing GMID Display mapping");
+        console.log("⏳ Status: Initializing GMID Display mapping");
         state.mappings.gmidDisplay = buildGmidDisplayMapping(state.dimensions.gmid_display, state.factData);
         
-        console.log("GMID Display Mapping initialized with", 
+        console.log("✅ Status: GMID Display Mapping initialized with", 
             Object.keys(state.mappings.gmidDisplay.gmidToDisplay || {}).length, "GMIDs mapped");
     } else {
         console.warn("Cannot initialize GMID display mapping: missing dimension or fact data");
@@ -1096,10 +1096,10 @@ function initializeMappings() {
 
     // 5. Initialize ITEM_COST_TYPE mapping
     if (state.dimensions && state.dimensions.item_cost_type && state.factData) {
-        console.log("Initializing ITEM_COST_TYPE mapping");
+        console.log("⏳ Status: Initializing ITEM_COST_TYPE mapping");
         state.mappings.itemCostType = buildItemCostTypeMapping(state.dimensions.item_cost_type, state.factData);
         
-        console.log("ITEM_COST_TYPE Mapping initialized with", 
+        console.log("✅ Status: ITEM_COST_TYPE Mapping initialized with", 
             Object.keys(state.mappings.itemCostType.costTypeToDetails || {}).length, "item cost types mapped");
     } else {
         console.warn("Cannot initialize item cost type mapping: missing dimension or fact data");
@@ -1107,10 +1107,10 @@ function initializeMappings() {
 
     // 6. Initialize MATERIAL_TYPE mapping
     if (state.dimensions && state.dimensions.material_type && state.factData) {
-        console.log("Initializing MATERIAL_TYPE mapping");
+        console.log("⏳ Status: Initializing MATERIAL_TYPE mapping");
         state.mappings.materialType = buildMaterialTypeMapping(state.dimensions.material_type, state.factData);
         
-        console.log("MATERIAL_TYPE Mapping initialized with", 
+        console.log("✅ Status: MATERIAL_TYPE Mapping initialized with", 
             Object.keys(state.mappings.materialType.materialTypeToDetails || {}).length, "material types mapped");
     } else {
         console.warn("Cannot initialize material type mapping: missing dimension or fact data");
@@ -1118,10 +1118,10 @@ function initializeMappings() {
 
     // 7. Initialize ZYEAR mapping
     if (state.dimensions && state.dimensions.year && state.factData) {
-        console.log("Initializing YEAR mapping");
+        console.log("⏳ Status: Initializing YEAR mapping");
         state.mappings.year = buildBusinessYearMapping(state.dimensions.year, state.factData);
         
-        console.log("ZYEAR Mapping initialized with", 
+        console.log("✅ Status: ZYEAR Mapping initialized with", 
             Object.keys(state.mappings.year.yearToDetails || {}).length, "year entries mapped");
     } else {
         console.warn("Cannot initialize year mapping: missing dimension or fact data");
@@ -1129,10 +1129,10 @@ function initializeMappings() {
 
     // 8. Initialize MC mapping
     if (state.dimensions && state.dimensions.mc && state.factData) {
-        console.log("Initializing MC mapping");
+        console.log("⏳ Status: Initializing MC mapping");
         state.mappings.managementCentre = buildManagementCentreMapping(state.dimensions.mc, state.factData);
         
-        console.log("MC Mapping initialized with", 
+        console.log("✅ Status: MC Mapping initialized with", 
             Object.keys(state.mappings.managementCentre.mcToDetails || {}).length, "MCs mapped");
     } else {
         console.warn("Cannot initialize MC mapping: missing dimension or fact data");
@@ -1141,201 +1141,8 @@ function initializeMappings() {
     // 7. Add integrity checks to verify mappings are working
     verifyFactDimensionMappings();
     
-    console.log("All mappings initialized successfully");
-
-    // Verify entity mappings
-    logMappingDetails();
+    console.log("✅ Status: All mappings initialized successfully");
 }
-
-
-/**
- * Log detailed information about dimension mappings
- */
-function logMappingDetails() {
-    console.log("=== Dimension Mapping Debug Information ===");
-
-    // Check Legal Entity mapping
-    if (state.mappings && state.mappings.legalEntity) {
-        const leMapping = state.mappings.legalEntity;
-        console.log(`Legal Entity mapping: ${Object.keys(leMapping.leToDetails || {}).length} entities`);
-        
-        // Sample a few mappings
-        const leKeys = Object.keys(leMapping.leToDetails || {}).slice(0, 2);
-        if (leKeys.length > 0) {
-            console.log("Sample LE mappings:");
-            leKeys.forEach(key => {
-                console.log(`  ${key} -> ${JSON.stringify(leMapping.leToDetails[key])}`);
-            });
-        }
-        
-        // Check if any LE codes in fact data are unmapped
-        const unmappedLEs = new Set();
-        state.factData.slice(0, 3).forEach(record => {
-            if (record.LE && !leMapping.leToDetails[record.LE]) {
-                unmappedLEs.add(record.LE);
-            }
-        });
-
-        if (unmappedLEs.size > 0) {
-            console.warn(`Found ${unmappedLEs.size} unmapped LE codes in fact data`);
-            console.warn("First few unmapped LEs:", Array.from(unmappedLEs).slice(0, 5));
-        }
-    }
-    
-    // Check Cost Element mapping
-    if (state.mappings && state.mappings.costElement) {
-        const ceMapping = state.mappings.costElement;
-        console.log(`Cost Element mapping: ${Object.keys(ceMapping.costElementToDetails || {}).length} elements`);
-        
-        // Sample a few mappings
-        const ceKeys = Object.keys(ceMapping.costElementToDetails || {}).slice(0, 2);
-        if (ceKeys.length > 0) {
-            console.log("Sample Cost Element mappings:");
-            ceKeys.forEach(key => {
-                console.log(`  ${key} -> ${JSON.stringify(ceMapping.costElementToDetails[key])}`);
-            });
-        }
-        
-        // Check if any Cost Elements in fact data are unmapped
-        const unmappedCEs = new Set();
-        state.factData.slice(0, 5).forEach(record => {
-            if (record.COST_ELEMENT && !ceMapping.costElementToDetails[record.COST_ELEMENT]) {
-                unmappedCEs.add(record.COST_ELEMENT);
-            }
-        });
-        if (unmappedCEs.size > 0) {
-            console.warn(`Found ${unmappedCEs.size} unmapped Cost Elements in fact data`);
-            console.warn("First few unmapped Cost Elements:", Array.from(unmappedCEs).slice(0, 3));
-        }
-    }
-    
-    // Check Smart Code mapping
-    if (state.mappings && state.mappings.smartCode) {
-        const scMapping = state.mappings.smartCode;
-        console.log(`Smart Code mapping: ${Object.keys(scMapping.smartCodeToDetails || {}).length} smart codes`);
-        
-        // Sample a few mappings
-        const scKeys = Object.keys(scMapping.smartCodeToDetails || {}).slice(0, 3);
-        if (scKeys.length > 0) {
-            console.log("Sample Smart Code mappings:");
-            scKeys.forEach(key => {
-                console.log(`  ${key} -> ${JSON.stringify(scMapping.smartCodeToDetails[key])}`);
-            });
-        }
-        
-        // Check if any Smart Codes in fact data are unmapped
-        const unmappedSCs = new Set();
-        state.factData.slice(0, 3).forEach(record => {
-            if (record.ROOT_SMARTCODE && !scMapping.smartCodeToDetails[record.ROOT_SMARTCODE]) {
-                unmappedSCs.add(record.ROOT_SMARTCODE);
-            }
-        });
-        if (unmappedSCs.size > 0) {
-            console.warn(`Found ${unmappedSCs.size} unmapped Smart Codes in fact data`);
-            console.warn("First few unmapped Smart Codes:", Array.from(unmappedSCs).slice(0, 3));
-        }
-    }
-    
-    // Check GMID mapping
-    if (state.mappings && state.mappings.gmidDisplay) {
-        const gmidMapping = state.mappings.gmidDisplay;
-        
-        // Log GMID to Display mapping details
-        console.log(`GMID mapping: ${Object.keys(gmidMapping.gmidToDisplay || {}).length} GMIDs`);
-                
-        // Log ROOT_GMID to ROOT_DISPLAY mapping details
-        const rootGmidCount = Object.keys(gmidMapping.rootGmidToDisplay || {}).length;
-        console.log(`Root GMID mapping: ${rootGmidCount} root GMIDs`);
-                
-        // Check if any COMPONENT_GMIDs in fact data are unmapped
-        const unmappedGmids = new Set();
-        state.factData.slice(0, 5).forEach(record => {
-            if (record.COMPONENT_GMID && !gmidMapping.gmidToDisplay[record.COMPONENT_GMID]) {
-                unmappedGmids.add(record.COMPONENT_GMID);
-            }
-        });
-        if (unmappedGmids.size > 0) {
-            console.warn(`Found ${unmappedGmids.size} unmapped COMPONENT_GMIDs in fact data`);
-            console.warn("First few unmapped GMIDs:", Array.from(unmappedGmids).slice(0, 3));
-        }
-        
-        // Log nodeToChildGmids stats if available
-        if (gmidMapping.nodeToChildGmids) {
-            const nodesWithChildren = Object.keys(gmidMapping.nodeToChildGmids).length;
-            console.log(`GMID node relationships: ${nodesWithChildren} nodes with children`);
-        }
-    }
-    
-    // Check Business Year mapping (if available)
-    if (state.mappings && state.mappings.businessYear) {
-        const yearMapping = state.mappings.businessYear;
-        console.log(`Business Year mapping: ${Object.keys(yearMapping || {}).length} years`);
-    }
-    
-    // Check Item Cost Type mapping (if available)
-    if (state.mappings && state.mappings.itemCostType) {
-        const ictMapping = state.mappings.itemCostType;
-        console.log(`Item Cost Type mapping: ${Object.keys(ictMapping || {}).length} types`);
-    }
-    
-    // Check Component Material Type mapping (if available)
-    if (state.mappings && state.mappings.componentMaterialType) {
-        const cmtMapping = state.mappings.componentMaterialType;
-        console.log(`Component Material Type mapping: ${Object.keys(cmtMapping || {}).length} types`);
-        
-        // Sample a few mappings
-        const cmtKeys = Object.keys(cmtMapping || {}).slice(0, 3);
-        if (cmtKeys.length > 0) {
-            console.log("Sample Component Material Type mappings:");
-            cmtKeys.forEach(key => {
-                console.log(`  ${key} -> ${JSON.stringify(cmtMapping[key])}`);
-            });
-        }
-    }
-    
-    // Check hierarchy structures
-    if (state.hierarchies) {
-        console.log("Hierarchy structures:");
-        Object.keys(state.hierarchies).forEach(hierName => {
-            const hier = state.hierarchies[hierName];
-            
-            // Check if it's a multi-root or single-root hierarchy
-            if (hier.roots && Array.isArray(hier.roots)) {
-                console.log(`  ${hierName}: ${hier.roots.length} root nodes, ${Object.keys(hier.nodesMap || {}).length} total nodes`);
-                // Log sample of root nodes
-                // if (hier.roots.length > 0) {
-                //     const sampleRoots = hier.roots.slice(0, 2);
-                //     sampleRoots.forEach(root => {
-                //         console.log(`    Root: ${root.id} (${root.label}) with ${root.children ? root.children.length : 0} children`);
-                //     });
-                // }
-            } else if (hier.root) {
-                console.log(`  ${hierName}: Single root (${hier.root.label}), ${Object.keys(hier.nodesMap || {}).length} total nodes`);
-                if (hier.root.children) {
-                    console.log(`    Root has ${hier.root.children.length} children`);
-                }
-            } else {
-                console.log(`  ${hierName}: No root structure found, ${Object.keys(hier.nodesMap || {}).length} total nodes`);
-            }
-            
-            // Check for precomputed descendant factIds
-            let nodesWithDescendants = 0;
-            let maxDescendants = 0;
-            if (hier.nodesMap) {
-                Object.values(hier.nodesMap).forEach(node => {
-                    if (node.descendantFactIds && node.descendantFactIds.length > 0) {
-                        nodesWithDescendants++;
-                        maxDescendants = Math.max(maxDescendants, node.descendantFactIds.length);
-                    }
-                });
-                // console.log(`    ${nodesWithDescendants} nodes have precomputed descendant factIds (max: ${maxDescendants})`);
-            }
-        });
-    }
-    
-    console.log("=========================================");
-}
-
 
 
 /**
@@ -1357,7 +1164,7 @@ function verifyFactDimensionMappings() {
             record.LE && state.mappings.legalEntity.leToDetails[record.LE]
         ).length;
         
-        console.log(`Legal Entity mapping: ${leMatches}/${sampleSize} records have matching LE codes`);
+        console.log(`✅ Status: Legal Entity mapping: ${leMatches}/${sampleSize} records have matching LE codes`);
     }
     
     // Check cost element mapping
@@ -1366,7 +1173,7 @@ function verifyFactDimensionMappings() {
             record.COST_ELEMENT && state.mappings.costElement.costElementToDetails[record.COST_ELEMENT]
         ).length;
         
-        console.log(`Cost Element mapping: ${ceMatches}/${sampleSize} records have matching COST_ELEMENT`);
+        console.log(`✅ Status: Cost Element mapping: ${ceMatches}/${sampleSize} records have matching COST_ELEMENT`);
     }
     
     // Check smart code mapping
@@ -1375,7 +1182,7 @@ function verifyFactDimensionMappings() {
             record.ROOT_SMARTCODE && state.mappings.smartCode.smartCodeToDetails[record.ROOT_SMARTCODE]
         ).length;
         
-        console.log(`Smart Code mapping: ${scMatches}/${sampleSize} records have matching ROOT_SMARTCODE`);
+        console.log(`✅ Status: Smart Code mapping: ${scMatches}/${sampleSize} records have matching ROOT_SMARTCODE`);
     }
     
     // Check GMID mapping
@@ -1384,7 +1191,7 @@ function verifyFactDimensionMappings() {
             record.COMPONENT_GMID && state.mappings.gmidDisplay.gmidToDisplay[record.COMPONENT_GMID]
         ).length;
         
-        console.log(`GMID mapping: ${gmidMatches}/${sampleSize} records have matching COMPONENT_GMID`);
+        console.log(`✅ Status: GMID mapping: ${gmidMatches}/${sampleSize} records have matching COMPONENT_GMID`);
     }
     
     // Check item cost type mapping
@@ -1393,7 +1200,7 @@ function verifyFactDimensionMappings() {
             record.ITEM_COST_TYPE && state.mappings.itemCostType.costTypeToDetails[record.ITEM_COST_TYPE]
         ).length;
         
-        console.log(`Item Cost Type mapping: ${ictMatches}/${sampleSize} records have matching ITEM_COST_TYPE`);
+        console.log(`✅ Status: Item Cost Type mapping: ${ictMatches}/${sampleSize} records have matching ITEM_COST_TYPE`);
     }
     
     // Check material type mapping
@@ -1402,7 +1209,7 @@ function verifyFactDimensionMappings() {
             record.COMPONENT_MATERIAL_TYPE && state.mappings.materialType.materialTypeToDetails[record.COMPONENT_MATERIAL_TYPE]
         ).length;
         
-        console.log(`Material Type mapping: ${mtMatches}/${sampleSize} records have matching COMPONENT_MATERIAL_TYPE`);
+        console.log(`✅ Status: Material Type mapping: ${mtMatches}/${sampleSize} records have matching COMPONENT_MATERIAL_TYPE`);
     }
 
     // Check mc mapping
@@ -1411,7 +1218,7 @@ function verifyFactDimensionMappings() {
             record.MC && state.mappings.managementCentre.mcToDetails[record.MC]
         ).length;
         
-        console.log(`MC mapping: ${mcMatches}/${sampleSize} records have matching MC`);
+        console.log(`✅ Status: MC mapping: ${mcMatches}/${sampleSize} records have matching MC`);
     }
 
     // Check year mapping
@@ -1420,7 +1227,7 @@ function verifyFactDimensionMappings() {
             record.YEAR && state.mappings.year.yearToDetails[record.YEAR]
         ).length;
         
-        console.log(`MC mapping: ${yrMatches}/${sampleSize} records have matching YEAR`);
+        console.log(`✅ Status: MC mapping: ${yrMatches}/${sampleSize} records have matching YEAR`);
     }
 }
 
@@ -1478,8 +1285,7 @@ function enhancedFilterByMultipleDimensions(data, rowDef) {
      * @returns {Object} - Hierarchy object with root, nodesMap, and flatData
      */
 function buildGenericHierarchy(data, config) {
-    console.log(`Processing ${data.length} rows of data...`);
-    console.log("Sample row:", data.length > 0 ? data[0] : "No data");
+    console.log(`⏳ Status: Processing ${data.length} rows of data...`);
     
     // Default configuration
     const defaultConfig = {
@@ -1660,8 +1466,7 @@ function buildGenericHierarchy(data, config) {
  * @returns {Object} - Hierarchy object with root, nodesMap, and flatData
  */
 function buildGenericPathHierarchy(data, config) {
-    console.log(`Processing ${data.length} rows of path-based data...`);
-    console.log("Sample row:", data.length > 0 ? data[0] : "No data");
+    console.log(`⏳ Status: Processing ${data.length} rows of path-based data...`);
     
     // Default configuration
     const defaultConfig = {
@@ -1903,8 +1708,7 @@ function buildGenericPathHierarchy(data, config) {
  * @returns {Object} - Hierarchy object with root, nodesMap, and flatData
  */
 function buildLegalEntityHierarchy(data) {
-    console.log("Building Legal Entity hierarchy using PATH-based approach");
-    console.log(`Processing ${data.length} LE records with PATH structure`);
+    console.log(`⏳ Status: Processing ${data.length} LE records with PATH structure`);
     
     // First extract all unique first segments and count their frequency
     const firstSegmentCounts = new Map();
@@ -1928,7 +1732,7 @@ function buildLegalEntityHierarchy(data) {
         }
     }
     
-    console.log(`Using most common first segment as root label: ${rootLabel}`);
+    // console.log(`Using most common first segment as root label: ${rootLabel}`);
     
     // Create root node with this label
     const root = {
@@ -2015,7 +1819,7 @@ function buildLegalEntityHierarchy(data) {
     
     sortNodes(root);
     
-    console.log(`Successfully built Legal Entity hierarchy with ${Object.keys(nodesMap).length} nodes`);
+    console.log(`✅ Status: Successfully built Legal Entity hierarchy with ${Object.keys(nodesMap).length} nodes`);
     
     return {
         root: root,
@@ -2046,8 +1850,7 @@ function buildSmartCodeHierarchy(data) {
 
 
 function buildManagementCentreHierarchy(data) {
-    console.log("Building management Centrey hierarchy using PATH-based approach");
-    console.log(`Processing ${data.length} MC records with PATH structure`);
+    console.log(`⏳ Status: Processing ${data.length} MC records with PATH structure`);
     
     // First extract all unique first segments and count their frequency
     const firstSegmentCounts = new Map();
@@ -2070,9 +1873,7 @@ function buildManagementCentreHierarchy(data) {
             rootLabel = segment;
         }
     }
-    
-    console.log(`Using most common first segment as root label: ${rootLabel}`);
-    
+        
     // Create root node with this label
     const root = {
         id: 'ROOT',
@@ -2158,7 +1959,7 @@ function buildManagementCentreHierarchy(data) {
     
     sortNodes(root);
     
-    console.log(`Successfully built MC hierarchy with ${Object.keys(nodesMap).length} nodes`);
+    console.log(`✅ Status: Successfully built MC hierarchy with ${Object.keys(nodesMap).length} nodes`);
     
     return {
         root: root,
@@ -2169,7 +1970,7 @@ function buildManagementCentreHierarchy(data) {
 
 
 function buildItemCostTypeHierarchy(data) {
-    console.log(`Processing ${data.length} rows of ITEM_COST_TYPE data...`);
+    console.log(`⏳ Status: Processing ${data.length} rows of ITEM_COST_TYPE data...`);
     
     // Create root node
     const root = {
@@ -2233,7 +2034,7 @@ function buildItemCostTypeHierarchy(data) {
         return aLabel.localeCompare(bLabel);
     });
     
-    console.log(`Built ITEM_COST_TYPE hierarchy with ${Object.keys(nodesMap).length} nodes`);
+    console.log(`✅ Status: Built ITEM_COST_TYPE hierarchy with ${Object.keys(nodesMap).length} nodes`);
     
     return {
         root: root,
@@ -2244,7 +2045,7 @@ function buildItemCostTypeHierarchy(data) {
 
 
 function buildMaterialTypeHierarchy(data) {
-    console.log(`Processing ${data ? data.length : 0} rows of MATERIAL_TYPE data...`);
+    console.log(`⏳ Status: Processing ${data ? data.length : 0} rows of MATERIAL_TYPE data...`);
     
     // Safety check
     if (!data || data.length === 0) {
@@ -2281,26 +2082,6 @@ function buildMaterialTypeHierarchy(data) {
         }
     });
     
-    console.log(`Found ${materialTypeMap.size} unique material types in dimension data`);
-    
-    // If no material types found in dimension data, try to get them from fact data
-    // if (materialTypeMap.size === 0 && state.factData) {
-    //     console.log("No material types found in dimension data, using fact data");
-        
-    //     const uniqueMaterialTypes = new Set();
-    //     state.factData.forEach(record => {
-    //         if (record && record.COMPONENT_MATERIAL_TYPE !== undefined) {
-    //             uniqueMaterialTypes.add(record.COMPONENT_MATERIAL_TYPE);
-    //         }
-    //     });
-        
-    //     console.log(`Found ${uniqueMaterialTypes.size} unique material types in fact data`);
-        
-    //     uniqueMaterialTypes.forEach(mt => {
-    //         materialTypeMap.set(mt, mt); // Use code as description
-    //     });
-    // }
-    
     // Create nodes for each material type
     materialTypeMap.forEach((description, materialTypeCode) => {
         // Handle null values
@@ -2329,7 +2110,7 @@ function buildMaterialTypeHierarchy(data) {
         root.hasChildren = true;
     });
     
-    console.log(`Built material type hierarchy with ${Object.keys(nodesMap).length} nodes`);
+    console.log(`✅ Status: Built material type hierarchy with ${Object.keys(nodesMap).length} nodes`);
     
     return {
         root: root,
@@ -2339,8 +2120,7 @@ function buildMaterialTypeHierarchy(data) {
 }
 
 function buildBusinessYearHierarchy(data) {
-    console.log("Building YEAR hierarchy");
-    console.log(`Processing ${data.length} rows of YEAR data...`);
+    console.log(`⏳ Status: Processing ${data.length} rows of YEAR data...`);
     
     // Create root node with this label
     const root = {
@@ -2400,7 +2180,7 @@ function buildBusinessYearHierarchy(data) {
         return YearA - YearB;
     });
     
-    console.log(`Successfully built YEAR hierarchy with ${Object.keys(nodesMap).length} nodes`);
+    console.log(`✅ Status: Successfully built YEAR hierarchy with ${Object.keys(nodesMap).length} nodes`);
     
     return {
         root: root,
@@ -2429,107 +2209,6 @@ function buildCostElementHierarchy(data) {
         },
         pathSeparator: '//'
     });
-}
-
-
-function diagnoseDimGmidData(data) {
-    console.log(`Analyzing ${data.length} rows of DIM_GMID_DISPLAY data...`);
-    
-    // Check data structure
-    const sampleRow = data.length > 0 ? data[0] : null;
-    if (sampleRow) {
-        console.log("Sample row structure:", Object.keys(sampleRow).join(", "));
-        console.log("Sample row values:", JSON.stringify(sampleRow));
-    }
-    
-    // Count rows with different key fields
-    const counts = {
-        hasComponentGmid: 0,
-        hasPathGmid: 0,
-        hasDisplay: 0,
-        hasRootGmid: 0,
-        hasRootDisplay: 0,
-        pathGmidFormats: new Set(),
-        displayFormats: new Set()
-    };
-    
-    data.forEach(row => {
-        if (row.COMPONENT_GMID) counts.hasComponentGmid++;
-        if (row.PATH_GMID) counts.hasPathGmid++;
-        if (row.DISPLAY) counts.hasDisplay++;
-        if (row.ROOT_GMID) counts.hasRootGmid++;
-        if (row.ROOT_DISPLAY) counts.hasRootDisplay++;
-        
-        // Check PATH_GMID format
-        if (row.PATH_GMID) {
-            if (row.PATH_GMID.includes('/')) {
-                counts.pathGmidFormats.add('has_slashes');
-            } else {
-                counts.pathGmidFormats.add('no_slashes');
-            }
-        }
-        
-        // Check DISPLAY format
-        if (row.DISPLAY) {
-            if (row.DISPLAY.includes('//')) {
-                counts.displayFormats.add('has_double_slashes');
-            } else {
-                counts.displayFormats.add('no_double_slashes');
-            }
-        }
-    });
-    
-    console.log("Data analysis:");
-    console.log(`- Rows with COMPONENT_GMID: ${counts.hasComponentGmid} of ${data.length}`);
-    console.log(`- Rows with PATH_GMID: ${counts.hasPathGmid} of ${data.length}`);
-    console.log(`- Rows with DISPLAY: ${counts.hasDisplay} of ${data.length}`);
-    console.log(`- Rows with ROOT_GMID: ${counts.hasRootGmid} of ${data.length}`);
-    console.log(`- Rows with ROOT_DISPLAY: ${counts.hasRootDisplay} of ${data.length}`);
-    
-    console.log("PATH_GMID formats:", Array.from(counts.pathGmidFormats).join(", "));
-    console.log("DISPLAY formats:", Array.from(counts.displayFormats).join(", "));
-    
-    // Sample some PATH_GMID values
-    const pathGmidSamples = data
-        .filter(row => row.PATH_GMID)
-        .map(row => row.PATH_GMID)
-        .slice(0, 5);
-    
-    console.log("Sample PATH_GMID values:", pathGmidSamples);
-    
-    // Count unique values
-    const uniqueCounts = {
-        componentGmids: new Set(),
-        rootGmids: new Set(),
-        pathGmidSections: {}
-    };
-    
-    data.forEach(row => {
-        if (row.COMPONENT_GMID) uniqueCounts.componentGmids.add(row.COMPONENT_GMID);
-        if (row.ROOT_GMID) uniqueCounts.rootGmids.add(row.ROOT_GMID);
-        
-        // Count unique path segments
-        if (row.PATH_GMID) {
-            const segments = row.PATH_GMID.split('/').filter(s => s.trim() !== '');
-            segments.forEach((segment, index) => {
-                uniqueCounts.pathGmidSections[index] = uniqueCounts.pathGmidSections[index] || new Set();
-                uniqueCounts.pathGmidSections[index].add(segment);
-            });
-        }
-    });
-    
-    console.log(`Unique COMPONENT_GMIDs: ${uniqueCounts.componentGmids.size}`);
-    console.log(`Unique ROOT_GMIDs: ${uniqueCounts.rootGmids.size}`);
-    
-    // Object.keys(uniqueCounts.pathGmidSections).forEach(level => {
-    //     console.log(`Unique PATH_GMID segments at level ${level}: ${uniqueCounts.pathGmidSections[level].size}`);
-    // });
-    
-    return {
-        counts,
-        uniqueCounts,
-        pathGmidSamples
-    };
 }
 
 
@@ -2623,7 +2302,7 @@ function processDimensionHierarchies(dimensions, factData) {
         precomputeDescendantFactIds(hierarchies.gmid_display, 'COMPONENT_GMID');
     }
     
-    console.log("New hierarchies built:", Object.keys(hierarchies));
+    console.log("✅ Status: New hierarchies built:", Object.keys(hierarchies));
     return hierarchies;
 }
 
@@ -2811,7 +2490,7 @@ function regenerateColumnHierarchies(filteredData, state) {
     dimInColumns.forEach(dimField => {
         const dimName = dimField.replace('DIM_', '').toLowerCase();
         
-        console.log(`Preserving hierarchy structure for ${dimField} in column zone`);
+        console.log(`⏳ Status: Preserving hierarchy structure for ${dimField} in column zone`);
         
         // We don't actually regenerate the hierarchy - we just ensure we preserve it
         // by keeping the original structure and just marking the hierarchy as processed
@@ -2841,14 +2520,14 @@ function precomputeDescendantFactIds(hierarchy, factIdField) {
         return;
     }
     
-    console.log(`Precomputing descendant factIds for hierarchy using ${factIdField}`);
+    // console.log(`Precomputing descendant factIds for hierarchy using ${factIdField}`);
     
     // Special case for GMID hierarchy - ensure we're handling it differently
     const isGmidHierarchy = factIdField === 'COMPONENT_GMID';
     
     // Get all nodes from the hierarchy
     const nodes = Object.values(hierarchy.nodesMap);
-    console.log(`Processing ${nodes.length} nodes in hierarchy`);
+    // console.log(`Processing ${nodes.length} nodes in hierarchy`);
     
     // Group nodes by level for bottom-up processing
     const nodesByLevel = {};
@@ -2870,7 +2549,7 @@ function precomputeDescendantFactIds(hierarchy, factIdField) {
         }
     });
     
-    console.log(`Hierarchy has ${maxLevel + 1} levels (0 to ${maxLevel})`);
+    // console.log(`Hierarchy has ${maxLevel + 1} levels (0 to ${maxLevel})`);
     
     // Process from bottom to top, starting with leaf nodes
     for (let level = maxLevel; level >= 0; level--) {
@@ -2912,42 +2591,13 @@ function precomputeDescendantFactIds(hierarchy, factIdField) {
         }
     });
     
-    console.log(`Nodes with descendantFactIds: ${nodesWithDescendants} of ${nodes.length}`);
+    // console.log(`Nodes with descendantFactIds: ${nodesWithDescendants} of ${nodes.length}`);
     
     // Log distribution of descendantFactIds counts
     const countEntries = Object.entries(factIdCounts)
         .sort((a, b) => parseInt(a[0]) - parseInt(b[0]));
     
-    // console.log("Distribution of descendantFactIds counts:");
-    // countEntries.forEach(([count, nodeCount]) => {
-    //     console.log(`  ${count} factIds: ${nodeCount} nodes`);
-    // });
-    
-    // Verify master root (if exists)
-    // if (hierarchy.root) {
-    //     console.log(`Master root node "${hierarchy.root.label}": ${hierarchy.root.descendantFactIds?.length || 0} descendant factIds`);
-    // }
-    
-    // Log sample of nodes at each level
-    // for (let level = 0; level <= maxLevel; level++) {
-    //     if (!nodesByLevel[level] || nodesByLevel[level].length === 0) continue;
-        
-    //     const sampleSize = Math.min(3, nodesByLevel[level].length);
-    //     const samples = nodesByLevel[level].slice(0, sampleSize);
-        
-    //     console.log(`Level ${level} samples:`);
-    //     samples.forEach(node => {
-    //         console.log(`  "${node.label}": ${node.descendantFactIds?.length || 0} descendant factIds`);
-            
-    //         if (node.descendantFactIds && node.descendantFactIds.length > 0 && node.descendantFactIds.length <= 5) {
-    //             console.log(`    FactIds: ${node.descendantFactIds.join(', ')}`);
-    //         } else if (node.descendantFactIds && node.descendantFactIds.length > 5) {
-    //             console.log(`    First 5 factIds: ${node.descendantFactIds.slice(0, 5).join(', ')}...`);
-    //         }
-    //     });
-    // }
-    
-    console.log("Descendant factIds precomputation complete");
+    console.log("✅ Status: Descendant factIds precomputation complete");
 }
 
 
@@ -2973,216 +2623,6 @@ function filterRecordsByLeHierarchy(records, leCode) {
 }
 
 
-/**
- * Builds a hierarchical structure from tabular data with PATH_GMID and H*_GMID columns
- * following the same signature as buildGenericPathHierarchy
- * 
- * @param {Array} data - Array of objects containing the dataset
- * @param {Object} config - Configuration options (optional)
- * @returns {Object} - Object containing root node, nodesMap, and original data
- */
-// function buildGmidDisplayHierarchy(data) {
-//     // console.log("Processing GMID display hierarchy from DIM_GMID_DISPLAY data...");
-//     console.log(`Building GMID display hierarchy from ${data ? data.length : 0} dimension records...`);
-    
-//     // Ensure data is an array
-//     if (!data || !Array.isArray(data)) {
-//         console.error("DIM_GMID_DISPLAY data is not an array");
-//         data = [];
-//     }
-    
-//     // Verify we have data to process
-//     if (data.length === 0) {
-//         console.error("No data to process in DIM_GMID_DISPLAY");
-//     } else {
-//         // Debug: Log the first few rows to check column structure
-//         console.log("First rows of data:", data.slice(0, 3).map(row => {
-//             const simplified = {...row};
-//             // Only include important columns in log to keep it readable
-//             return {
-//                 COMPONENT_GMID: simplified.COMPONENT_GMID,
-//                 PATH_GMID: simplified.PATH_GMID,
-//                 DISPLAY: simplified.DISPLAY
-//             };
-//         }));
-//     }
-
-//     // Filter root gmid here before hierarchy is built
-//     // Filter data to include ONLY the selected ROOT_GMIDs
-//     if (state.selectedRootGmids && state.selectedRootGmids.length > 0 && 
-//         state.rootGmids && state.selectedRootGmids.length < state.rootGmids.length) {
-        
-//         console.log(`Filtering GMID data to include only ${state.selectedRootGmids.length} selected ROOT_GMIDs`);
-        
-//         // Keep only records where ROOT_GMID is in the selected list
-//         data = data.filter(item => 
-//             item.ROOT_GMID && state.selectedRootGmids.includes(item.ROOT_GMID)
-//         );
-        
-//         console.log(`Filtered to ${data.length} GMID records`);
-//     }
-    
-//     // Create root node
-//     const rootNode = { 
-//         id: 'ROOT', 
-//         label: 'All GMIDs', 
-//         children: [], 
-//         level: 0, 
-//         path: ['ROOT'],
-//         expanded: true,
-//         isLeaf: false,
-//         hasChildren: false
-//     };
-    
-//     // Map to store all nodes by their ID for quick lookup
-//     const nodesMap = { 'ROOT': rootNode };
-    
-//     // Debug: Keep track of how many nodes we're creating at each level
-//     const levelCounts = { 0: 1 }; // Root node
-    
-//     // Process each row in the data
-//     data.forEach((item, index) => {
-//         if (!item) {
-//             console.warn(`Skipping null item at index ${index}`);
-//             return;
-//         }
-        
-//         // Handle missing required fields
-//         if (!item.PATH_GMID || !item.DISPLAY) {
-//             // console.warn(`Skipping item at index ${index} due to missing PATH_GMID or DISPLAY`);
-//             return;
-//         }
-        
-//         // Split the PATH_GMID and DISPLAY columns by their respective delimiters
-//         const pathSegments = item.PATH_GMID.split('/');
-//         const displaySegments = item.DISPLAY.split('//');
-        
-//         // Validate that we have matching segments
-//         if (pathSegments.length !== displaySegments.length) {
-//             // console.warn(`Mismatched segments for item at index ${index}. PATH_GMID has ${pathSegments.length} segments but DISPLAY has ${displaySegments.length} segments.`);
-//             return;
-//         }
-        
-//         // Determine the GMID for this row
-//         let gmid;
-//         if (pathSegments[pathSegments.length - 1] === '#') {
-//             // When leaf segment is '#', use the entire PATH_GMID as COMPONENT_GMID
-//             gmid = item.PATH_GMID;
-//         } else {
-//             // Otherwise, use the COMPONENT_GMID value
-//             gmid = item.COMPONENT_GMID || "Unknown GMID";
-//         }
-        
-//         // Track the maximum level
-//         const maxLevel = pathSegments.length;
-        
-//         let currentNode = rootNode;
-//         let currentPath = ['ROOT'];
-        
-//         // Process each level
-//         for (let i = 0; i < maxLevel; i++) {
-//             const pathSegment = pathSegments[i];
-//             const displaySegment = displaySegments[i];
-            
-//             // Skip if segment is empty
-//             if (!displaySegment || displaySegment.trim() === '') {
-//                 continue;
-//             }
-            
-//             // Create a unique node ID for this segment that's safe for DOM
-//             // Using the path segment as part of the ID ensures uniqueness
-//             const safeId = pathSegment.replace(/[^a-zA-Z0-9]/g, '_');
-//             const nodeId = `LEVEL_${i+1}_${safeId}`;
-            
-//             // Track nodes created at this level
-//             levelCounts[i+1] = (levelCounts[i+1] || 0) + 1;
-            
-//             // Check if we already have a node for this segment
-//             if (!nodesMap[nodeId]) {
-//                 // Create a new node
-//                 const isLastLevel = i === maxLevel - 1;
-//                 const newNode = {
-//                     id: nodeId,
-//                     label: displaySegment.trim(),  // Using the DISPLAY segment as the label
-//                     levelNum: i + 1,
-//                     levelValue: pathSegment.trim(),  // Store the PATH_GMID segment for reference
-//                     children: [],
-//                     level: i + 1,
-//                     path: [...currentPath, nodeId],
-//                     expanded: i < 2, // Auto-expand first two levels
-//                     isLeaf: isLastLevel,
-//                     hasChildren: false,
-//                     // If this is the last level, associate with the GMID for filtering
-//                     factId: isLastLevel ? gmid : null
-//                 };
-                
-//                 nodesMap[nodeId] = newNode;
-                
-//                 // Add to parent's children
-//                 currentNode.children.push(newNode);
-//                 currentNode.isLeaf = false;
-//                 currentNode.hasChildren = true;
-//             } else if (i === maxLevel - 1 && currentNode.id === nodesMap[nodeId].path[nodesMap[nodeId].path.length - 2]) {
-//                 // If this node already exists but is now a leaf at this level under the same parent,
-//                 // we need to handle potential multiple GMIDs mapping to the same node
-//                 const existingNode = nodesMap[nodeId];
-                
-//                 // If the node doesn't already have a factId, set it
-//                 if (!existingNode.factId) {
-//                     existingNode.factId = gmid;
-//                     existingNode.isLeaf = true;
-//                 } 
-//                 // If it already has a factId but this is a different GMID,
-//                 // we need to track both GMIDs
-//                 else if (existingNode.factId !== gmid) {
-//                     // Convert factId to array if it isn't already
-//                     if (!Array.isArray(existingNode.factId)) {
-//                         existingNode.factId = [existingNode.factId];
-//                     }
-//                     // Add this GMID if it's not already in the array
-//                     if (!existingNode.factId.includes(gmid)) {
-//                         existingNode.factId.push(gmid);
-//                     }
-//                 }
-                
-//                 // Mark as non-leaf if it has children
-//                 if (existingNode.children && existingNode.children.length > 0) {
-//                     existingNode.isLeaf = false;
-//                 }
-//             }
-            
-//             // Update current node and path for next level
-//             currentNode = nodesMap[nodeId];
-//             currentPath = [...currentPath, nodeId];
-//         }
-//     });
-    
-//     // Debug: Log how many nodes we created at each level
-//     console.log("Nodes created per level:", levelCounts);
-//     console.log("Total nodes in hierarchy:", Object.keys(nodesMap).length);
-    
-//     // Sort nodes at each level
-//     function sortHierarchyNodes(node) {
-//         if (node.children && node.children.length > 0) {
-//             // Sort children by label
-//             node.children.sort((a, b) => {
-//                 return a.label.localeCompare(b.label);
-//             });
-            
-//             // Recursively sort children's children
-//             node.children.forEach(child => sortHierarchyNodes(child));
-//         }
-//     }
-    
-//     sortHierarchyNodes(rootNode);
-    
-//     return {
-//         root: rootNode,
-//         nodesMap: nodesMap,
-//         flatData: data
-//     };
-// }
-
 
 /**
  * Enhanced version of buildGmidDisplayHierarchy that filters by selected Root GMIDs
@@ -3193,7 +2633,7 @@ function filterRecordsByLeHierarchy(records, leCode) {
  * @returns {Object} - Hierarchy object with root, nodesMap and original data
  */
 function buildFilteredGmidDisplayHierarchy(data, selectedRootGmids = null) {
-console.log(`Building GMID display hierarchy${selectedRootGmids ? ' with ROOT_GMID filtering' : ''}...`);
+console.log(`⏳ Status: Building GMID display hierarchy${selectedRootGmids ? ' with ROOT_GMID filtering' : ''}...`);
 
 // Check if we should apply ROOT_GMID filtering
 const applyRootGmidFilter = selectedRootGmids && 
@@ -3201,12 +2641,12 @@ const applyRootGmidFilter = selectedRootGmids &&
                             selectedRootGmids.length > 0;
 
 if (applyRootGmidFilter) {
-    console.log(`Filtering GMID hierarchy to include only ${selectedRootGmids.length} selected ROOT_GMIDs`);
+    // console.log(`Filtering GMID hierarchy to include only ${selectedRootGmids.length} selected ROOT_GMIDs`);
     
     // Filter the dimension data to only include records with selected ROOT_GMIDs
     data = data.filter(item => item.ROOT_GMID && selectedRootGmids.includes(item.ROOT_GMID));
     
-    console.log(`Filtered to ${data.length} GMID dimension records`);
+    // console.log(`Filtered to ${data.length} GMID dimension records`);
 }
 
 // Create root node
@@ -3230,7 +2670,7 @@ const levelCounts = { 0: 1 }; // Root node
 // Process each row in the data
 data.forEach((item, index) => {
     if (!item) {
-    console.warn(`Skipping null item at index ${index}`);
+    // console.warn(`Skipping null item at index ${index}`);
     return;
     }
     
@@ -3345,8 +2785,8 @@ data.forEach((item, index) => {
 });
 
 // Debug: Log how many nodes we created at each level
-console.log("Nodes created per level:", levelCounts);
-console.log("Total nodes in hierarchy:", Object.keys(nodesMap).length);
+// console.log("Nodes created per level:", levelCounts);
+// console.log("Total nodes in hierarchy:", Object.keys(nodesMap).length);
 
 // Sort nodes at each level
 function sortHierarchyNodes(node) {
@@ -3373,7 +2813,7 @@ return {
 
 
 function buildGmidDisplayMapping(gmidDisplayData, bomData) {
-    console.log("Building GMID Display mapping with PATH_GMID-based hierarchy");
+    console.log("⏳ Status: Building GMID Display mapping with PATH_GMID-based hierarchy");
     
     // Create mapping object
     const mapping = {
@@ -3409,11 +2849,11 @@ function buildGmidDisplayMapping(gmidDisplayData, bomData) {
         });
     }
     
-    console.log(`Loaded ${mapping.usedGmids.size} GMIDs from FACT_BOM data`);
+    console.log(`✅ Status: Loaded ${mapping.usedGmids.size} GMIDs from FACT_BOM data`);
     
     // Then process the display mappings
     if (gmidDisplayData && gmidDisplayData.length > 0) {
-        console.log(`Processing ${gmidDisplayData.length} rows of GMID Display data...`);
+        console.log(`⏳ Status: Processing ${gmidDisplayData.length} rows of GMID Display data...`);
         
         // First find all root GMIDs to ensure we build complete hierarchies
         const rootGmidCounts = {};
@@ -3427,7 +2867,7 @@ function buildGmidDisplayMapping(gmidDisplayData, bomData) {
             }
         });
         
-        console.log(`Found ${Object.keys(rootGmidCounts).length} unique root GMIDs in PATH_GMID`);
+        // console.log(`Found ${Object.keys(rootGmidCounts).length} unique root GMIDs in PATH_GMID`);
         
         // Now process each row for display mappings
         gmidDisplayData.forEach(row => {
@@ -3556,9 +2996,9 @@ function buildGmidDisplayMapping(gmidDisplayData, bomData) {
     const pathMappings = Object.keys(mapping.pathGmidToDisplay).length;
     const rootGmids = Object.keys(mapping.nodeToChildGmids).filter(id => !mapping.nodeToParent[id]).length;
     
-    console.log(`GMID Display mapping complete: ${mappedGmids} GMIDs mapped`);
-    console.log(`PATH_GMID mapping: ${pathMappings} path segments mapped`);
-    console.log(`Root GMID mapping: ${rootGmids} root GMIDs`);
+    console.log(`✅ Status: GMID Display mapping complete: ${mappedGmids} GMIDs mapped`);
+    console.log(`✅ Status: PATH_GMID mapping: ${pathMappings} path segments mapped`);
+    console.log(`✅ Status: Root GMID mapping: ${rootGmids} root GMIDs`);
     
     return mapping;
 }
@@ -3571,7 +3011,7 @@ function buildGmidDisplayMapping(gmidDisplayData, bomData) {
  * @returns {Object} - Mapping object
  */
 function buildLegalEntityMapping(legalEntityData, bomData) {
-    console.log("Building Legal Entity mapping with PATH-based structure");
+    console.log("⏳ Status: Building Legal Entity mapping with PATH-based structure");
     
     // Create mapping object
     const mapping = {
@@ -3665,8 +3105,8 @@ function buildLegalEntityMapping(legalEntityData, bomData) {
         });
     }
     
-    console.log(`Legal Entity mapping complete: ${Object.keys(mapping.leToDetails).length} LE codes mapped`);
-    console.log(`${mapping.usedLeCodes.size} LE codes used in FACT_BOM`);
+    console.log(`✅ Status: Legal Entity mapping complete: ${Object.keys(mapping.leToDetails).length} LE codes mapped`);
+    console.log(`✅ Status: ${mapping.usedLeCodes.size} LE codes used in FACT_BOM`);
     
     // Diagnostic info: Check how many FACT_BOM LE codes are mapped
     const mappedLeCodesCount = Array.from(mapping.usedLeCodes).filter(leCode => 
@@ -3674,7 +3114,7 @@ function buildLegalEntityMapping(legalEntityData, bomData) {
     ).length;
     
     const mappingCoveragePercent = Math.round((mappedLeCodesCount / mapping.usedLeCodes.size) * 100);
-    console.log(`LE mapping coverage: ${mappedLeCodesCount}/${mapping.usedLeCodes.size} (${mappingCoveragePercent}%)`);
+    console.log(`✅ Status: LE mapping coverage: ${mappedLeCodesCount}/${mapping.usedLeCodes.size} (${mappingCoveragePercent}%)`);
     
     return mapping;
 }
@@ -3687,7 +3127,7 @@ function buildLegalEntityMapping(legalEntityData, bomData) {
  * @returns {Object} - Mapping object
  */
 function buildManagementCentreMapping(managementCentreData, bomData) {
-    console.log("Building MC mapping with PATH-based structure");
+    console.log("⏳ Status: Building MC mapping with PATH-based structure");
     
     // Create mapping object
     const mapping = {
@@ -3775,13 +3215,13 @@ function buildManagementCentreMapping(managementCentreData, bomData) {
                 // Add to leToPaths
                 mapping.mcToPaths[row.MC] = 'UNKNOWN/' + row.MC;
                 
-                console.warn(`Added fallback mapping for unmapped MC code: ${row.MC}`);
+                // console.warn(`Added fallback mapping for unmapped MC code: ${row.MC}`);
             }
         });
     }
     
-    console.log(`Legal Entity mapping complete: ${Object.keys(mapping.mcToDetails).length} MC codes mapped`);
-    console.log(`${mapping.usedMcCodes.size} MC codes used in FACT_BOM`);
+    console.log(`✅ Status: Legal Entity mapping complete: ${Object.keys(mapping.mcToDetails).length} MC codes mapped`);
+    console.log(`✅ Status: ${mapping.usedMcCodes.size} MC codes used in FACT_BOM`);
     
     // Diagnostic info: Check how many FACT_BOM LE codes are mapped
     const mappedMcCodesCount = Array.from(mapping.usedMcCodes).filter(mcCode => 
@@ -3789,7 +3229,7 @@ function buildManagementCentreMapping(managementCentreData, bomData) {
     ).length;
     
     const mappingCoveragePercent = Math.round((mappedMcCodesCount / mapping.usedMcCodes.size) * 100);
-    console.log(`MC mapping coverage: ${mappedMcCodesCount}/${mapping.usedMcCodes.size} (${mappingCoveragePercent}%)`);
+    console.log(`✅ Status: MC mapping coverage: ${mappedMcCodesCount}/${mapping.usedMcCodes.size} (${mappingCoveragePercent}%)`);
     
     return mapping;
 }
@@ -3802,7 +3242,7 @@ function buildManagementCentreMapping(managementCentreData, bomData) {
  * @returns {Object} - Mapping object
  */
 function buildCostElementMapping(costElementData, bomData) {
-    console.log("Building Cost Element mapping");
+    console.log("⏳ Status: Building Cost Element mapping");
     
     // Create mapping object
     const mapping = {
@@ -3845,8 +3285,8 @@ function buildCostElementMapping(costElementData, bomData) {
         });
     }
     
-    console.log(`Cost Element mapping complete: ${Object.keys(mapping.costElementToDetails).length} cost elements mapped`);
-    console.log(`${mapping.usedCostElements.size} cost elements used in FACT_BOM`);
+    console.log(`✅ Status: Cost Element mapping complete: ${Object.keys(mapping.costElementToDetails).length} cost elements mapped`);
+    console.log(`✅ Status: ${mapping.usedCostElements.size} cost elements used in FACT_BOM`);
     
     return mapping;
 }
@@ -3859,7 +3299,7 @@ function buildCostElementMapping(costElementData, bomData) {
  * @returns {Object} - Mapping object
  */
 function buildSmartCodeMapping(smartCodeData, bomData) {
-    console.log("Building Smart Code mapping");
+    console.log("⏳ Status: Building Smart Code mapping");
     
     // Create mapping object
     const mapping = {
@@ -3902,8 +3342,8 @@ function buildSmartCodeMapping(smartCodeData, bomData) {
         });
     }
     
-    console.log(`Smart Code mapping complete: ${Object.keys(mapping.smartCodeToDetails).length} smart codes mapped`);
-    console.log(`${mapping.usedSmartCodes.size} smart codes used in FACT_BOM as ROOT_SMARTCODE`);
+    console.log(`✅ Status: Smart Code mapping complete: ${Object.keys(mapping.smartCodeToDetails).length} smart codes mapped`);
+    console.log(`✅ Status: ${mapping.usedSmartCodes.size} smart codes used in FACT_BOM as ROOT_SMARTCODE`);
     
     return mapping;
 }
@@ -3919,7 +3359,7 @@ function buildSmartCodeMapping(smartCodeData, bomData) {
  * @returns {Object} - Mapping object
  */
 function buildItemCostTypeMapping(itemCostTypeData, bomData) {
-    console.log("Building ITEM_COST_TYPE mapping");
+    console.log("⏳ Status: Building ITEM_COST_TYPE mapping");
     
     // Create mapping object
     const mapping = {
@@ -3952,7 +3392,7 @@ function buildItemCostTypeMapping(itemCostTypeData, bomData) {
         });
     }
     
-    console.log(`ITEM_COST_TYPE mapping complete: ${Object.keys(mapping.costTypeToDetails).length} types mapped`);
+    console.log(`✅ Status: ITEM_COST_TYPE mapping complete: ${Object.keys(mapping.costTypeToDetails).length} types mapped`);
     
     return mapping;
 }
@@ -3965,7 +3405,7 @@ function buildItemCostTypeMapping(itemCostTypeData, bomData) {
  * @returns {Object} - Mapping object
  */
 function buildMaterialTypeMapping(data, bomData) {
-    console.log("Building MATERIAL_TYPE mapping");
+    console.log("⏳ Status: Building MATERIAL_TYPE mapping");
     
     // Create mapping object
     const mapping = {
@@ -4004,7 +3444,7 @@ function buildMaterialTypeMapping(data, bomData) {
         });
     }
     
-    console.log(`MATERIAL_TYPE mapping complete: ${Object.keys(mapping.materialTypeToDetails).length} types mapped`);
+    console.log(`✅ Status: MATERIAL_TYPE mapping complete: ${Object.keys(mapping.materialTypeToDetails).length} types mapped`);
     
     return mapping;
 }
@@ -4017,7 +3457,7 @@ function buildMaterialTypeMapping(data, bomData) {
  * @returns {Object} - Mapping object
  */
 function buildBusinessYearMapping(businessYearData, bomData) {
-    console.log("Business Year mapping");
+    console.log("⏳ Status: Building Business Year mapping");
     
     // Create mapping object
     const mapping = {
@@ -4056,53 +3496,12 @@ function buildBusinessYearMapping(businessYearData, bomData) {
         });
     }
     
-    console.log(`YEAR mapping complete: ${Object.keys(mapping.yearToDetails).length} years mapped`);
-    console.log(`${mapping.usedYears.size} years used in FACT_BOM as ZYEAR`);
+    console.log(`✅ Status: YEAR mapping complete: ${Object.keys(mapping.yearToDetails).length} years mapped`);
+    console.log(`✅ Status: ${mapping.usedYears.size} years used in FACT_BOM as ZYEAR`);
     
     return mapping;
 }
 
-
-
-/**
- * Extract unique values from columns in FACT_BOM for filtering
- * @param {Array} bomData - BOM fact data
- * @returns {object} - Object containing unique values by column
- */
-function extractUniqueFactValues(bomData) {
-    const valueSet = {
-        ITEM_COST_TYPE: new Set(),
-        COMPONENT_MATERIAL_TYPE: new Set(),
-        ZYEAR: new Set(),
-        MC: new Set()
-    };
-    
-    if (!bomData || bomData.length === 0) {
-        return {
-            ITEM_COST_TYPE: [],
-            COMPONENT_MATERIAL_TYPE: [],
-            ZYEAR: [],
-            MC:[]
-        };
-    }
-    
-    // Extract unique values
-    bomData.forEach(row => {
-        if (row.ITEM_COST_TYPE) valueSet.ITEM_COST_TYPE.add(row.ITEM_COST_TYPE);
-        if (row.COMPONENT_MATERIAL_TYPE) valueSet.COMPONENT_MATERIAL_TYPE.add(row.COMPONENT_MATERIAL_TYPE);
-        if (row.ZYEAR) valueSet.ZYEAR.add(row.ZYEAR);
-        if (row.MC) valueSet.MC.add(row.MC);
-    });
-    
-    // Convert to sorted arrays
-    return {
-        ITEM_COST_TYPE: Array.from(valueSet.ITEM_COST_TYPE).sort(),
-        COMPONENT_MATERIAL_TYPE: Array.from(valueSet.COMPONENT_MATERIAL_TYPE).sort(),
-        ZYEAR: Array.from(valueSet.ZYEAR).sort(),
-        MC: Array.from(valueSet.MC).sort()
-
-    };
-}
 
 
 /**
@@ -4471,12 +3870,12 @@ function preFilterData(originalData) {
     }
     
     console.time('Pre-Filter');
-    console.log(`Starting pre-filter with ${originalData.length} records`);
+    console.log(`⏳ Status: Starting pre-filter with ${originalData.length} records`);
     
     // If no active filters, return original data
     if (!state.filters || Object.keys(state.filters).every(key => 
         !state.filters[key] || state.filters[key].length === 0)) {
-        console.log("No active filters, using original data");
+        console.log("✅ Status: No active filters, using original data");
         return originalData;
     }
     
@@ -4489,7 +3888,7 @@ function preFilterData(originalData) {
         filteredData = filteredData.filter(row => 
             state.filters.legalEntity.includes(row.LE)
         );
-        console.log(`After LE filter: ${filteredData.length} records (${before - filteredData.length} removed)`);
+        console.log(`✅ Status: After LE filter: ${filteredData.length} records (${before - filteredData.length} removed)`);
     }
     
     // Filter by Smartcode
@@ -4498,7 +3897,7 @@ function preFilterData(originalData) {
         filteredData = filteredData.filter(row => 
             state.filters.smartcode.includes(row.ROOT_SMARTCODE)
         );
-        console.log(`After Smartcode filter: ${filteredData.length} records (${before - filteredData.length} removed)`);
+        console.log(`✅ Status: After Smartcode filter: ${filteredData.length} records (${before - filteredData.length} removed)`);
     }
     
     // Filter by Cost Element
@@ -4507,7 +3906,7 @@ function preFilterData(originalData) {
         filteredData = filteredData.filter(row => 
             state.filters.costElement.includes(row.COST_ELEMENT)
         );
-        console.log(`After Cost Element filter: ${filteredData.length} records (${before - filteredData.length} removed)`);
+        console.log(`✅ Status: After Cost Element filter: ${filteredData.length} records (${before - filteredData.length} removed)`);
     }
     
     // Filter by Business Year
@@ -4516,7 +3915,7 @@ function preFilterData(originalData) {
         filteredData = filteredData.filter(row => 
             state.filters.businessYear.includes(row.ZYEAR)
         );
-        console.log(`After Year filter: ${filteredData.length} records (${before - filteredData.length} removed)`);
+        console.log(`✅ Status: After Year filter: ${filteredData.length} records (${before - filteredData.length} removed)`);
     }
     
     // Filter by Item Cost Type
@@ -4525,7 +3924,7 @@ function preFilterData(originalData) {
         filteredData = filteredData.filter(row => 
             state.filters.itemCostType.includes(row.ITEM_COST_TYPE)
         );
-        console.log(`After Item Cost Type filter: ${filteredData.length} records (${before - filteredData.length} removed)`);
+        console.log(`✅ Status: After Item Cost Type filter: ${filteredData.length} records (${before - filteredData.length} removed)`);
     }
     
     // Filter by Component Material Type
@@ -4534,188 +3933,15 @@ function preFilterData(originalData) {
         filteredData = filteredData.filter(row => 
             state.filters.componentMaterialType.includes(row.COMPONENT_MATERIAL_TYPE)
         );
-        console.log(`After Material Type filter: ${filteredData.length} records (${before - filteredData.length} removed)`);
+        console.log(`✅ Status: After Material Type filter: ${filteredData.length} records (${before - filteredData.length} removed)`);
     }
     
-    console.log(`Pre-filter complete: ${originalData.length} -> ${filteredData.length} records`);
+    console.log(`✅ Status: Pre-filter complete: ${originalData.length} -> ${filteredData.length} records`);
     console.timeEnd('Pre-Filter');
     
     return filteredData;
 }
 
-
-/**
- * Initialize Root GMID filter dropdown with checkbox-based UI
- * @param {Array} gmidDisplayData - The GMID display dimension data
- */
-// function initializeRootGmidFilter(gmidDisplayData) {
-//     console.log("Initializing improved Root GMID filter dropdown");
-    
-//     // Extract unique ROOT_GMID values
-//     const uniqueRootGmids = new Set();
-    
-//     if (gmidDisplayData && gmidDisplayData.length > 0) {
-//       gmidDisplayData.forEach(item => {
-//         if (item.ROOT_GMID) {
-//           uniqueRootGmids.add(item.ROOT_GMID);
-//         }
-//       });
-//     }
-    
-//     // Convert to array and sort
-//     const rootGmids = Array.from(uniqueRootGmids).sort();
-    
-//     // Store in state for reference
-//     state.rootGmids = rootGmids;
-//     console.log(`Found ${rootGmids.length} unique ROOT_GMID values`);
-    
-//     // Initialize state.selectedRootGmids with all ROOT_GMIDs initially
-//     state.selectedRootGmids = [...rootGmids];
-    
-//     // Get the checkbox list container
-//     const checkboxList = document.getElementById('rootGmidCheckboxList');
-//     if (!checkboxList) {
-//       console.error("Root GMID checkbox list element not found");
-//       return;
-//     }
-    
-//     // Clear existing options
-//     checkboxList.innerHTML = '';
-    
-//     // Populate checkbox list
-//     rootGmids.forEach(gmid => {
-//       const checkboxOption = document.createElement('div');
-//       checkboxOption.className = 'checkbox-option';
-      
-//       const label = document.createElement('label');
-      
-//       const checkbox = document.createElement('input');
-//       checkbox.type = 'checkbox';
-//       checkbox.value = gmid;
-//       checkbox.checked = true; // All checked by default
-//       checkbox.dataset.gmid = gmid;
-      
-//       const span = document.createElement('span');
-//       span.textContent = gmid;
-      
-//       label.appendChild(checkbox);
-//       label.appendChild(span);
-//       checkboxOption.appendChild(label);
-//       checkboxList.appendChild(checkboxOption);
-      
-//       // Add event listener to each checkbox
-//       checkbox.addEventListener('change', function() {
-//         updateSelectionText();
-//       });
-//     });
-    
-//     // Initialize multiselect dropdown behavior
-//     const dropdownControls = initializeMultiselectDropdown();
-    
-//     // Apply button handler
-//     const applyBtn = document.getElementById('applyRootGmidBtn');
-//     if (applyBtn) {
-//     applyBtn.addEventListener('click', applyRootGmidFilter);
-//     }
-    
-//     console.log("Improved Root GMID filter initialized");
-//   }
-
-
-
-/**
- * Initialize multiselect dropdown UI behaviors
- * @returns {Object} Object with utility functions
- */
-// function initializeMultiselectDropdown() {
-//     const multiselectButton = document.querySelector('.multiselect-button');
-//     const multiselectDropdown = document.querySelector('.multiselect-dropdown');
-//     const checkboxList = document.getElementById('rootGmidCheckboxList');
-//     const selectAllBtn = document.querySelector('.select-all-btn');
-//     const clearAllBtn = document.querySelector('.clear-all-btn');
-//     const searchInput = document.querySelector('.search-input');
-//     const selectionText = document.querySelector('.selection-text');
-    
-//     // Toggle dropdown
-//     multiselectButton.addEventListener('click', (e) => {
-//       e.stopPropagation();
-//       multiselectDropdown.classList.toggle('open');
-//     });
-    
-//     // Close dropdown when clicking outside
-//     document.addEventListener('click', (e) => {
-//       if (!multiselectDropdown.contains(e.target)) {
-//         multiselectDropdown.classList.remove('open');
-//       }
-//     });
-    
-//     // Prevent dropdown from closing when clicking inside
-//     checkboxList.addEventListener('click', (e) => {
-//       e.stopPropagation();
-//     });
-    
-//     // Select all button
-//     selectAllBtn.addEventListener('click', (e) => {
-//       e.stopPropagation();
-//       const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
-//       checkboxes.forEach(checkbox => {
-//         checkbox.checked = true;
-//       });
-//       updateSelectionText();
-//     });
-    
-//     // Clear all button
-//     clearAllBtn.addEventListener('click', (e) => {
-//       e.stopPropagation();
-//       const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
-//       checkboxes.forEach(checkbox => {
-//         checkbox.checked = false;
-//       });
-//       updateSelectionText();
-//     });
-    
-//     // Search functionality
-//     searchInput.addEventListener('input', (e) => {
-//       const searchTerm = e.target.value.toLowerCase();
-//       const options = checkboxList.querySelectorAll('.checkbox-option');
-      
-//       options.forEach(option => {
-//         const text = option.textContent.toLowerCase();
-//         if (text.includes(searchTerm)) {
-//           option.style.display = 'block';
-//         } else {
-//           option.style.display = 'none';
-//         }
-//       });
-//     });
-    
-//     // Initialize selection text
-//     updateSelectionText();
-    
-//     return {
-//       updateSelectionText
-//     };
-//   }
-  
-  /**
-   * Update the selection text in the dropdown button
-   */
-//   function updateSelectionText() {
-//     const selectionText = document.querySelector('.selection-text');
-//     if (!selectionText) return;
-    
-//     const checkboxList = document.getElementById('rootGmidCheckboxList');
-//     const checkedBoxes = checkboxList.querySelectorAll('input[type="checkbox"]:checked');
-//     const totalBoxes = checkboxList.querySelectorAll('input[type="checkbox"]');
-    
-//     if (checkedBoxes.length === 0) {
-//       selectionText.textContent = 'Select Root GMIDs';
-//     } else if (checkedBoxes.length === totalBoxes.length) {
-//       selectionText.textContent = 'All Root GMIDs selected';
-//     } else {
-//       selectionText.innerHTML = `${checkedBoxes.length} selected <span class="selection-count">${checkedBoxes.length}/${totalBoxes.length}</span>`;
-//     }
-//   }
   
 /**
  * Update the selectedRootGmids array in the state based on checked checkboxes
@@ -4729,7 +3955,7 @@ function updateSelectedRootGmids() {
     // Update selectedRootGmids with the values from checked checkboxes
     state.selectedRootGmids = Array.from(checkedBoxes).map(checkbox => checkbox.value);
 
-    console.log(`Selected ${state.selectedRootGmids.length} ROOT_GMIDs`);
+    console.log(`✅ Status: Selected ${state.selectedRootGmids.length} ROOT_GMIDs`);
 
     // Filter fact data based on selected ROOT_GMIDs
     filterFactDataByRootGmids();
@@ -4741,32 +3967,32 @@ function updateSelectedRootGmids() {
  * This function should be called whenever selectedRootGmids changes
  */
 function filterFactDataByRootGmids() {
-    console.log("Filtering FACT_BOM data by selected ROOT_GMIDs");
+    console.log("⏳ Status: Filtering FACT_BOM data by selected ROOT_GMIDs");
 
     // Skip if no fact data or no selected ROOT_GMIDs
     if (!state.factData || !state.factData.length || 
         !state.selectedRootGmids || !state.selectedRootGmids.length) {
-        console.log("No filtering needed: missing data or no selections");
+        console.log("✅ Status: No filtering needed: missing data or no selections");
         state.filteredFactData = null;
         return;
     }
 
     // Skip if all ROOT_GMIDs are selected
     if (state.rootGmids && state.selectedRootGmids.length === state.rootGmids.length) {
-        console.log("All ROOT_GMIDs selected, using original data");
+        console.log("✅ Status: All ROOT_GMIDs selected, using original data");
         state.filteredFactData = null;
         return;
     }
 
     console.time('FilterFactData');
-    console.log(`Filtering ${state.factData.length} FACT_BOM records by ${state.selectedRootGmids.length} ROOT_GMIDs`);
+    console.log(`⏳ Status: Filtering ${state.factData.length} FACT_BOM records by ${state.selectedRootGmids.length} ROOT_GMIDs`);
 
     // Filter the fact data to only include records with selected ROOT_GMIDs
     state.filteredFactData = state.factData.filter(record => 
         record.ROOT_GMID && state.selectedRootGmids.includes(record.ROOT_GMID)
     );
 
-    console.log(`Filtered FACT_BOM data: ${state.factData.length} -> ${state.filteredFactData.length} records`);
+    console.log(`✅ Status: Filtered FACT_BOM data: ${state.factData.length} -> ${state.filteredFactData.length} records`);
     console.timeEnd('FilterFactData');
 }
 
@@ -4782,11 +4008,11 @@ function setupFactDataInterception() {
       
       // Replace with our intercepting function
       window.generatePivotTable = function() {
-        console.log("Intercepted generatePivotTable call to ensure filtered data is used");
+        console.log("✅ Status: Intercepted generatePivotTable call to ensure filtered data is used");
         
         // Check if we have filtered data available
         if (state.filteredFactData && state.filteredFactData.length > 0) {
-          console.log(`Using filtered data: ${state.filteredFactData.length} records`);
+          console.log(`✅ Status: Using filtered data: ${state.filteredFactData.length} records`);
           
           // Store the original factData temporarily
           const originalFactData = state.factData;
@@ -4802,113 +4028,14 @@ function setupFactDataInterception() {
           
           return result;
         } else {
-          console.log(`Using original data: ${state.factData.length} records`);
+          console.log(`✅ Status: Using original data: ${state.factData.length} records`);
           return window.originalGeneratePivotTable();
         }
       };
       
-      console.log("Successfully intercepted pivot table generation");
+      console.log("✅ Status: Successfully intercepted pivot table generation");
     }
   }
-
-
-/**
- * Update the applyRootGmidFilter function to handle both filtering
- */
-function applyRootGmidFilter() {
-    // Update the selected ROOT_GMIDs
-    updateSelectedRootGmids();
-    
-    // Filter fact data based on selected ROOT_GMIDs
-    filterFactDataByRootGmids();
-    
-    // Rebuild GMID hierarchy based on filtered dimension data
-    const hierarchyRebuilt = rebuildGmidDisplayHierarchy();
-    
-    // Make sure interception is set up
-    setupFactDataInterception();
-    
-    // Refresh pivot table
-    if (window.generatePivotTable && typeof window.generatePivotTable === 'function') {
-        window.generatePivotTable();
-    }
-    
-    // Close dropdown
-    document.querySelector('.multiselect-dropdown').classList.remove('open');
-    
-    // Log information
-    console.log(`Applied filter with ${state.selectedRootGmids.length} selected ROOT_GMIDs`);
-    console.log(`Hierarchy was ${hierarchyRebuilt ? 'rebuilt' : 'not rebuilt'}`);
-    
-    // If the filteredFactData is null (all ROOT_GMIDs selected), restore original hierarchy
-    if (!state.filteredFactData && state._originalGmidHierarchy) {
-        restoreOriginalGmidHierarchy();
-    }
-  }
-
-
-  /**
- * Rebuild the GMID display hierarchy based on selected ROOT_GMIDs
- * This ensures both the hierarchy and fact data are filtered
- */
-function rebuildGmidDisplayHierarchy() {
-    console.log("Rebuilding GMID display hierarchy based on selected ROOT_GMIDs");
-    
-    // Skip if no dimension data or no selected ROOT_GMIDs
-    if (!state.dimensions.gmid_display || !state.dimensions.gmid_display.length || 
-        !state.selectedRootGmids || !state.selectedRootGmids.length) {
-      console.log("Cannot rebuild hierarchy: missing data or no selections");
-      return false;
-    }
-    
-    // Skip if all ROOT_GMIDs are selected - no need to rebuild
-    if (state.rootGmids && state.selectedRootGmids.length === state.rootGmids.length) {
-      console.log("All ROOT_GMIDs selected, using original hierarchy");
-      return false;
-    }
-    
-    console.time('RebuildHierarchy');
-    
-    // Get the original dimension data
-    const originalDimData = state.dimensions.gmid_display;
-    console.log(`Filtering ${originalDimData.length} GMID dimension records by ${state.selectedRootGmids.length} ROOT_GMIDs`);
-    
-    // Filter dimension data based on selected ROOT_GMIDs
-    const filteredDimData = originalDimData.filter(item => 
-      item.ROOT_GMID && state.selectedRootGmids.includes(item.ROOT_GMID)
-    );
-    
-    console.log(`Filtered GMID dimension data: ${originalDimData.length} -> ${filteredDimData.length} records`);
-    
-    // Temporarily store original hierarchy
-    const originalHierarchy = state.hierarchies.gmid_display;
-    
-    // Build new hierarchy using filtered dimension data
-    state.hierarchies.gmid_display = buildGmidDisplayHierarchy(filteredDimData);
-    
-    console.log(`Rebuilt GMID hierarchy with filtered data (${filteredDimData.length} records)`);
-    
-    // Store a reference to the filtered/rebuilt hierarchy for restoration if needed
-    state._filteredGmidHierarchy = state.hierarchies.gmid_display;
-    state._originalGmidHierarchy = originalHierarchy;
-    
-    console.timeEnd('RebuildHierarchy');
-    return true;
-  }
-
-
-/**
- * Restore the original GMID hierarchy if needed
- */
-function restoreOriginalGmidHierarchy() {
-    if (state._originalGmidHierarchy) {
-      console.log("Restoring original GMID hierarchy");
-      state.hierarchies.gmid_display = state._originalGmidHierarchy;
-      return true;
-    }
-    return false;
-  }
-
 
 
 
@@ -4965,7 +4092,7 @@ export default {
     getVisibleLeafNodes,
     regenerateColumnHierarchies,
     filterRecordsByLeHierarchy,
-    diagnoseDimGmidData,
+    // diagnoseDimGmidData,
     ingestData,
     processHierarchicalFields,
     preFilterData,

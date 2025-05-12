@@ -1,10 +1,9 @@
 // This module centralizes the essential logic of pivot table functionality
-// Enhanced with functionality from old implementation
+// with enhanced column hierarchy handling capabilities
 
 import data from './data.js';
 import stateModule from './state.js';
 import multiDimensionPivotHandler from './pivotTableMultiDimensionsHandler.js';
-import columnHierarchyHandler from './columnHierarchyHandler.js';
 
 // Get reference to application state
 const state = stateModule.state;
@@ -28,7 +27,10 @@ const pivotTable = {
         // Initialize column expansion states
         this.initializeColumnExpansionStates();
         
-        console.log("Pivot table system initialized with enhanced functionality");
+        // Initialize column hierarchy handler
+        this.columnHierarchyHandler.init();
+        
+        console.log("✅ Status: Pivot table system initialized with enhanced functionality");
     },
     
     
@@ -53,27 +55,47 @@ const pivotTable = {
    
     /**
      * Handle expand/collapse clicks in the pivot table
+     * @param {Event} e - The click event
      */
     handleExpandCollapseClick: function(e) {
-        const nodeId = e.target.getAttribute('data-node-id');
-        const hierarchyName = e.target.getAttribute('data-hierarchy');
-        const zone = e.target.getAttribute('data-zone') || 'row';
+        // Make sure we're handling the actual button click, not its children
+        let target = e.target;
+        
+        // If clicked on a child element, find the actual button
+        if (!target.classList.contains('expand-collapse')) {
+            target = target.closest('.expand-collapse');
+            if (!target) return; // Exit if no button found
+        }
+        
+        const nodeId = target.getAttribute('data-node-id');
+        const hierarchyName = target.getAttribute('data-hierarchy');
+        const zone = target.getAttribute('data-zone') || 'row';
         
         console.log("Expand/collapse clicked:", { nodeId, hierarchyName, zone });
         
-        // Get state from the global App object
+        // Get state from the global App object or this object
         const state = window.App?.state || this.state;
         
-        // Ensure hierarchy exists
-        if (!state.hierarchies[hierarchyName]) {
-            console.error(`Hierarchy ${hierarchyName} not found in state`);
-            return;
+        // Ensure node exists in state
+        let node = null;
+        
+        if (hierarchyName && state.hierarchies && state.hierarchies[hierarchyName]) {
+            // Look in the specified hierarchy
+            node = state.hierarchies[hierarchyName].nodesMap?.[nodeId];
+        } else if (nodeId === 'ROOT') {
+            // It might be the root node
+            const pivotData = state.pivotData || {};
+            if (zone === 'column') {
+                // Find in columns
+                node = pivotData.columns?.find(col => col._id === 'ROOT' || col.isRootNode);
+            } else {
+                // Find in rows
+                node = pivotData.rows?.find(row => row._id === 'ROOT' || row.isRootNode);
+            }
         }
         
-        // Ensure node exists
-        const node = state.hierarchies[hierarchyName].nodesMap[nodeId];
         if (!node) {
-            console.error(`Node ${nodeId} not found in ${hierarchyName} hierarchy`);
+            console.error(`❌ Alert! Node ${nodeId} not found in ${hierarchyName} hierarchy`);
             return;
         }
         
@@ -81,19 +103,29 @@ const pivotTable = {
         state.expandedNodes = state.expandedNodes || {};
         state.expandedNodes[hierarchyName] = state.expandedNodes[hierarchyName] || {};
         state.expandedNodes[hierarchyName][zone] = state.expandedNodes[hierarchyName][zone] || {};
-        state.expandedNodes[hierarchyName][zone][nodeId] = !state.expandedNodes[hierarchyName][zone][nodeId];
         
-        // Also update the node's expanded property directly for proper rendering
-        node.expanded = state.expandedNodes[hierarchyName][zone][nodeId];
+        // Toggle the expansion state
+        const newState = !state.expandedNodes[hierarchyName][zone][nodeId];
+        state.expandedNodes[hierarchyName][zone][nodeId] = newState;
         
-        console.log(`Node ${nodeId} expansion set to: ${node.expanded}`);
+        // Also update the node's expanded property directly
+        node.expanded = newState;
         
-        // Update the visual state of the expand/collapse icon
-        e.target.classList.toggle('expanded');
-        e.target.classList.toggle('collapsed');
+        // Special handling for column zone
+        if (zone === 'column') {
+            node.columnExpanded = newState;
+        }
         
-        // Regenerate pivot table
-        window.refreshPivotTable();
+        console.log(`Node ${nodeId} expansion set to: ${newState}`);
+        
+        // Update the visual state of the button IMMEDIATELY for feedback
+        target.classList.toggle('expanded');
+        target.classList.toggle('collapsed');
+        
+        // Regenerate pivot table with a small delay to allow visual feedback
+        setTimeout(() => {
+            window.refreshPivotTable();
+        }, 10);
         
         // Prevent event from bubbling up
         e.stopPropagation();
@@ -117,14 +149,14 @@ const pivotTable = {
             return this.calculateMeasureMultiDim(records, rowDef, colDef, measureField);
         }
         
-        console.log(`Calculating ${measureField} for row: ${rowDef ? rowDef.label : 'none'} (${rowDef ? rowDef._id : 'none'})`);
+        // console.log(`Calculating ${measureField} for row: ${rowDef ? rowDef.label : 'none'} (${rowDef ? rowDef._id : 'none'})`);
         
         // Start with all records
         let filteredRecords = [...records];
         
         // Filter by row definition if provided
         if (rowDef) {
-            console.log(`Filtering by row: ${rowDef._id}, label: ${rowDef.label}`);
+            // console.log(`Filtering by row: ${rowDef._id}, label: ${rowDef.label}`);
             
             // Special case for material_type
             if (rowDef._id && rowDef._id.startsWith('MATERIAL_TYPE_')) {
@@ -133,12 +165,12 @@ const pivotTable = {
                 filteredRecords = this.filterByDimensionNode(filteredRecords, rowDef);
             }
             
-            console.log(`After row filtering: ${filteredRecords.length} records`);
+            // console.log(`After row filtering: ${filteredRecords.length} records`);
         }
         
         // Filter by column definition if provided
         if (colDef) {
-            console.log(`Filtering by column: ${colDef._id}, label: ${colDef.label}`);
+            // console.log(`Filtering by column: ${colDef._id}, label: ${colDef.label}`);
             
             // Special case for material_type
             if (colDef._id && colDef._id.startsWith('MATERIAL_TYPE_')) {
@@ -147,12 +179,12 @@ const pivotTable = {
                 filteredRecords = this.filterByDimensionNode(filteredRecords, colDef);
             }
             
-            console.log(`After column filtering: ${filteredRecords.length} records`);
+            // console.log(`After column filtering: ${filteredRecords.length} records`);
         }
         
         // Return 0 if no records match
         if (filteredRecords.length === 0) {
-            console.log(`No records after filtering, returning 0`);
+            // console.log(`✅ Status: No records after filtering, returning 0`);
             return 0;
         }
         
@@ -165,7 +197,7 @@ const pivotTable = {
             }
         });
         
-        console.log(`Calculated ${measureField} value: ${result}`);
+        // console.log(`Calculated ${measureField} value: ${result}`);
         return result;
     },
 
@@ -226,6 +258,117 @@ const pivotTable = {
 
 
     /**
+     * Recursively renders column hierarchy
+     * @param {Array} columns - Columns to render
+     * @param {Array} headerRows - Header rows by level
+     * @param {Number} level - Current level in hierarchy
+     */
+    renderColumnHierarchy: function(columns, headerRows, level) {
+        if (!columns || columns.length === 0 || !headerRows || level >= headerRows.length) {
+            return;
+        }
+        
+        // Current row for this level
+        const currentRow = headerRows[level];
+        
+        // Process each column at this level
+        columns.forEach(column => {
+            // Skip invalid columns
+            if (!column) return;
+            
+            // Create column header cell
+            const cell = document.createElement('th');
+            cell.className = 'column-header';
+            
+            // Add cell classification
+            if (column.isLeaf) cell.classList.add('leaf-node');
+            if (column.children && column.children.length > 0) cell.classList.add('has-children');
+            
+            // Apply data attributes for styling and behavior
+            cell.setAttribute('data-node-id', column._id);
+            cell.setAttribute('data-level', level);
+            
+            // Add dimension info if available
+            if (column.hierarchyField) {
+                const dimName = column.hierarchyField.replace('DIM_', '').toLowerCase();
+                cell.setAttribute('data-hierarchy', dimName);
+            } else if (column.hierarchyName) {
+                cell.setAttribute('data-hierarchy', column.hierarchyName);
+            }
+            
+            // Calculate colspan - how many leaf nodes underneath
+            let colspan = this.countLeafNodes(column);
+            if (colspan > 1) {
+                cell.colSpan = colspan;
+            }
+            
+            // Calculate rowspan for leaf or collapsed nodes
+            if (column.isLeaf || !column.expanded || !column.children || column.children.length === 0) {
+                const remainingRows = headerRows.length - level;
+                if (remainingRows > 1) {
+                    cell.rowSpan = remainingRows;
+                }
+            }
+            
+            // Add expand/collapse control if column has children
+            if (column.children && column.children.length > 0) {
+                const expandControl = document.createElement('span');
+                expandControl.className = `expand-collapse ${column.expanded ? 'expanded' : 'collapsed'}`;
+                expandControl.setAttribute('data-node-id', column._id);
+                
+                // Get dimension name
+                let dimName = '';
+                if (column.hierarchyField) {
+                    dimName = column.hierarchyField.replace('DIM_', '').toLowerCase();
+                } else if (column.hierarchyName) {
+                    dimName = column.hierarchyName;
+                }
+                
+                expandControl.setAttribute('data-hierarchy', dimName);
+                expandControl.setAttribute('data-zone', 'column');
+                
+                // Add click handler via a data attribute for event delegation
+                expandControl.setAttribute('onclick', 'window.handleExpandCollapseClick(event)');
+                
+                cell.appendChild(expandControl);
+            }
+            
+            // Add column label
+            const labelSpan = document.createElement('span');
+            labelSpan.className = 'column-label';
+            labelSpan.textContent = column.label || '';
+            cell.appendChild(labelSpan);
+            
+            // Add cell to current row
+            currentRow.appendChild(cell);
+            
+            // Process children if expanded
+            if (column.expanded && column.children && column.children.length > 0) {
+                // Get actual child nodes
+                const childNodes = column.children.map(childId => {
+                    if (typeof childId === 'string') {
+                        // Get dimension name
+                        let dimName = '';
+                        if (column.hierarchyField) {
+                            dimName = column.hierarchyField.replace('DIM_', '').toLowerCase();
+                        } else if (column.hierarchyName) {
+                            dimName = column.hierarchyName;
+                        }
+                        
+                        // Look up in hierarchies
+                        return this.state.hierarchies?.[dimName]?.nodesMap?.[childId];
+                    }
+                    return childId;
+                }).filter(Boolean); // Remove nulls/undefined
+                
+                // Recursively render children at next level
+                this.renderColumnHierarchy(childNodes, headerRows, level + 1);
+            }
+        });
+    },
+
+
+    /**
      * Filters records by a specific dimension node
      * @param {Array} records - The records to filter
      * @param {Object} node - The dimension node
@@ -268,7 +411,7 @@ const pivotTable = {
                 return this.filterByTime(records, node);
 
             default:
-                console.warn(`Unknown dimension: ${dimName}`);
+                console.warn(`⚠️ Warning: Unknown dimension: ${dimName}`);
                 return records;
         }
     },
@@ -322,7 +465,7 @@ const pivotTable = {
         }
         
         // Log what we found
-        console.log(`Filtering by LE node ${nodeLabel}: Found ${leCodes.size} matching LE codes`);
+        // console.log(`Filtering by LE node ${nodeLabel}: Found ${leCodes.size} matching LE codes`);
         
         // If we found LE codes, filter the records
         if (leCodes.size > 0) {
@@ -332,7 +475,7 @@ const pivotTable = {
         }
         
         // If we didn't find any matching LE codes, just return the records as is
-        console.warn(`No matching LE codes found for node ${nodeLabel}`);
+        console.warn(`⚠️ Warning: No matching LE codes found for node ${nodeLabel}`);
         return records;
     },
 
@@ -471,7 +614,7 @@ const pivotTable = {
         }
         
         // If no criteria matched, log a warning and return all records
-        // console.warn(`No filtering criteria found for GMID node: ${node.label}`);
+        // console.warn(`⚠️ Warning: No filtering criteria found for GMID node: ${node.label}`);
         return records;
     },
 
@@ -489,12 +632,12 @@ const pivotTable = {
         const costType = node.factId || node.label;
         
         // Debug what we're doing
-        console.log(`Filtering by ITEM_COST_TYPE: ${costType}, records before: ${records.length}`);
+        // console.log(`Filtering by ITEM_COST_TYPE: ${costType}, records before: ${records.length}`);
         
         // Direct equality filter on ITEM_COST_TYPE field
         const filtered = records.filter(record => record.ITEM_COST_TYPE === costType);
         
-        console.log(`After filtering: ${filtered.length} records`);
+        // console.log(`After filtering: ${filtered.length} records`);
         
         return filtered;
     },
@@ -506,18 +649,18 @@ const pivotTable = {
     filterByMaterialType: function(records, node) {
         // Safety check
         if (!records || records.length === 0) {
-            console.log("No records to filter");
+            // console.log("No records to filter");
             return [];
         }
         
         if (!node) {
-            console.error("No node provided for material type filtering");
+            console.error("❌ Alert! No node provided for material type filtering");
             return records;
         }
         
         // If it's the root node, return all records
         if (node._id === 'MATERIAL_TYPE_ROOT') {
-            console.log('Material Type Root node - no filtering');
+            // console.log('Material Type Root node - no filtering');
             return records;
         }
         
@@ -532,11 +675,11 @@ const pivotTable = {
             const extractedCode = node._id.replace('MATERIAL_TYPE_', '');
             materialTypeCode = extractedCode === 'null' ? null : extractedCode;
         } else {
-            console.error(`Cannot extract material type code from node:`, node);
+            console.error(`❌ Alert! Cannot extract material type code from node:`, node);
             return records; // Return all records if we can't extract the code
         }
         
-        console.log(`Filtering for material type '${materialTypeCode === null ? 'null' : materialTypeCode}', records before: ${records.length}`);
+        // console.log(`Filtering for material type '${materialTypeCode === null ? 'null' : materialTypeCode}', records before: ${records.length}`);
         
         // Simple equality filter
         const filtered = records.filter(record => {
@@ -548,7 +691,7 @@ const pivotTable = {
             }
         });
         
-        console.log(`After filtering: ${filtered.length} records for material type '${materialTypeCode === null ? 'null' : materialTypeCode}'`);
+        // console.log(`After filtering: ${filtered.length} records for material type '${materialTypeCode === null ? 'null' : materialTypeCode}'`);
         
         return filtered;
     },
@@ -602,7 +745,7 @@ const pivotTable = {
         }
         
         // Log what we found
-        console.log(`Filtering by MC node ${nodeLabel}: Found ${mcCodes.size} matching MC codes`);
+        // console.log(`Filtering by MC node ${nodeLabel}: Found ${mcCodes.size} matching MC codes`);
         
         // If we found LE codes, filter the records
         if (mcCodes.size > 0) {
@@ -612,7 +755,7 @@ const pivotTable = {
         }
         
         // If we didn't find any matching LE codes, just return the records as is
-        console.warn(`No matching MC codes found for node ${nodeLabel}`);
+        console.warn(`⚠️ Warning: No matching MC codes found for node ${nodeLabel}`);
         return records;
     },
 
@@ -658,82 +801,41 @@ const pivotTable = {
     },
 
 
-   /**
+    /**
      * Helper function to get all visible leaf columns
      * This gets columns that should show values (leaf nodes and collapsed parents)
+     * @param {Array} columns - Array of column definitions
+     * @returns {Array} - Array of visible leaf columns
      */
     getVisibleLeafColumns: function(columns) {
+        if (!columns || !Array.isArray(columns)) return [];
+        
         const visibleLeafs = [];
         
-        // Find root node if it exists
-        const rootNode = columns.find(col => 
-            col.label === 'All Items' || 
-            col.label === 'All Item Cost Types' || 
-            col.label === 'All Material Types' ||
-            col._id === 'ROOT' || 
-            col.isRootNode);
-        
-        const findVisibleLeafs = (column) => {
+        // Process a column and its descendants
+        const processColumn = (column) => {
             if (!column) return;
             
-            // Skip nodes marked to be hidden in UI
+            // Skip nodes marked to be hidden
             if (column.skipInUI) return;
             
-            // Special handling for root node
-            if (column === rootNode) {
-                // If root is collapsed, it counts as one leaf
-                if (!column.expanded) {
-                    visibleLeafs.push(column);
-                    return;
-                }
-                
-                // If root is expanded, process its children instead
-                if (column.expanded && column.children && column.children.length > 0) {
-                    const childNodes = column.children.map(childId => {
-                        if (typeof childId === 'string') {
-                            const dimName = column.hierarchyField ? 
-                                column.hierarchyField.replace('DIM_', '').toLowerCase() : 
-                                column.hierarchyName;
-                            return this.state.hierarchies[dimName]?.nodesMap?.[childId];
-                        }
-                        return childId;
-                    }).filter(Boolean);
-                    
-                    childNodes.forEach(childNode => {
-                        findVisibleLeafs(childNode);
-                    });
-                }
-                return;
-            }
-            
+            // If leaf node, include it
             if (column.isLeaf) {
-                // This is a leaf node, include it
                 visibleLeafs.push(column);
                 return;
             }
             
-            // Not a leaf, check if it's expanded
+            // If not expanded, treat as leaf
             if (!column.expanded) {
-                // Not expanded, treat it as a leaf for display purposes
                 visibleLeafs.push(column);
                 return;
             }
             
-            // Expanded parent, check children
+            // For expanded parents, process all children
             if (column.children && column.children.length > 0) {
-                const childNodes = column.children.map(childId => {
-                    if (typeof childId === 'string') {
-                        const dimName = column.hierarchyField ? 
-                            column.hierarchyField.replace('DIM_', '').toLowerCase() : 
-                            column.hierarchyName;
-                        return this.state.hierarchies[dimName]?.nodesMap?.[childId];
-                    }
-                    return childId;
-                }).filter(Boolean);
-                
-                // Process each child
-                childNodes.forEach(childNode => {
-                    findVisibleLeafs(childNode);
+                const childNodes = this.getChildNodes(column);
+                childNodes.forEach(child => {
+                    processColumn(child);
                 });
             } else {
                 // No children, treat as leaf
@@ -741,20 +843,14 @@ const pivotTable = {
             }
         };
         
-        // Process each column
-        if (rootNode) {
-            // If we have a root node, start with it
-            findVisibleLeafs(rootNode);
-        } else {
-            // Otherwise process all columns
-            columns.forEach(column => {
-                findVisibleLeafs(column);
-            });
-        }
+        // Process all top-level columns
+        columns.forEach(column => {
+            processColumn(column);
+        });
         
         return visibleLeafs;
     },
-    
+
     
     /**
      * Helper function to count leaf nodes under a node
@@ -791,7 +887,7 @@ const pivotTable = {
     getElement:function(id) {
         const element = document.getElementById(id);
         if (!element) {
-            console.warn(`Element with ID '${id}' not found`);
+            console.warn(`⚠️ Warning: Element with ID '${id}' not found`);
         }
         return element;
     },
@@ -943,11 +1039,13 @@ const pivotTable = {
         // Add expand/collapse control only if it has children
         if (rowDef.hasChildren === true) {
             const expandClass = rowDef.expanded ? 'expanded' : 'collapsed';
+            
+            // IMPORTANT: Use proper event handling - inline event handler
             cellHtml += `<span class="expand-collapse ${expandClass}" 
                 data-node-id="${rowDef._id}" 
                 data-hierarchy="${dimName}" 
                 data-zone="row"
-                onclick="window.handleExpandCollapseClick(event)"
+                onclick="handleExpandCollapseClick(event)"
                 title="Expand/collapse this item"></span>`;
         } else {
             cellHtml += `<span class="leaf-node"></span>`;
@@ -966,53 +1064,256 @@ const pivotTable = {
      * @param {Object} pivotData - Pivot table data with columns structure
      */
     renderHierarchicalColumns: function(elements, pivotData) {
-        // Safety checks
         if (!elements || !elements.pivotTableHeader) {
-            console.error("Missing header element");
+            console.error("❌ Alert! Missing header element");
             return;
         }
         
         try {
-            // Clear header
+            // Clear existing header content
             elements.pivotTableHeader.innerHTML = '';
             
-            // Get available measures
-            const valueFields = this.state?.valueFields || ['COST_UNIT'];
+            // Get column field dimensions
+            const hasColumnDimensions = pivotData.columns && 
+                                    pivotData.columns.length > 0 && 
+                                    pivotData.columns[0]._id !== 'default';
             
-            // Create a single header row
-            const headerRow = document.createElement('tr');
-            headerRow.className = 'measure-header-row';
+            // Get value/measure fields
+            const valueFields = this.state.valueFields || ['COST_UNIT'];
             
-            // Add corner cell
-            const cornerCell = document.createElement('th');
-            cornerCell.className = 'corner-cell';
-            headerRow.appendChild(cornerCell);
-            
-            // Add measure headers - one for each measure
-            for (let i = 0; i < valueFields.length; i++) {
-                const measureCell = document.createElement('th');
-                measureCell.className = 'measure-header';
-                
-                // Format display name
-                let displayName = valueFields[i];
-                if (displayName === 'COST_UNIT') displayName = 'Cost Unit';
-                else if (displayName === 'QTY_UNIT') displayName = 'Quantity Unit';
-                
-                measureCell.textContent = displayName;
-                headerRow.appendChild(measureCell);
+            if (!hasColumnDimensions) {
+                // Simple case - just measures, no column dimensions
+                this.renderSimpleMeasureHeaders(elements, valueFields);
+                return;
             }
             
-            // Add row to header
-            elements.pivotTableHeader.appendChild(headerRow);
+            // Complex case - we have column dimensions
+            const maxHierarchyDepth = this.getMaxColumnHierarchyDepth(pivotData.columns);
             
-            console.log("Single row measure headers rendered");
+            // Create header rows - one for each hierarchy level plus one for measures
+            const headerRows = [];
+            for (let i = 0; i <= maxHierarchyDepth; i++) {
+                const row = document.createElement('tr');
+                row.className = `header-row header-level-${i}`;
+                headerRows.push(row);
+            }
+            
+            // Add the corner cell in the top-left spanning all header rows
+            const cornerCell = document.createElement('th');
+            cornerCell.className = 'corner-cell';
+            cornerCell.rowSpan = headerRows.length;
+            cornerCell.textContent = ''; // Can add a label like "Dimensions" if desired
+            headerRows[0].appendChild(cornerCell);
+            
+            // Process column hierarchies recursively
+            this.renderColumnHierarchy(pivotData.columns, headerRows, 0);
+            
+            // Add all header rows to the container
+            headerRows.forEach(row => {
+                elements.pivotTableHeader.appendChild(row);
+            });
+            
+            console.log(`Column hierarchies rendered with ${headerRows.length} levels`);
             
         } catch (error) {
-            console.error("Error rendering column headers:", error);
-            // Fall back to basic rendering
-            this.renderBasicColumnHeaders(elements, pivotData);
+            console.error("❌ Alert! Error rendering column headers:", error);
+            this.renderSimpleMeasureHeaders(elements, this.state.valueFields || ['COST_UNIT']);
         }
     },
+
+
+    // Process column hierarchies recursively
+    processHierarchicalColumns: function(columns, headerRows, level, valueFields) {
+        if (!columns || columns.length === 0 || !headerRows || level >= headerRows.length) {
+            return;
+        }
+        
+        const isLastLevel = level === headerRows.length - 1;
+        
+        // Process each column at this level
+        columns.forEach(column => {
+            // Skip undefined/null columns
+            if (!column) return;
+            
+            // Create column header cell
+            const cell = document.createElement('th');
+            cell.className = 'column-header';
+            
+            // Add cell classification
+            if (column.isLeaf) cell.classList.add('leaf-node');
+            if (column.children && column.children.length > 0) cell.classList.add('has-children');
+            
+            // Add data attributes
+            cell.setAttribute('data-node-id', column._id);
+            cell.setAttribute('data-level', level);
+            
+            // Add hierarchy info if available
+            const dimName = column.hierarchyField ? 
+                column.hierarchyField.replace('DIM_', '').toLowerCase() : 
+                (column.hierarchyName || '');
+            
+            if (dimName) {
+                cell.setAttribute('data-hierarchy', dimName);
+            }
+            
+            // Calculate colspan - either based on measures or child columns
+            let colspan = 1;
+            
+            if (column.isLeaf || !column.expanded || !column.children || column.children.length === 0) {
+                // Leaf nodes or collapsed parents need to span all measures
+                colspan = valueFields.length;
+                
+                // Also calculate rowspan if not at the last level
+                if (!isLastLevel) {
+                    const remainingRows = headerRows.length - level - 1;
+                    if (remainingRows > 0) {
+                        cell.rowSpan = remainingRows;
+                    }
+                }
+            } else if (column.expanded && column.children && column.children.length > 0) {
+                // Expanded parents - calculate colspan based on visible descendants
+                const leafCount = this.countVisibleLeafNodes(column);
+                colspan = leafCount * valueFields.length;
+            }
+            
+            // Set colspan if greater than 1
+            if (colspan > 1) {
+                cell.colSpan = colspan;
+            }
+            
+            // Add expand/collapse control if column has children
+            if (column.children && column.children.length > 0) {
+                const expandControl = document.createElement('span');
+                expandControl.className = `expand-collapse ${column.expanded ? 'expanded' : 'collapsed'}`;
+                expandControl.setAttribute('data-node-id', column._id);
+                expandControl.setAttribute('data-hierarchy', dimName);
+                expandControl.setAttribute('data-zone', 'column');
+                expandControl.setAttribute('onclick', 'handleExpandCollapseClick(event)');
+                
+                cell.appendChild(expandControl);
+            }
+            
+            // Add column label
+            const labelSpan = document.createElement('span');
+            labelSpan.className = 'column-label';
+            labelSpan.textContent = column.label || '';
+            cell.appendChild(labelSpan);
+            
+            // Add cell to the current row
+            headerRows[level].appendChild(cell);
+            
+            // If at the last level and measures should be shown below dimension values,
+            // add measure headers
+            if (isLastLevel && 
+            (column.isLeaf || !column.expanded || !column.children || column.children.length === 0) &&
+            valueFields.length > 1) {
+                
+                // Show measures in separate row
+                valueFields.forEach(fieldId => {
+                    const measureCell = document.createElement('th');
+                    measureCell.className = 'measure-header';
+                    
+                    // Format measure name
+                    let displayName = fieldId;
+                    if (fieldId === 'COST_UNIT') displayName = 'Cost';
+                    else if (fieldId === 'QTY_UNIT') displayName = 'Qty';
+                    
+                    measureCell.textContent = displayName;
+                    headerRows[level].appendChild(measureCell);
+                });
+            }
+            
+            // Process children if expanded
+            if (column.expanded && column.children && column.children.length > 0) {
+                const childNodes = this.getChildNodes(column);
+                this.processHierarchicalColumns(childNodes, headerRows, level + 1, valueFields);
+            }
+        });
+    },
+
+
+    /**
+     * Render simple measure headers when no column hierarchies are present
+     */
+    renderSimpleMeasureHeaders: function(elements, valueFields) {
+        const headerRow = document.createElement('tr');
+        headerRow.className = 'measure-header-row';
+        
+        // Add corner cell
+        const cornerCell = document.createElement('th');
+        cornerCell.className = 'corner-cell';
+        cornerCell.textContent = ''; // Can add a label if desired
+        headerRow.appendChild(cornerCell);
+        
+        // Add measure headers
+        valueFields.forEach(fieldId => {
+            const measureCell = document.createElement('th');
+            measureCell.className = 'measure-header';
+            measureCell.setAttribute('data-measure', fieldId);
+            
+            // Format display name
+            let displayName = fieldId;
+            if (fieldId === 'COST_UNIT') displayName = 'Cost Unit';
+            else if (fieldId === 'QTY_UNIT') displayName = 'Quantity Unit';
+            
+            measureCell.textContent = displayName;
+            headerRow.appendChild(measureCell);
+        });
+        
+        // Add to container
+        elements.pivotTableHeader.appendChild(headerRow);
+    },
+
+
+    /**
+     * Get maximum depth of column hierarchy
+     */
+    getMaxColumnHierarchyDepth: function(columns) {
+        let maxDepth = 0;
+        
+        const traverseNode = (node, currentDepth) => {
+            maxDepth = Math.max(maxDepth, currentDepth);
+            
+            // Only recurse if node is expanded and has children
+            if (node.expanded && node.children && node.children.length > 0) {
+                const childNodes = this.getChildNodes(node);
+                childNodes.forEach(child => {
+                    traverseNode(child, currentDepth + 1);
+                });
+            }
+        };
+        
+        // Start with each top-level column
+        columns.forEach(col => {
+            traverseNode(col, 0);
+        });
+        
+        return maxDepth;
+    },
+
+
+    /**
+     * Get actual child node objects from parent node
+     */
+    getChildNodes: function(parentNode) {
+        if (!parentNode.children || !parentNode.children.length) {
+            return [];
+        }
+        
+        return parentNode.children.map(childId => {
+            if (typeof childId === 'string') {
+                // Get dimension name
+                const dimName = parentNode.hierarchyField ? 
+                    parentNode.hierarchyField.replace('DIM_', '').toLowerCase() : 
+                    (parentNode.hierarchyName || '');
+                
+                // Look up in hierarchies
+                return this.state.hierarchies?.[dimName]?.nodesMap?.[childId];
+            }
+            return childId;
+        }).filter(Boolean); // Remove nulls
+    },
+
 
 
     /**
@@ -1069,427 +1370,248 @@ const pivotTable = {
     /**
      * Process column hierarchy recursively
      */
-    processColumnHierarchy: function(columns, headerRows, level, parentColspan = 0) {
-        if (!columns || columns.length === 0 || !headerRows || level >= headerRows.length) {
-            return 0;
+    processColumnHierarchy: function(columns, headerRows, level, valueFields) {
+    if (!columns || columns.length === 0 || !headerRows[level]) {
+        return;
+    }
+
+    // Process each column node at this level
+    columns.forEach(colNode => {
+        // Skip invalid columns
+        if (!colNode) return;
+        
+        // Create header cell
+        const cell = document.createElement('th');
+        cell.className = 'column-header';
+        if (colNode.isLeaf) cell.classList.add('leaf-node');
+        if (colNode.children && colNode.children.length > 0) cell.classList.add('has-children');
+        
+        // Add data attributes
+        cell.setAttribute('data-node-id', colNode._id);
+        cell.setAttribute('data-level', level);
+        
+        // Get dimension info
+        const dimName = colNode.hierarchyField ? 
+            colNode.hierarchyField.replace('DIM_', '').toLowerCase() : 
+            (colNode.hierarchyName || '');
+        
+        if (dimName) {
+            cell.setAttribute('data-hierarchy', dimName);
         }
         
-        let totalColspan = 0;
-        const currentRow = headerRows[level];
+        // Calculate colspan - each leaf node needs to span all measures
+        let colspan = 1;
         
-        // Process each column at this level
-        columns.forEach(column => {
-            // Skip if undefined or null
-            if (!column) return;
-            
-            // Create column header cell
-            const cell = document.createElement('th');
-            cell.className = 'column-header';
-            if (column.children && column.children.length > 0) {
-                cell.classList.add('parent-column');
-            }
-            
-            // Set data attributes for styling
-            cell.setAttribute('data-node-id', column._id || '');
-            cell.setAttribute('data-level', level);
-            
-            // Add hierarchy metadata if available
-            if (column.hierarchyField) {
-                const dimName = column.hierarchyField.replace('DIM_', '').toLowerCase();
-                cell.setAttribute('data-hierarchy', dimName);
-            } else if (column.hierarchyName) {
-                cell.setAttribute('data-hierarchy', column.hierarchyName);
-            }
-            
-            // Check if column is expanded
-            const isExpanded = column.expanded || column.columnExpanded;
-            
-            // Calculate colspan based on visible descendants
-            let colspan = 1;
-            
-            // If it has children and is expanded, process them
-            if (column.children && column.children.length > 0 && isExpanded) {
-                // Get child nodes (convert string IDs to objects)
-                const childNodes = column.children.map(childId => {
-                    if (typeof childId === 'string') {
-                        // Look up in hierarchies
-                        const dimName = column.hierarchyField ? 
-                            column.hierarchyField.replace('DIM_', '').toLowerCase() : 
-                            column.hierarchyName;
-                        
-                        return this.state.hierarchies?.[dimName]?.nodesMap?.[childId];
-                    }
-                    return childId;
-                }).filter(Boolean); // Remove nulls
-                
-                // Process children at next level
-                colspan = this.processColumnHierarchy(childNodes, headerRows, level + 1);
-                
-                // If no children were processed, ensure at least 1
-                colspan = Math.max(1, colspan);
-                
-            } else if (column.children && column.children.length > 0) {
-                // Has children but collapsed - count visible leaf nodes
-                colspan = this.countVisibleLeafColumns([column]);
-                
-                // If column is a leaf or collapsed parent, set rowspan
-                const remainingLevels = headerRows.length - level;
-                if (remainingLevels > 1) {
-                    cell.rowSpan = remainingLevels;
-                }
-            } else {
-                // Leaf node - span to bottom
-                const remainingLevels = headerRows.length - level;
-                if (remainingLevels > 1) {
-                    cell.rowSpan = remainingLevels;
-                }
-            }
-            
-            // Set colspan
-            if (colspan > 1) {
-                cell.colSpan = colspan;
-            }
-            
-            // Add expand/collapse control if it has children
-            if (column.children && column.children.length > 0) {
-                const expandControl = document.createElement('span');
-                expandControl.className = isExpanded ? 'expand-collapse expanded' : 'expand-collapse collapsed';
-                
-                // Set data attributes
-                expandControl.setAttribute('data-node-id', column._id || '');
-                
-                const dimName = column.hierarchyField ? 
-                    column.hierarchyField.replace('DIM_', '').toLowerCase() : 
-                    column.hierarchyName || '';
-                
-                expandControl.setAttribute('data-hierarchy', dimName);
-                expandControl.setAttribute('data-zone', 'column');
-                
-                // Add click handler
-                expandControl.setAttribute('onclick', 'window.handleExpandCollapseClick(event)');
-                
-                cell.appendChild(expandControl);
-            }
-            
-            // Add label
-            const labelSpan = document.createElement('span');
-            labelSpan.className = 'column-label';
-            labelSpan.textContent = column.label || '';
-            cell.appendChild(labelSpan);
-            
-            // Add cell to row
-            currentRow.appendChild(cell);
-            
-            // Update total colspan
-            totalColspan += colspan;
-        });
-        
-        return totalColspan;
-    },
-
-
-    /**
-     * Count total visible leaf columns
-     * @param {Array} columns - Column array
-     * @returns {Number} - Count of visible leaf columns
-     */
-    countVisibleLeafColumns: function(columns) {
-        let count = 0;
-        
-        columns.forEach(column => {
-            count += this.countLeafNodes(column);
-        });
-        
-        return Math.max(1, count); // At least 1
-    },
-
-
-    /**
-     * Recursively renders column hierarchy
-     * @param {Array} columns - Columns to render
-     * @param {Array} headerRows - Header rows by level
-     * @param {Number} level - Current level in hierarchy
-     */
-    renderColumnHierarchy: function(columns, headerRows, level, parentId) {
-        if (!columns || columns.length === 0 || !headerRows || level >= headerRows.length) {
-            return;
+        // If this is a leaf or collapsed node, it needs to span all measures
+        if (colNode.isLeaf || !colNode.expanded || !colNode.children || colNode.children.length === 0) {
+            colspan = valueFields.length;
+        } else {
+            // For expanded parents, calculate based on visible leaf descendants
+            const leafCount = this.countVisibleLeafNodes(colNode);
+            colspan = leafCount * valueFields.length;
         }
         
-        // Current row for this level
-        const currentRow = headerRows[level];
+        // Set colspan if greater than 1
+        if (colspan > 1) {
+            cell.colSpan = colspan;
+        }
         
-        // Process each column at this level
-        columns.forEach(column => {
-            // Create column header cell
-            const cell = document.createElement('th');
-            cell.className = 'column-header';
-            
-            // Add cell classification
-            if (column.isLeaf) cell.classList.add('leaf-node');
-            if (column.children && column.children.length > 0) cell.classList.add('has-children');
-            
-            // Apply data attributes for styling and behavior
-            cell.setAttribute('data-node-id', column._id);
-            cell.setAttribute('data-level', level);
-            
-            // Track parent-child relationship
-            if (parentId) {
-                cell.setAttribute('data-parent-id', parentId);
+        // Calculate rowspan - if leaf or collapsed, span remaining rows
+        if (colNode.isLeaf || !colNode.expanded || !colNode.children || colNode.children.length === 0) {
+            // Special case for the last level - don't span, we'll add measure headers below
+            if (level < headerRows.length - 1) {
+                cell.rowSpan = headerRows.length - level - 1; // Span remaining hierarchy rows except measure row
             }
+        }
+        
+        // Add expand/collapse control if node has children
+        if (colNode.children && colNode.children.length > 0) {
+            const expandControl = document.createElement('span');
+            expandControl.className = `expand-collapse ${colNode.expanded ? 'expanded' : 'collapsed'}`;
+            expandControl.setAttribute('data-node-id', colNode._id);
+            expandControl.setAttribute('data-hierarchy', dimName);
+            expandControl.setAttribute('data-zone', 'column');
+            expandControl.setAttribute('onclick', 'handleExpandCollapseClick(event)');
             
-            // Add dimension info if available
-            if (column.hierarchyField) {
-                const dimName = column.hierarchyField.replace('DIM_', '').toLowerCase();
-                cell.setAttribute('data-hierarchy', dimName);
-            } else if (column.hierarchyName) {
-                cell.setAttribute('data-hierarchy', column.hierarchyName);
-            }
+            cell.appendChild(expandControl);
+        }
+        
+        // Add column label
+        const labelSpan = document.createElement('span');
+        labelSpan.className = 'column-label';
+        labelSpan.textContent = colNode.label || colNode._id;
+        cell.appendChild(labelSpan);
+        
+        // Add cell to current row
+        headerRows[level].appendChild(cell);
+        
+        // If this is a leaf node or collapsed node at the last hierarchy level,
+        // add measure headers below it
+        if (level === headerRows.length - 2 && 
+            (colNode.isLeaf || !colNode.expanded || !colNode.children || colNode.children.length === 0)) {
             
-            // Calculate colspan - how many leaf nodes underneath
-            let colspan = this.countLeafNodes(column);
-            if (colspan > 1) {
-                cell.colSpan = colspan;
-            }
-            
-            // Calculate rowspan for leaf or collapsed nodes
-            if (column.isLeaf || !column.expanded || !column.children || column.children.length === 0) {
-                const remainingRows = headerRows.length - level;
-                if (remainingRows > 1) {
-                    cell.rowSpan = remainingRows;
-                }
-            }
-            
-            // Add expand/collapse control if column has children
-            if (column.children && column.children.length > 0) {
-                const expandControl = document.createElement('span');
-                expandControl.className = `expand-collapse ${column.expanded ? 'expanded' : 'collapsed'}`;
-                expandControl.setAttribute('data-node-id', column._id);
+            // Add measure headers for this leaf column
+            valueFields.forEach(fieldId => {
+                const measureCell = document.createElement('th');
+                measureCell.className = 'measure-header';
+                measureCell.setAttribute('data-measure', fieldId);
+                measureCell.setAttribute('data-column-id', colNode._id);
                 
-                // Get dimension name
-                let dimName = '';
-                if (column.hierarchyField) {
-                    dimName = column.hierarchyField.replace('DIM_', '').toLowerCase();
-                } else if (column.hierarchyName) {
-                    dimName = column.hierarchyName;
-                }
+                // Format display name
+                let displayName = fieldId;
+                if (fieldId === 'COST_UNIT') displayName = 'Cost';
+                else if (fieldId === 'QTY_UNIT') displayName = 'Qty';
                 
-                expandControl.setAttribute('data-hierarchy', dimName);
-                expandControl.setAttribute('data-zone', 'column');
-                
-                // Add click handler via a data attribute for event delegation
-                expandControl.setAttribute('onclick', 'window.handleExpandCollapseClick(event)');
-                
-                cell.appendChild(expandControl);
-            }
-            
-            // Add column label
-            const labelSpan = document.createElement('span');
-            labelSpan.className = 'column-label';
-            labelSpan.textContent = column.label || '';
-            cell.appendChild(labelSpan);
-            
-            // Add cell to current row
-            currentRow.appendChild(cell);
-            
-            // Process children if expanded
-            if (column.expanded && column.children && column.children.length > 0) {
-                // Get actual child nodes
-                const childNodes = column.children.map(childId => {
-                    if (typeof childId === 'string') {
-                        // Get dimension name
-                        let dimName = '';
-                        if (column.hierarchyField) {
-                            dimName = column.hierarchyField.replace('DIM_', '').toLowerCase();
-                        } else if (column.hierarchyName) {
-                            dimName = column.hierarchyName;
-                        }
-                        
-                        // Look up in hierarchies
-                        return this.state.hierarchies?.[dimName]?.nodesMap?.[childId];
-                    }
-                    return childId;
-                }).filter(Boolean); // Remove nulls/undefined
-                
-                // Recursively render children at next level
-                this.renderColumnHierarchy(childNodes, headerRows, level + 1, column._id);
-            }
-        });
+                measureCell.textContent = displayName;
+                headerRows[headerRows.length - 1].appendChild(measureCell);
+            });
+        }
+        
+        // Process children if expanded
+        if (colNode.expanded && colNode.children && colNode.children.length > 0) {
+            const childNodes = this.getChildNodes(colNode);
+            this.processColumnHierarchy(childNodes, headerRows, level + 1, valueFields);
+        }
+    });
     },
 
 
     /**
-     * Helper function to get child leaf count from root node
-     * @param {Object} rootNode - The root node
-     * @param {Array} availableColumns - All available columns
-     * @returns {number} - Count of leaf nodes under root
+     * Count visible leaf nodes under a column node
      */
-    getChildLeafCount(rootNode, availableColumns) {
-        if (!rootNode || !rootNode.children || !rootNode.expanded) return 1;
+    countVisibleLeafNodes: function(node) {
+        if (!node) return 0;
         
+        // If node is a leaf, count as 1
+        if (node.isLeaf) return 1;
+        
+        // If node is not expanded, treat as 1 leaf for display
+        if (!node.expanded) return 1;
+        
+        // If node has no children, count as 1
+        if (!node.children || node.children.length === 0) return 1;
+        
+        // For expanded nodes with children, count leaves in all child branches
         let count = 0;
+        const childNodes = this.getChildNodes(node);
         
-        // Process direct children of the root node
-        const childIds = Array.isArray(rootNode.children) ? rootNode.children : [];
-        
-        // For each child ID, find the actual node and count its leaves
-        childIds.forEach(childId => {
-            let childNode;
-            
-            if (typeof childId === 'string') {
-                // Look up node by ID in hierarchies
-                const dimName = rootNode.hierarchyField ? 
-                    rootNode.hierarchyField.replace('DIM_', '').toLowerCase() : 
-                    rootNode.hierarchyName;
-                    
-                childNode = this.state.hierarchies[dimName]?.nodesMap?.[childId];
-                
-                // If not found in hierarchies, try to find in available columns
-                if (!childNode) {
-                    childNode = availableColumns.find(col => col._id === childId);
-                }
-            } else {
-                // Already a node object
-                childNode = childId;
-            }
-            
-            // Count leaves under this child
-            if (childNode) {
-                count += this.countLeafNodes(childNode);
-            }
+        childNodes.forEach(child => {
+            count += this.countVisibleLeafNodes(child);
         });
         
+        // Return at least 1 even if no children found
         return Math.max(1, count);
     },
 
-
-    /**
-     * Count total leaf columns across all root level columns
-     */
-    countTotalLeafColumns:function(rootColumns) {
-        // Find root node
-        const rootNode = rootColumns.find(col => 
-            col.label === 'All Items' || 
-            col.label === 'All Item Cost Types' || 
-            col.label === 'All Material Types' ||
-            col._id === 'ROOT' || 
-            col.isRootNode);
-        
-        if (rootNode) {
-            // If root node exists and is expanded, count its children
-            if (rootNode.expanded && rootNode.children && rootNode.children.length > 0) {
-                // Get child nodes
-                const childNodes = rootNode.children.map(childId => {
-                    if (typeof childId === 'string') {
-                        const dimName = rootNode.hierarchyField 
-                            ? rootNode.hierarchyField.replace('DIM_', '').toLowerCase() 
-                            : rootNode.hierarchyName;
-                        return this.state.hierarchies[dimName]?.nodesMap?.[childId];
-                    }
-                    return childId;
-                }).filter(Boolean);
-                
-                // Calculate total leaves from all children
-                let totalChildLeaves = 0;
-                childNodes.forEach(childNode => {
-                    if (childNode.expanded && childNode.hasChildren) {
-                        totalChildLeaves += this.countLeafNodes(childNode);
-                    } else {
-                        totalChildLeaves += 1;
-                    }
-                });
-                
-                return totalChildLeaves;
-            } else {
-                // Root node exists but not expanded - counts as 1
-                return 1;
-            }
-        } else {
-            // No root node, count all columns individually
-            let totalLeaves = 0;
-            rootColumns.forEach(col => {
-                if (col.isLeaf || !col.expanded) {
-                    totalLeaves += 1;
-                } else {
-                    totalLeaves += this.countLeafNodes(col);
-                }
-            });
-            
-            return Math.max(1, totalLeaves);
-        }
-    },
-
-
-    renderPivotTable: function(elements, useMultiDimension = false) {        
-        console.log("Rendering standard pivot table with data:", this.state.pivotData);
-        
-        // Validate elements parameter
-        if (!elements || !elements.pivotTableHeader || !elements.pivotTableBody) {
-            console.error("Invalid elements provided to renderPivotTable");
-            // Try to get elements directly if not provided correctly
-            elements = {
-                pivotTableHeader: document.getElementById('pivotTableHeader'),
-                pivotTableBody: document.getElementById('pivotTableBody')
-            };
-            
-            // Still not found? Use fallback
-            if (!elements.pivotTableHeader || !elements.pivotTableBody) {
-                console.error("Cannot find pivot table DOM elements, using fallback rendering");
-                return;
-            }
-        }
-        
-        const pivotData = this.state.pivotData;
-
-        // Check if we have valid data
-        if (!pivotData || !pivotData.rows || pivotData.rows.length === 0) {
-            console.error("No valid pivot data available for rendering");
-            return;
-        }
-
-        // Continue with the standard table rendering
-        this.renderStandardTable(elements, useMultiDimension);
-    },
-
-
-    /**
-     * Update the renderTableBody function to properly handle column hierarchies
-     */    
+    
     renderTableBody: function(elements, useMultiDimension) {
-        console.log("Rendering table body with hierarchy structure");
+        console.log("Rendering table body with column dimension support");
         const pivotData = this.state.pivotData;
         if (!pivotData) return;
         
-        // Get the visible rows
-        const rows = this.getVisibleRows(pivotData.rows, useMultiDimension);
-        
-        // Get value fields
+        // Get value fields (measures)
         const valueFields = this.state.valueFields || ['COST_UNIT'];
         
+        // Filter rows based on visibility
+        const visibleRows = this.getVisibleRows(pivotData.rows);
+        
+        // Process column data
+        const hasColumnHierarchy = pivotData.columns && 
+                                pivotData.columns.length > 0 && 
+                                pivotData.columns[0]._id !== 'default';
+        
+        // Get visible leaf columns if we have hierarchy
+        const visibleColumns = hasColumnHierarchy ? 
+                            this.getVisibleLeafColumns(pivotData.columns) : 
+                            pivotData.columns;
+        
+        console.log(`Found ${visibleColumns.length} visible leaf columns`);
+        
+        // Build HTML for table body
         let bodyHtml = '';
         
-        // Render each row
-        rows.forEach((rowDef, index) => {
+        // Render each visible row
+        visibleRows.forEach((rowDef, rowIndex) => {
             const rowData = pivotData.data.find(d => d._id === rowDef._id) || { _id: rowDef._id };
-            const rowClass = index % 2 === 0 ? 'even' : 'odd';
+            const rowClass = rowIndex % 2 === 0 ? 'even' : 'odd';
             
             // Start row
-            bodyHtml += `<tr class="${rowClass}">`;
+            bodyHtml += `<tr class="${rowClass}" data-row-id="${rowDef._id}">`;
             
             // Hierarchy cell with proper indentation and expand/collapse controls
             if (useMultiDimension) {
-                bodyHtml += multiDimensionPivotHandler.renderMultiDimensionRowCells(rowDef);
+                bodyHtml += window.multiDimensionPivotHandler.renderMultiDimensionRowCells(rowDef);
             } else {
                 bodyHtml += this.renderRowCell(rowDef);
             }
             
-            // Render a cell for each measure
-            valueFields.forEach(fieldId => {
-                // Get the value from row data directly
-                let value = rowData[fieldId] !== undefined ? rowData[fieldId] : 0;
-                
-                // Render the value cell
-                bodyHtml += this.renderValueCell(value);
-            });
+            // Render cells for each visible leaf column
+            if (hasColumnHierarchy && visibleColumns.length > 0) {
+                visibleColumns.forEach(colDef => {
+                    valueFields.forEach(fieldId => {
+                        // Get the key for this cell - column ID + measure
+                        const key = `${colDef._id}|${fieldId}`;
+                        
+                        // Get value from row data
+                        let value = 0;
+                        if (rowData[key] !== undefined) {
+                            value = typeof rowData[key] === 'number' ? 
+                                rowData[key] : parseFloat(rowData[key]);
+                            if (isNaN(value)) value = 0;
+                        }
+                        
+                        // Format value for display
+                        let formattedValue;
+                        if (value === 0) {
+                            formattedValue = '0.00';
+                        } else if (Math.abs(value) >= 1000000) {
+                            formattedValue = (value / 1000000).toFixed(2) + 'm';
+                        } else if (Math.abs(value) >= 1000) {
+                            formattedValue = (value / 1000).toFixed(2) + 'k';
+                        } else {
+                            formattedValue = value.toFixed(2);
+                        }
+                        
+                        // Add cell class based on value
+                        const cellClass = value !== 0 ? 'value-cell non-zero-value' : 'value-cell zero-value';
+                        
+                        // Add data attributes for filtering and sorting
+                        bodyHtml += `<td class="${cellClass}" 
+                                    data-raw-value="${value}" 
+                                    data-measure="${fieldId}"
+                                    data-column-id="${colDef._id}">${formattedValue}</td>`;
+                    });
+                });
+            } else {
+                // Simple case - just render measure values
+                valueFields.forEach(fieldId => {
+                    // Get the value for this measure
+                    let value = 0;
+                    if (rowData[fieldId] !== undefined) {
+                        value = typeof rowData[fieldId] === 'number' ? 
+                            rowData[fieldId] : parseFloat(rowData[fieldId]);
+                        if (isNaN(value)) value = 0;
+                    }
+                    
+                    // Format value for display
+                    let formattedValue;
+                    if (value === 0) {
+                        formattedValue = '0.00';
+                    } else if (Math.abs(value) >= 1000000) {
+                        formattedValue = (value / 1000000).toFixed(2) + 'm';
+                    } else if (Math.abs(value) >= 1000) {
+                        formattedValue = (value / 1000).toFixed(2) + 'k';
+                    } else {
+                        formattedValue = value.toFixed(2);
+                    }
+                    
+                    // Add cell class based on value
+                    const cellClass = value !== 0 ? 'value-cell non-zero-value' : 'value-cell zero-value';
+                    
+                    // Add value cell
+                    bodyHtml += `<td class="${cellClass}" data-raw-value="${value}" data-measure="${fieldId}">${formattedValue}</td>`;
+                });
+            }
             
             // End row
             bodyHtml += '</tr>';
@@ -1498,7 +1620,17 @@ const pivotTable = {
         // Set the HTML content
         if (elements && elements.pivotTableBody) {
             elements.pivotTableBody.innerHTML = bodyHtml;
-            console.log(`Rendered table body with ${rows.length} rows and ${valueFields.length} measures`);
+            console.log(`Rendered table body with ${visibleRows.length} rows`);
+            
+            // Attach event handlers to expand/collapse controls
+            setTimeout(() => {
+                const controls = elements.pivotTableBody.querySelectorAll('.expand-collapse');
+                controls.forEach(control => {
+                    control.addEventListener('click', (e) => {
+                        window.handleExpandCollapseClick(e);
+                    });
+                });
+            }, 100);
         } else {
             console.error("Cannot set table body HTML - element not found");
         }
@@ -1508,23 +1640,26 @@ const pivotTable = {
     /**
      * Get visible rows based on hierarchy expansion state
      */
-    getVisibleRows: function(rows, useMultiDimension = false) {
-        if (useMultiDimension) {
-            // Use multi-dimension visibility check
-            return rows.filter(row => 
-                multiDimensionPivotHandler.isMultiDimensionRowVisible(row, rows));
-        } else {
-            // Use standard visibility check
-            return rows.filter(row => this.isNodeVisible(row, rows));
-        }
+    getVisibleRows: function(rows) {
+        if (!rows || !Array.isArray(rows)) return [];
+        
+        const visibleRows = [];
+        
+        rows.forEach(row => {
+            if (this.isNodeVisible(row, rows)) {
+                visibleRows.push(row);
+            }
+        });
+        
+        return visibleRows;
     },
-    
+
 
     renderStandardTable: function(elements, useMultiDimension) {
         const pivotData = this.state.pivotData;
         if (!pivotData) return;
         
-        console.log("Rendering standard table with data");
+        console.log("✅ Status: Rendering standard table with data");
         
         // Filter out the ROOT node from columns
         const validColumns = pivotData.columns.filter(col => col._id !== 'ROOT');
@@ -1614,7 +1749,7 @@ const pivotTable = {
      */
     renderTableRow: function(rowDef, dataRow, rowIndex, bodyHtml, useMultiDimension, validColumns) {
         // Debug the entire row data
-        console.log(`Row data for ${rowDef.label}:`, dataRow);
+        console.log(`✅ Status: Row data for ${rowDef.label}:`, dataRow);
         
         let rowHtml = `<tr class="${rowIndex % 2 === 0 ? 'even' : 'odd'}">`;
         
@@ -1648,7 +1783,7 @@ const pivotTable = {
 
     processPivotData: function() {
         if (!this.state.factData || this.state.factData.length === 0) {
-            console.error("No fact data available for pivot table");
+            console.error("❌ Alert! No fact data available for pivot table");
             return;
         }
         
@@ -1659,11 +1794,11 @@ const pivotTable = {
         
         // Ensure we have at least one field in each area
         if (rowFields.length === 0) {
-            console.warn("No row fields selected, defaulting to first available dimension");
+            console.warn("⚠️ Warning: No row fields selected, defaulting to first available dimension");
         }
         
         if (valueFields.length === 0) {
-            console.warn("No value fields selected, defaulting to COST_UNIT");
+            console.warn("⚠️ Warning: No value fields selected, defaulting to COST_UNIT");
         }
         
         // Detect if we need multi-dimension row processing
@@ -1704,11 +1839,11 @@ const pivotTable = {
         const useMultiDimension = pivotData.useMultiDimension;
         
         if (!pivotData || !pivotData.rows || pivotData.rows.length === 0) {
-            console.error("Invalid pivot data structure");
+            console.error("❌ Alert! Invalid pivot data structure");
             return;
         }
         
-        console.log(`Calculating pivot cells with ${factData.length} fact records`);
+        // console.log(`✅ Status: Calculating pivot cells with ${factData.length} fact records`);
         
         // Find the root node if it exists
         const rootNode = pivotData.columns.find(col => 
@@ -1765,42 +1900,6 @@ const pivotTable = {
             pivotData.data.push(rowData);
         });
     },
-    
-    
-    checkTableStructure: function() {
-        console.log("=== TABLE STRUCTURE CHECK ===");
-        
-        // Check if table header exists
-        const tableHeader = document.getElementById('pivotTableHeader');
-        console.log("Table header exists:", !!tableHeader);
-        if (tableHeader) {
-            console.log("Header HTML:", tableHeader.innerHTML);
-        }
-        
-        // Check if table body exists
-        const tableBody = document.getElementById('pivotTableBody');
-        console.log("Table body exists:", !!tableBody);
-        if (tableBody) {
-            console.log("Body has rows:", tableBody.querySelectorAll('tr').length);
-            console.log("Body HTML sample:", tableBody.innerHTML.substring(0, 200) + '...');
-        }
-        
-        // Check for any value cells
-        const valueCells = document.querySelectorAll('.value-cell');
-        console.log("Value cells found:", valueCells.length);
-        
-        // Check if the pivot data structure is correctly populated
-        if (this.state && this.state.pivotData) {
-            console.log("Pivot data exists with:");
-            console.log("- Rows:", this.state.pivotData.rows?.length || 0);
-            console.log("- Columns:", this.state.pivotData.columns?.length || 0);
-            console.log("- Data rows:", this.state.pivotData.data?.length || 0);
-        } else {
-            console.log("No pivot data structure exists!");
-        }
-        
-        console.log("=== END STRUCTURE CHECK ===");
-    },
 
 
     /**
@@ -1836,7 +1935,7 @@ const pivotTable = {
 
 
     generatePivotTable: function(elements) {
-        console.log("Starting pivot table generation...");
+        console.log("✅ Status: Starting pivot table generation with dual hierarchies...");
         
         // Get DOM elements if not provided
         if (!elements) {
@@ -1846,24 +1945,21 @@ const pivotTable = {
             };
         }
         
-        // Check if elements exist
+        // Safety checks
         if (!elements.pivotTableHeader || !elements.pivotTableBody) {
-            console.error("Required pivot table elements not found in DOM");
+            console.error("❌ Alert! Required pivot table elements not found in DOM");
             return;
         }
         
         try {
-            // Debug state before processing
-            // this.debugPivotTableState();
-            
             // Check if we have filtered data to use
             const useFilteredData = this.state.filteredData && this.state.filteredData.length > 0;
             const dataToUse = useFilteredData ? this.state.filteredData : this.state.factData;
             
             if (useFilteredData) {
-                console.log(`Using filtered data: ${this.state.filteredData.length} of ${this.state.factData.length} records`);
+                console.log(`✅ Status: Using filtered data: ${this.state.filteredData.length} of ${this.state.factData.length} records`);
             } else {
-                console.log(`Using original data: ${this.state.factData.length} records`);
+                console.log(`✅ Status: Using original data: ${this.state.factData.length} records`);
             }
             
             // Store original factData reference if we're using filtered data
@@ -1876,29 +1972,28 @@ const pivotTable = {
             // Process the data for the pivot table
             this.processPivotData();
             
-            
             // Check if we have multiple row dimensions
             const useMultiDimension = this.state.rowFields && this.state.rowFields.length > 1;
             
-            // Render the pivot table
+            // Render the pivot table - both header and body
             this.renderHierarchicalColumns(elements, this.state.pivotData);
-            this.renderTableBody(elements, useMultiDimension);
+            this.renderHierarchicalBody(elements, useMultiDimension);
             
             // Restore original factData if we used filtered data
             if (useFilteredData) {
                 this.state.factData = originalFactData;
             }
-            
+
             // Hide empty rows and columns at the end
             setTimeout(() => {
                 this.hideEmptyRowsAndColumns();
-                this.reduceCellHeights();
+                // this.reduceCellHeights();
             }, 0);
             
-            console.log("Pivot table generation complete");
+            console.log("✅ Status: Dual-hierarchy pivot table generation complete");
             
         } catch (error) {
-            console.error("Error in pivot table generation:", error);
+            console.error("❌ Alert! Error in pivot table generation:", error);
             
             // If we replaced factData, make sure to restore it
             if (this.state.filteredData && this.state.factData === this.state.filteredData) {
@@ -1908,6 +2003,153 @@ const pivotTable = {
     },
 
 
+    // Render the table body with hierarchical rows and column values
+    renderHierarchicalBody: function(elements, useMultiDimension) {
+        console.log("Rendering hierarchical table body with row and column dimensions");
+        const pivotData = this.state.pivotData;
+        if (!pivotData) return;
+        
+        // Get value fields
+        const valueFields = this.state.valueFields || ['COST_UNIT'];
+        
+        // Get visible rows based on expansion state
+        const visibleRows = this.getVisibleRows(pivotData.rows);
+        console.log(`Found ${visibleRows.length} visible rows`);
+        
+        // Check if we have column hierarchies
+        const hasColumnHierarchy = pivotData.columns && 
+                                pivotData.columns.length > 0 && 
+                                pivotData.columns[0]._id !== 'default';
+        
+        // Get visible leaf columns if we have hierarchy
+        const visibleColumns = hasColumnHierarchy ? 
+                            this.getVisibleLeafColumns(pivotData.columns) : 
+                            pivotData.columns;
+        
+        console.log(`Found ${visibleColumns.length} visible leaf columns`);
+        
+        // Build HTML for table body
+        let bodyHtml = '';
+        
+        // Render each visible row
+        visibleRows.forEach((rowDef, rowIndex) => {
+            const rowData = pivotData.data.find(d => d._id === rowDef._id) || { _id: rowDef._id };
+            const rowClass = rowIndex % 2 === 0 ? 'even' : 'odd';
+            
+            // Add data attributes for row
+            bodyHtml += `<tr class="${rowClass}" data-row-id="${rowDef._id}">`;
+            
+            // Render the hierarchy cell (row header)
+            if (useMultiDimension) {
+                bodyHtml += multiDimensionPivotHandler.renderMultiDimensionRowCells(rowDef);
+            } else {
+                bodyHtml += this.renderRowCell(rowDef);
+            }
+            
+            // Render value cells based on visible columns
+            if (hasColumnHierarchy && visibleColumns.length > 0) {
+                // We have column dimensions - render cells for each column and measure
+                visibleColumns.forEach(colDef => {
+                    valueFields.forEach(fieldId => {
+                        // Get the combined key for this cell
+                        const key = `${colDef._id}|${fieldId}`;
+                        
+                        // Try to get the value from row data
+                        let value = rowData[key];
+                        if (value === undefined) {
+                            // Value not found, may need to calculate it
+                            value = this.calculateMeasure(
+                                this.state.factData,
+                                rowDef,
+                                colDef,
+                                fieldId
+                            );
+                        }
+                        
+                        // Convert to number
+                        if (typeof value !== 'number') {
+                            value = parseFloat(value) || 0;
+                        }
+                        
+                        // Format the value for display
+                        const formattedValue = this.formatValue(value);
+                        
+                        // Determine cell class based on value
+                        const cellClass = value !== 0 ? 'value-cell non-zero-value' : 'value-cell zero-value';
+                        
+                        // Add the cell to the row
+                        bodyHtml += `<td class="${cellClass}" 
+                                    data-raw-value="${value}" 
+                                    data-measure="${fieldId}"
+                                    data-column-id="${colDef._id}">${formattedValue}</td>`;
+                    });
+                });
+            } else {
+                // Simple case - just render measure fields
+                valueFields.forEach(fieldId => {
+                    // Get value from row data
+                    let value = rowData[fieldId];
+                    if (value === undefined) {
+                        // Value not found, may need to calculate it
+                        value = 0;
+                    }
+                    
+                    // Convert to number
+                    if (typeof value !== 'number') {
+                        value = parseFloat(value) || 0;
+                    }
+                    
+                    // Format the value for display
+                    const formattedValue = this.formatValue(value);
+                    
+                    // Determine cell class based on value
+                    const cellClass = value !== 0 ? 'value-cell non-zero-value' : 'value-cell zero-value';
+                    
+                    // Add the cell to the row
+                    bodyHtml += `<td class="${cellClass}" 
+                                data-raw-value="${value}" 
+                                data-measure="${fieldId}">${formattedValue}</td>`;
+                });
+            }
+            
+            // Close the row
+            bodyHtml += '</tr>';
+        });
+        
+        // Set the HTML content
+        if (elements && elements.pivotTableBody) {
+            elements.pivotTableBody.innerHTML = bodyHtml;
+            console.log(`Rendered hierarchical table body with ${visibleRows.length} rows`);
+            
+            // Attach event handlers
+            setTimeout(() => {
+                const controls = elements.pivotTableBody.querySelectorAll('.expand-collapse');
+                controls.forEach(control => {
+                    control.addEventListener('click', (e) => {
+                        handleExpandCollapseClick(e);
+                    });
+                });
+            }, 100);
+        } else {
+            console.error("Cannot set table body HTML - element not found");
+        }
+    },
+
+
+    // Format a numeric value for display
+    formatValue: function(value) {
+        if (value === 0) {
+            return '0.00';
+        } else if (Math.abs(value) >= 1000000) {
+            return (value / 1000000).toFixed(2) + 'm';
+        } else if (Math.abs(value) >= 1000) {
+            return (value / 1000).toFixed(2) + 'k';
+        } else {
+            return value.toFixed(2);
+        }
+    },
+
+    
     /**
      * Hides rows and columns that contain only zeros
      */
@@ -1977,7 +2219,7 @@ const pivotTable = {
             }
         }
         
-        console.log(`Hiding ${hiddenRowCount} rows and ${hiddenColumnCount} columns with all zeros`);
+        console.log(`✅ Status: Hiding ${hiddenRowCount} rows and ${hiddenColumnCount} columns with all zeros`);
         
         // Add an indicator to the table for statistics
         const tableContainer = table.closest('.pivot-table-container');
@@ -2010,11 +2252,448 @@ const pivotTable = {
         cells.forEach(cell => {
             cell.style.paddingTop = '0.4rem';
             cell.style.paddingBottom = '0.4rem';
-            cell.style.lineHeight = '1.05';
+            cell.style.lineHeight = '1.3';
         });
+    },
+
+
+    // Column Hierarchy Handler functionality - integrated from columnHierarchyHandler.js
+    columnHierarchyHandler: {
+        /**
+         * Renders hierarchical column headers with proper expand/collapse controls
+         * @param {HTMLElement} headerContainer - The table header container
+         * @param {Array} columns - The column data array
+         */
+        renderHierarchicalColumnHeaders: function(headerContainer, columns) {
+            // Clear existing header content
+            headerContainer.innerHTML = '';
+            
+            // Find measure fields
+            const valueFields = state.valueFields || ['COST_UNIT'];
+            
+            // First determine the maximum depth of the hierarchy
+            const hierarchyInfo = this.analyzeHierarchy(columns);
+            const maxDepth = hierarchyInfo.maxDepth;
+            
+            // Create array to hold header rows
+            const headerRows = [];
+            for (let i = 0; i <= maxDepth; i++) {
+                const row = document.createElement('tr');
+                row.className = `header-row header-level-${i}`;
+                headerRows.push(row);
+            }
+            
+            // Add measure header in the first row that spans all columns
+            const measureRow = headerRows[0];
+            
+            // Add the corner cell (top-left) in the first row
+            const cornerCell = document.createElement('th');
+            cornerCell.className = 'corner-cell';
+            cornerCell.rowSpan = maxDepth + 1; // Span all header rows
+            measureRow.appendChild(cornerCell);
+            
+            // Add measure headers that span all value columns
+            valueFields.forEach(field => {
+                const measureHeader = document.createElement('th');
+                measureHeader.className = 'measure-header';
+                measureHeader.textContent = field === 'COST_UNIT' ? 'Cost Unit' : 
+                                           field === 'QTY_UNIT' ? 'Quantity Unit' : field;
+                
+                // Calculate total number of leaf columns
+                const leafCount = this.countVisibleLeafColumns(columns);
+                measureHeader.colSpan = leafCount > 0 ? leafCount : 1;
+                
+                measureRow.appendChild(measureHeader);
+            });
+            
+            // Process the column hierarchy to create the header structure
+            // Start with level 1 (below the measure header)
+            this.processColumnHeaders(headerRows.slice(1), columns, 0);
+            
+            // Add the header rows to the container
+            headerRows.forEach(row => {
+                headerContainer.appendChild(row);
+            });
+        },
+
+        /**
+         * Analyzes the column hierarchy to determine depth and structure
+         * @param {Array} columns - The column data
+         * @returns {Object} - Hierarchy information
+         */
+        analyzeHierarchy: function(columns) {
+            const info = {
+                maxDepth: 0,
+                nodesByLevel: {}
+            };
+            
+            const analyzeNode = (node, level) => {
+                if (!node) return;
+                
+                // Update max depth
+                info.maxDepth = Math.max(info.maxDepth, level);
+                
+                // Add node to level collection
+                info.nodesByLevel[level] = info.nodesByLevel[level] || [];
+                info.nodesByLevel[level].push(node);
+                
+                // Process children if expanded
+                if (node.expanded && node.children && node.children.length > 0) {
+                    node.children.forEach(childId => {
+                        // Handle both string IDs and direct references
+                        const childNode = typeof childId === 'string'
+                            ? this.findNodeById(childId, node.hierarchyField)
+                            : childId;
+                        
+                        if (childNode) {
+                            analyzeNode(childNode, level + 1);
+                        }
+                    });
+                }
+            };
+            
+            // Process all columns
+            columns.forEach(column => {
+                analyzeNode(column, 0);
+            });
+            
+            return info;
+        },
+
+        
+        /**
+         * Process column headers recursively
+         * @param {Array} headerRows - Array of header row elements
+         * @param {Array} nodes - The nodes to process at this level
+         * @param {Number} level - Current level in hierarchy
+         */
+        processColumnHeaders: function(headerRows, nodes, level) {
+            if (!headerRows[level]) return;
+            
+            // Process nodes at this level
+            nodes.forEach(node => {
+                // Create header cell
+                const cell = document.createElement('th');
+                cell.className = 'column-header';
+                if (node.isLeaf) cell.classList.add('leaf-node');
+                
+                cell.setAttribute('data-node-id', node._id);
+                cell.setAttribute('data-level', level);
+                
+                // Calculate colspan - how many leaf nodes underneath
+                const colspan = this.countLeafNodes(node);
+                if (colspan > 1) {
+                    cell.colSpan = colspan;
+                }
+                
+                // Calculate rowspan - if this is a leaf or collapsed node
+                if (node.isLeaf || !node.expanded || !node.children || node.children.length === 0) {
+                    // Span down to the bottom of the header
+                    const rowsLeft = headerRows.length - level;
+                    if (rowsLeft > 1) {
+                        cell.rowSpan = rowsLeft;
+                    }
+                }
+                
+                // Add expand/collapse controls if node has children
+                if (node.children && node.children.length > 0) {
+                    const expandControl = document.createElement('span');
+                    expandControl.className = `expand-collapse ${node.expanded ? 'expanded' : 'collapsed'}`;
+                    expandControl.setAttribute('data-node-id', node._id);
+                    
+                    // Get dimension name from hierarchy field
+                    const dimName = node.hierarchyField ? 
+                        node.hierarchyField.replace('DIM_', '').toLowerCase() : '';
+                    
+                    expandControl.setAttribute('data-hierarchy', dimName);
+                    expandControl.setAttribute('data-zone', 'column');
+                    
+                    // Add click handler
+                    expandControl.onclick = function(e) {
+                        e.stopPropagation();
+                        window.handleExpandCollapseClick(e);
+                    };
+                    
+                    cell.appendChild(expandControl);
+                }
+                
+                // Add node label
+                const labelSpan = document.createElement('span');
+                labelSpan.className = 'column-label';
+                labelSpan.textContent = node.label || '';
+                cell.appendChild(labelSpan);
+                
+                // Add cell to appropriate header row
+                headerRows[level].appendChild(cell);
+                
+                // Process children if this node is expanded
+                if (node.expanded && node.children && node.children.length > 0) {
+                    // Get child nodes
+                    const childNodes = node.children.map(childId => {
+                        if (typeof childId === 'string') {
+                            // Get dimension name
+                            const dimName = node.hierarchyField ? 
+                                node.hierarchyField.replace('DIM_', '').toLowerCase() : '';
+                            
+                            // Look up child node in hierarchy
+                            return state.hierarchies[dimName]?.nodesMap?.[childId];
+                        }
+                        return childId;
+                    }).filter(Boolean); // Remove any undefined/null values
+                    
+                    // Process next level with child nodes
+                    if (childNodes.length > 0) {
+                        this.processColumnHeaders(headerRows, childNodes, level + 1);
+                    }
+                }
+            });
+        },
+
+        /**
+         * Count the number of leaf nodes under a node
+         * @param {Object} node - The node to check
+         * @returns {Number} - The number of leaf nodes
+         */
+        countLeafNodes: function(node) {
+            if (!node) return 0;
+            
+            // If this is a leaf node, count as 1
+            if (node.isLeaf) return 1;
+            
+            // If node is not expanded, count as 1
+            if (!node.expanded) return 1;
+            
+            // If node has no children, count as 1
+            if (!node.children || node.children.length === 0) return 1;
+            
+            // For expanded nodes with children, sum up leaves from all children
+            let count = 0;
+            
+            node.children.forEach(childId => {
+                // Look up child node
+                const childNode = typeof childId === 'string' ? 
+                    this.findNodeById(childId, node.hierarchyField) : 
+                    childId;
+                
+                if (childNode) {
+                    count += this.countLeafNodes(childNode);
+                }
+            });
+            
+            return Math.max(1, count); // At least 1
+        },
+
+        
+        /**
+         * Count the total number of visible leaf columns
+         * @param {Array} columns - The column data
+         * @returns {Number} - The count of visible leaf columns
+         */
+        countVisibleLeafColumns: function(columns) {
+            let count = 0;
+            
+            columns.forEach(column => {
+                count += this.countLeafNodes(column);
+            });
+            
+            return Math.max(1, count); // At least 1
+        },
+
+        
+        /**
+         * Find a node by ID in a hierarchy
+         * @param {String} nodeId - The node ID
+         * @param {String} hierarchyField - The hierarchy field name
+         * @returns {Object} - The found node or null
+         */
+        findNodeById: function(nodeId, hierarchyField) {
+            if (!nodeId || !hierarchyField) return null;
+            
+            // Get dimension name
+            const dimName = hierarchyField.replace('DIM_', '').toLowerCase();
+            
+            // Check if hierarchy exists
+            if (!state.hierarchies || !state.hierarchies[dimName]) return null;
+            
+            // Look up node in hierarchy
+            return state.hierarchies[dimName].nodesMap?.[nodeId] || null;
+        },
+
+        
+        /**
+         * Gets all visible leaf columns
+         * @param {Array} columns - All column data
+         * @returns {Array} - Visible leaf columns
+         */
+        // getVisibleLeafColumns: function(columns) {
+        //     const visibleLeafs = [];
+            
+        //     // Find root node if it exists
+        //     const rootNode = columns.find(col => 
+        //         col.label === 'All Items' || 
+        //         col.label === 'All Item Cost Types' || 
+        //         col.label === 'All Material Types' ||
+        //         col._id === 'ROOT' || 
+        //         col.isRootNode);
+            
+        //     const findVisibleLeafs = (column, currentPath = [], level = 0) => {
+        //         if (!column) return;
+                
+        //         // Skip nodes marked to be hidden in UI
+        //         if (column.skipInUI) return;
+                
+        //         // Add level information for indentation
+        //         column.level = level;
+        //         column.path = currentPath.concat(column._id);
+                
+        //         // Special handling for root node
+        //         if (column === rootNode) {
+        //             // If root is collapsed, it counts as one leaf
+        //             if (!column.expanded) {
+        //                 visibleLeafs.push(column);
+        //                 return;
+        //             }
+                    
+        //             // If root is expanded, process its children instead
+        //             if (column.expanded && column.children && column.children.length > 0) {
+        //                 const childNodes = column.children.map(childId => {
+        //                     if (typeof childId === 'string') {
+        //                         const dimName = column.hierarchyField ? 
+        //                             column.hierarchyField.replace('DIM_', '').toLowerCase() : 
+        //                             column.hierarchyName;
+        //                         return state.hierarchies[dimName]?.nodesMap?.[childId];
+        //                     }
+        //                     return childId;
+        //                 }).filter(Boolean);
+                        
+        //                 childNodes.forEach(childNode => {
+        //                     findVisibleLeafs(childNode, column.path, level + 1);
+        //                 });
+        //             }
+        //             return;
+        //         }
+                
+        //         if (column.isLeaf) {
+        //             // This is a leaf node, include it
+        //             visibleLeafs.push(column);
+        //             return;
+        //         }
+                
+        //         // Not a leaf, check if it's expanded
+        //         if (!column.expanded) {
+        //             // Not expanded, treat it as a leaf for display purposes
+        //             visibleLeafs.push(column);
+        //             return;
+        //         }
+                
+        //         // Expanded parent, check children
+        //         if (column.children && column.children.length > 0) {
+        //             const childNodes = column.children.map(childId => {
+        //                 if (typeof childId === 'string') {
+        //                     const dimName = column.hierarchyField ? 
+        //                         column.hierarchyField.replace('DIM_', '').toLowerCase() : 
+        //                         column.hierarchyName;
+        //                     return state.hierarchies[dimName]?.nodesMap?.[childId];
+        //                 }
+        //                 return childId;
+        //             }).filter(Boolean);
+                    
+        //             // Process each child
+        //             childNodes.forEach(childNode => {
+        //                 findVisibleLeafs(childNode, column.path, level + 1);
+        //             });
+        //         } else {
+        //             // No children, treat as leaf
+        //             visibleLeafs.push(column);
+        //         }
+        //     };
+            
+        //     // Process each column
+        //     if (rootNode) {
+        //         // If we have a root node, start with it
+        //         findVisibleLeafs(rootNode);
+        //     } else {
+        //         // Otherwise process all columns
+        //         columns.forEach(column => {
+        //             findVisibleLeafs(column);
+        //         });
+        //     }
+            
+        //     return visibleLeafs;
+        // },
+
+        getVisibleLeafColumns: function(columns) {
+            if (!columns || columns.length === 0) {
+                return [];
+            }
+            
+            const visibleLeafs = [];
+            
+            // Function to process a column node and its descendants
+            const processColumn = (column) => {
+                if (!column) return;
+                
+                // Skip nodes marked to be hidden
+                if (column.skipInUI) return;
+                
+                // If column is a leaf, include it
+                if (column.isLeaf) {
+                    visibleLeafs.push(column);
+                    return;
+                }
+                
+                // If column is not expanded, treat it as a leaf for display
+                if (!column.expanded) {
+                    visibleLeafs.push(column);
+                    return;
+                }
+                
+                // For expanded parents, process all children
+                if (column.children && column.children.length > 0) {
+                    const childNodes = this.getChildNodes(column);
+                    childNodes.forEach(childNode => {
+                        processColumn(childNode);
+                    });
+                } else {
+                    // No children, treat as leaf
+                    visibleLeafs.push(column);
+                }
+            };
+            
+            // Process each top-level column
+            columns.forEach(column => {
+                processColumn(column);
+            });
+            
+            return visibleLeafs;
+        },
+
+
+        /**
+         * Initialize column zone handlers
+         */
+        init: function() {
+            // Initialize expanded nodes state
+            state.expandedNodes = state.expandedNodes || {};
+            
+            // Set all hierarchies to have root nodes expanded by default
+            Object.keys(state.hierarchies || {}).forEach(dimName => {
+                state.expandedNodes[dimName] = state.expandedNodes[dimName] || {};
+                state.expandedNodes[dimName].column = state.expandedNodes[dimName].column || {};
+                
+                const hierarchy = state.hierarchies[dimName];
+                if (hierarchy && hierarchy.root) {
+                    state.expandedNodes[dimName].column[hierarchy.root.id] = true;
+                    hierarchy.root.expanded = true;
+                }
+            });
+            
+            console.log("✅ Status: Column hierarchy handler initialized");
+        }
     }
 };
 
 
 // Export the pivotTable object
 export default pivotTable;
+
