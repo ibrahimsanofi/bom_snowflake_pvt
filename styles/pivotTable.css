@@ -1,5 +1,5 @@
 /* ===========================================
-   Generic Pivot Table CSS for Multiple Measures
+   Enhanced Pivot Table CSS for Consistent Column Display
    Works with any dimension values
    =========================================== */
 
@@ -23,7 +23,7 @@
     --text-light: #64748b;
     --text-dark: #1e293b;
     
-    /* Level Colors - More subtle approach */
+    /* Level Colors - Consistent coloring across all dimensions */
     --level-0-bg: #f1f5f9;
     --level-1-bg: #f8fafc;
     --level-2-bg: #ffffff;
@@ -43,10 +43,10 @@
 .pivot-table-container {
     width: 100%;
     overflow: auto;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--border-light);
     border-radius: 0.375rem;
-    background-color: #ffffff;
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    background-color: var(--bg-card);
+    box-shadow: var(--shadow-sm);
     margin-bottom: 1rem;
     max-height: 80vh; /* Prevent extremely tall tables */
 }
@@ -55,7 +55,7 @@ table {
     border-collapse: separate;
     border-spacing: 0;
     font-size: 0.875rem;
-    color: #334155;
+    color: var(--text);
     table-layout: fixed;
     width: auto;
     min-width: 100%;
@@ -63,24 +63,16 @@ table {
 
 th, td {
     padding: 0.5rem;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--border-light);
     vertical-align: middle;
 }
 
-
 /* ---------- 3. HEADER STYLING ---------- */
-/* Header cell styles */
-th {
-    font-weight: 600;
-    color: var(--text-dark);
-    background-color: var(--bg-light);
-}
-
 /* Corner cell (top-left) */
 .corner-cell {
-    background-color: #f1f5f9;
-    border-right: 1px solid #cbd5e1;
-    border-bottom: 1px solid #cbd5e1;
+    background-color: var(--level-0-bg);
+    border-right: 1px solid var(--border-dark);
+    border-bottom: 1px solid var(--border-dark);
     text-align: left;
     padding: 8px;
     font-weight: 600;
@@ -94,15 +86,170 @@ th {
 
 /* Measure headers (Cost Unit, Quantity Unit, etc.) */
 .measure-header {
-    background-color: #f1f5f9;
+    background-color: var(--level-0-bg);
     font-weight: 600;
     text-align: center;
-    border-bottom: 2px solid #64748b;
+    border-bottom: 2px solid var(--text-light);
     padding: 6px 12px;
     position: sticky;
     top: 0;
     z-index: 30;
     min-width: 120px;
+}
+
+/* Consistent styling for column headers that are part of a group */
+.column-header[data-parent-id]:not([data-parent-id=""]) {
+    border-left: 1px solid var(--border-light);
+    border-right: 1px solid var(--border-light);
+}
+
+/* Consistent column headers regardless of hierarchy */
+.column-header {
+    background-color: var(--level-0-bg);
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    padding: 6px 8px;
+    white-space: nowrap;
+    font-weight: 500;
+    border: 1px solid var(--border-light);
+    border-bottom: 1px solid var(--border-dark);
+    border-right: 1px solid var(--border-dark);
+}
+
+/* Styling for single-level dimension headers to make them look like level 0 */
+.column-header.single-level,
+.column-header[data-dimension-type="flat"] {
+    background-color: var(--primary-light);
+    font-weight: 600;
+    border-bottom: 1px solid #93c5fd;
+    border-left: 2px solid var(--border-dark);
+    border-right: 2px solid var(--border-dark);
+}
+
+/* Ensure flat dimensions get proper styling */
+tr[data-flat-dimension="true"] .column-header {
+    background-color: var(--primary-light);
+    font-weight: 600;
+    border-bottom: 1px solid #93c5fd;
+    border-top: 1px solid var(--border-dark);
+}
+
+/* Special styling for single-level column headers */
+.header-row .column-header:only-child {
+    border-left: 2px solid var(--border-dark);
+    border-right: 2px solid var(--border-dark);
+}
+
+/* For any dimension that is the only one in column zone */
+.header-row .column-header:first-child:last-child {
+    border-left: 2px solid var(--border-dark);
+    border-right: 2px solid var(--border-dark);
+}
+
+/* Add visual hierarchy with background colors - level-agnostic */
+.column-header[data-level="0"] {
+    background-color: var(--primary-light);
+    border-bottom: 1px solid #93c5fd;
+    border-left: 2px solid var(--border-dark);
+    border-right: 2px solid var(--border-dark);
+    font-weight: 600;
+}
+
+.column-header[data-level="1"] {
+    background-color: #eff6ff;
+    border-bottom: 1px solid var(--border-dark);
+}
+
+.column-header[data-level="2"] {
+    background-color: var(--bg-light);
+    border-bottom: 1px solid var(--border-light);
+}
+
+/* Column header with children */
+.column-header.has-children {
+    font-weight: 600;
+}
+
+/* Expanded column headers */
+.column-header .expand-collapse.expanded + .column-label {
+    font-weight: 600;
+    color: var(--primary);
+}
+
+/* Column label text */
+.column-label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
+    max-width: 150px;
+    vertical-align: middle;
+}
+
+/* Column header hover effect */
+.column-header:hover {
+    background-color: #dbeafe;
+    cursor: pointer;
+}
+
+/* Tooltip for truncated labels */
+.column-header:hover .column-label {
+    position: relative;
+}
+
+.column-header:hover .column-label:before {
+    content: attr(title);
+    position: absolute;
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--text-dark);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+    z-index: 50;
+}
+
+.column-header:hover .column-label:hover:before {
+    opacity: 1;
+}
+
+/* Fix for column headers when only one dimension type is present */
+.header-row:only-child .column-header {
+    background-color: var(--primary-light);
+    font-weight: 600;
+    border-bottom: 2px solid var(--text-light);
+}
+
+/* Keep it simple but consistent when we have a single header row */
+thead tr:only-child th:not(.corner-cell) {
+    background-color: var(--primary-light);
+    border-bottom: 2px solid var(--text-light);
+    font-weight: 600;
+}
+
+/* Ensure visual consistency for various measure types */
+.measure-header[data-measure="COST_UNIT"] {
+    color: var(--primary-dark);
+}
+
+.measure-header[data-measure="QTY_UNIT"] {
+    color: var(--success);
+}
+
+/* Ensure all columns look good in special case of only one row of headers */
+thead tr:only-child th.column-header {
+    border-left: 1px solid var(--border-dark);
+    border-right: 1px solid var(--border-dark);
+    border-bottom: 2px solid var(--text-light);
+    background-color: var(--primary-light);
 }
 
 /* ---------- 4. HIERARCHY CELLS ---------- */
@@ -113,15 +260,15 @@ th {
     position: sticky;
     left: 0;
     z-index: 20;
-    background-color: #f8fafc;
+    background-color: var(--bg-light);
     padding: 0.5rem;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--border-light);
     width: 350px;
     min-width: 280px;
     box-sizing: border-box;
 }
 
-/* Generic level-based styling */
+/* Generic level-based styling with consistent indentation */
 .hierarchy-cell[data-level="0"] {
     background-color: var(--level-0-bg);
     padding-left: 8px;
@@ -199,7 +346,7 @@ th {
 /* Plus sign for collapsed state */
 .expand-collapse.collapsed:before {
     content: "+";
-    color: #10b981;
+    color: var(--success);
     font-weight: bold;
     font-size: 16px;
     line-height: 1;
@@ -210,7 +357,7 @@ th {
 /* Minus sign for expanded state */
 .expand-collapse.expanded:before {
     content: "-";
-    color: #ef4444;
+    color: var(--danger);
     font-weight: bold;
     font-size: 16px;
     line-height: 1;
@@ -220,7 +367,7 @@ th {
 
 /* Visual feedback on hover */
 .expand-collapse:hover {
-    background-color: #f1f5f9;
+    background-color: var(--level-0-bg);
     border-color: rgba(0, 0, 0, 0.3);
     transform: scale(1.05);
 }
@@ -228,7 +375,7 @@ th {
 /* Visual feedback when active/pressed */
 .expand-collapse:active {
     transform: scale(0.95);
-    background-color: #e6f0ff;
+    background-color: var(--primary-light);
 }
 
 /* Column header expand/collapse buttons */
@@ -245,6 +392,17 @@ th {
     font-size: 14px;
 }
 
+/* Adjust expand/collapse controls in column headers */
+.column-header .expand-collapse {
+    width: 14px;
+    height: 14px;
+    margin-right: 4px;
+    border: 1px solid rgba(37, 99, 235, 0.4);
+    background-color: rgba(255, 255, 255, 0.8);
+    vertical-align: middle;
+    display: inline-flex;
+}
+
 /* Add pointer cursor to the entire hierarchy cell */
 .hierarchy-cell {
     cursor: default;
@@ -259,7 +417,7 @@ th {
 table {
     border-collapse: separate;
     border-spacing: 0;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--border-light);
 }
 
 /* Placeholder for leaf nodes (no expand/collapse) */
@@ -285,41 +443,42 @@ table {
 /* Base styling for value cells */
 .value-cell {
     text-align: right !important;
-    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-family: var(--font-mono);
     background-color: white !important;
     padding-right: 12px !important;
     font-variant-numeric: tabular-nums;
     width: 120px;
     min-width: 100px;
+    font-weight: 1.5rem;
 }
 
 /* Zero values */
 .value-cell.zero-value {
-    color: #94a3b8;
+    color: var(--text-light);
     opacity: 0.7;
 }
 
 /* Non-zero values */
 .value-cell.non-zero-value {
-    font-weight: 600;
-    color: #334155;
+    /* font-weight: 600; */
+    color: var(--text);
 }
 
 /* Large values */
 .value-cell[data-raw-value^="2"] {
-    color: #1e40af;
-    font-weight: 700;
+    color: var(--primary-dark);
+    /* font-weight: 700; */
 }
 
 /* Medium values */
 .value-cell[data-raw-value^="1"] {
-    color: #2563eb;
-    font-weight: 600;
+    color: var(--primary);
+    /* font-weight: 600; */
 }
 
 /* Negative values */
 .value-cell[data-raw-value^="-"] {
-    color: #ef4444;
+    color: var(--danger);
 }
 
 /* ---------- 8. ROW STYLING ---------- */
@@ -330,7 +489,7 @@ tr:nth-child(even) {
 
 /* Row hover effect */
 tr:hover {
-    background-color: #f1f5f9;
+    background-color: var(--level-0-bg);
 }
 
 tr:hover .hierarchy-cell {
@@ -360,7 +519,22 @@ th[data-measure]:not(:last-child) {
     border-right: 1px solid var(--border-dark);
 }
 
-/* ---------- 10. RESPONSIVE ADJUSTMENTS ---------- */
+/* ---------- 10. HEADER ROW LAYOUT ---------- */
+/* Header row styles for different levels */
+.header-row {
+    height: auto;
+}
+
+.header-row.header-level-0 th {
+    border-bottom: 1px solid var(--border-dark);
+}
+
+/* Last header row with measure headers */
+.header-row:last-child th {
+    border-bottom: 2px solid var(--text-light);
+}
+
+/* ---------- 11. RESPONSIVE ADJUSTMENTS ---------- */
 @media (max-width: 768px) {
     th, td {
         padding: 0.3rem;
@@ -393,131 +567,7 @@ th[data-measure]:not(:last-child) {
     .hierarchy-cell[data-level="2"] { padding-left: 34px; }
     .hierarchy-cell[data-level="3"] { padding-left: 48px; }
     .hierarchy-cell[data-level="4"] { padding-left: 62px; }
-}
-
-/* ---------- COLUMN HEADER STYLING ---------- */
-/* Base column header styling */
-.column-header {
-    background-color: #f1f5f9;
-    text-align: center;
-    position: sticky;
-    top: 0;
-    z-index: 30;
-    padding: 6px 8px;
-    white-space: nowrap;
-    font-weight: 500;
-    border-bottom: 1px solid #cbd5e1;
-    border-right: 1px solid #cbd5e1;
-}
-
-/* Add visual hierarchy with background colors */
-.column-header[data-level="0"] {
-    background-color: #e6f0ff;
-    border-bottom: 1px solid #93c5fd;
-    border-left: 2px solid #cbd5e1;
-    border-right: 2px solid #cbd5e1;
-    font-weight: 600;
-}
-
-.column-header[data-level="1"] {
-    background-color: #eff6ff;
-    border-bottom: 1px solid #cbd5e1;
-}
-
-.column-header[data-level="2"] {
-    background-color: #f8fafc;
-    border-bottom: 1px solid #e5e7eb;
-}
-
-/* Column header with children */
-.column-header.has-children {
-    font-weight: 600;
-}
-
-/* Expanded column headers */
-.column-header .expand-collapse.expanded + .column-label {
-    font-weight: 600;
-    color: #2563eb;
-}
-
-/* Column label text */
-.column-label {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: inline-block;
-    max-width: 150px;
-}
-
-/* Adjust expand/collapse controls in column headers */
-.column-header .expand-collapse {
-    width: 14px;
-    height: 14px;
-    margin-right: 4px;
-    border: 1px solid rgba(37, 99, 235, 0.4);
-    background-color: rgba(255, 255, 255, 0.8);
-    vertical-align: middle;
-    display: inline-flex;
-}
-
-/* Column header hover effect */
-.column-header:hover {
-    background-color: #dbeafe;
-}
-
-/* ---------- MEASURE HEADERS FOR COLUMN DIMENSIONS ---------- */
-/* Measure headers in column hierarchies */
-.measure-header[data-column-id] {
-    font-size: 0.75rem;
-    background-color: #f8fafc;
-    border-bottom: 2px solid #e5e7eb;
-    font-weight: 500;
-    padding: 4px 8px;
-    min-width: 60px;
-}
-
-/* Style specific measures differently */
-.measure-header[data-measure="COST_UNIT"] {
-    color: #1e40af;
-}
-
-.measure-header[data-measure="QTY_UNIT"] {
-    color: #047857;
-}
-
-/* ---------- VALUE CELLS WITH COLUMN DIMENSIONS ---------- */
-/* Value cells linked to specific columns */
-td[data-column-id] {
-    text-align: right;
-    padding-right: 8px;
-}
-
-/* Apply different colors based on measure */
-td[data-measure="COST_UNIT"].non-zero-value {
-    color: #1e40af;
-}
-
-td[data-measure="QTY_UNIT"].non-zero-value {
-    color: #047857;
-}
-
-/* ---------- HEADER ROW LAYOUT ---------- */
-/* Header row styles for different levels */
-.header-row {
-    height: auto;
-}
-
-.header-row.header-level-0 th {
-    border-bottom: 1px solid #cbd5e1;
-}
-
-/* Last header row with measure headers */
-.header-row:last-child th {
-    border-bottom: 2px solid #64748b;
-}
-
-/* ---------- RESPONSIVE ADJUSTMENTS ---------- */
-@media (max-width: 768px) {
+    
     .column-header {
         padding: 4px 6px;
         font-size: 0.75rem;
@@ -530,16 +580,65 @@ td[data-measure="QTY_UNIT"].non-zero-value {
     }
     
     .column-label {
-        max-width: 100px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: inline-block;
+        max-width: 150px;
+        vertical-align: middle;
     }
 }
 
-/* ---------- ENHANCED TABLE LAYOUT FOR COLUMN DIMENSIONS ---------- */
-/* Prevent column width issues in complex hierarchies */
-table {
-    table-layout: fixed;
-    width: auto;
-    min-width: 100%;
+/* ---------- 12. ENHANCED VISUAL CONSISTENCY FOR COLUMNS ---------- */
+/* Ensure consistent styling for column headers at same level, regardless of dimension */
+.column-header[data-level] {
+    border-top: 1px solid var(--border-light);
+}
+
+/* Add visual separators between major column groups */
+.column-header[data-level="0"] {
+    border-left: 2px solid var(--border-dark);
+    border-right: 2px solid var(--border-dark);
+}
+
+/* Enhanced styling for measure headers in column hierarchies */
+.measure-header[data-column-id] {
+    font-size: 0.75rem;
+    background-color: var(--bg-light);
+    border-bottom: 2px solid var(--border-light);
+    font-weight: 500;
+    padding: 4px 8px;
+    min-width: 60px;
+}
+
+/* Consistent styling for cells with column dimensions */
+td[data-column-id] {
+    text-align: right;
+    padding-right: 8px;
+}
+
+/* Add visual cues for expandable columns */
+.column-header.has-children {
+    background-color: rgba(37, 99, 235, 0.04);
+}
+
+/* Consistent borders between column groups */
+.column-header + .column-header {
+    border-left: 1px solid var(--border-light);
+}
+
+/* Special case for multi-level first column headers */
+.header-row.header-level-0 th.column-header:first-child {
+    border-left: 2px solid var(--border-dark);
+}
+
+.header-row.header-level-0 th.column-header:last-child {
+    border-right: 2px solid var(--border-dark);
+}
+
+/* Ensure borders are consistent even with colspans */
+.column-header[colspan] {
+    border-right: 2px solid var(--border-dark);
 }
 
 /* Ensure sticky positioning works correctly */
@@ -555,8 +654,290 @@ table {
     z-index: 20;
 }
 
-/* Add some visual separators between major column groups */
-.column-header[data-level="0"] {
-    border-left: 2px solid #cbd5e1;
-    border-right: 2px solid #cbd5e1;
+/* Highlight active columns on hover */
+.column-header:hover {
+    background-color: rgba(37, 99, 235, 0.1);
+}
+
+/* Hide empty rows and columns */
+.all-zeros-row {
+    display: none;
+}
+
+.all-zeros-column {
+    display: none;
+}
+
+/* Pivot table stats indicator */
+.pivot-table-stats {
+    padding: 4px 8px;
+    font-size: 1.0rem;
+    color: black; /*var(--text-light);*/
+    text-align: right;
+    margin-top: 4px;
+}
+
+/* For reduced-height tables */
+.reduced-height th,
+.reduced-height td {
+    padding-top: 0.3rem;
+    padding-bottom: 0.3rem;
+    line-height: 1.3;
+}
+
+/* Ensure all measures under a column are visually grouped */
+th[data-measure] {
+    border-top: 1px solid var(--border-light);
+}
+
+/* Updated workspace layout to remove filter fields and arrange remaining fields side by side */
+.workspace-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: var(--space-6);
+  margin-bottom: var(--space-6);
+}
+
+.field-panel {
+  height: 700px;
+}
+
+.fields-list {
+  height: 100%;
+  overflow-y: auto;
+}
+
+/* New container for the three drop zones */
+.three-drop-zones {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: 1fr;
+  gap: var(--space-4);
+  height: 700px; /* Match the height of the available fields panel */
+}
+
+/* Adjust each drop zone to take full height */
+.drop-zone {
+  height: 100%;
+}
+
+/* Style for the drop zones */
+.pivot-fields {
+  height: 100%;
+  padding: var(--space-3);
+  border-radius: var(--radius);
+  border: 1px dashed var(--border-dark);
+  background-color: var(--bg-light);
+  overflow-y: auto;
+}
+
+/* Specific styles for each zone type */
+.pivot-fields.rows {
+  background-color: rgba(37, 99, 235, 0.05);
+  border-color: var(--primary);
+  height: 600px;
+}
+
+.pivot-fields.columns {
+  background-color: rgba(16, 185, 129, 0.05);
+  border-color: var(--success);
+  height: 600px;
+}
+
+.pivot-fields.values {
+  background-color: rgba(245, 158, 11, 0.05);
+  border-color: var(--accent);
+  height: 600px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .workspace-layout {
+    grid-template-columns: 250px 1fr;
+    gap: var(--space-4);
+  }
+}
+
+@media (max-width: 992px) {
+  .workspace-layout {
+    grid-template-columns: 1fr;
+  }
+  
+  .field-panel {
+    height: auto;
+    max-height: 300px;
+  }
+  
+  .three-drop-zones {
+    height: auto;
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(3, 200px);
+  }
+  
+  .container {
+    width: 95%;
+  }
+}
+
+/* Hide the filter-fields section */
+#filterFields, 
+.drop-zone:has(#filterFields),
+.card-header:has(.card-title span:contains("Filter Fields")) {
+  display: none !important;
+}
+
+/* Make the tab buttons more visible */
+.tabs .tab {
+  padding: var(--space-3) var(--space-5);
+  font-weight: 500;
+  color: var(--text-light);
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  transition: all 0.2s ease;
+  border-bottom: 2px solid transparent;
+}
+
+.tabs .tab:hover {
+  color: var(--primary);
+  background-color: rgba(37, 99, 235, 0.05);
+}
+
+.tabs .tab.active {
+  color: var(--primary);
+  font-weight: 600;
+  border-bottom: 2px solid var(--primary);
+  background-color: rgba(37, 99, 235, 0.1);
+}
+
+
+/* ---------- 13. MULTI-DIMENSION SPECIFIC STYLING ---------- */
+/* Base styling for multi-dimensional cells */
+.multi-dimension-cell {
+    display: table-cell;
+    vertical-align: middle;
+    min-width: 450px;
+    width: auto;
+    max-width: 650px;
+    box-sizing: border-box;
+    padding: 0 !important; /* Override default cell padding */
+}
+
+/* Improved two-column layout for dimensions */
+.dimension-row {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    align-items: center;
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.dimension-row:last-child {
+    border-bottom: none;
+}
+
+/* Dimension type label */
+.dimension-type {
+    font-weight: 600;
+    color: var(--primary-dark);
+    font-size: 0.85rem;
+    text-align: right;
+    padding-right: 12px;
+    border-right: 1px solid var(--border-light);
+    margin-right: 10px;
+}
+
+/* Dimension value container */
+.dimension-value {
+    display: flex;
+    align-items: center;
+    flex: 1;
+}
+
+.dimension-indent {
+    display: inline-block;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+/* Visual distinction between different dimensions */
+.dimension-row[data-dimension-index="0"] {
+    background-color: rgba(37, 99, 235, 0.07);
+}
+
+.dimension-row[data-dimension-index="1"] {
+    background-color: rgba(16, 185, 129, 0.07);
+}
+
+.dimension-row[data-dimension-index="2"] {
+    background-color: rgba(245, 158, 11, 0.07);
+}
+
+.dimension-row[data-dimension-index="3"] {
+    background-color: rgba(124, 58, 237, 0.07);
+}
+
+.dimension-row[data-dimension-index="4"] {
+    background-color: rgba(236, 72, 153, 0.07);
+}
+
+/* Improved visibility for dimension labels */
+.dimension-label {
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Status indicators for expanded/collapsed state */
+.dimension-row:has(.expand-collapse.collapsed) {
+    border-bottom: 1px solid var(--border-dark);
+}
+
+.dimension-row:has(.expand-collapse.expanded) .dimension-label {
+    font-weight: 600;
+    color: var(--primary);
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+    .multi-dimension-cell {
+        min-width: 400px;
+    }
+    
+    .dimension-row {
+        grid-template-columns: 100px 1fr;
+    }
+}
+
+@media (max-width: 992px) {
+    .multi-dimension-cell {
+        min-width: 350px;
+    }
+    
+    .dimension-type {
+        font-size: 0.75rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .multi-dimension-cell {
+        min-width: 320px;
+    }
+    
+    .dimension-row {
+        grid-template-columns: 90px 1fr;
+        padding: 4px 6px;
+    }
+}
+
+/* Fix for corner case when we have multi-dimensions */
+.pivot-table-container table tbody tr td.multi-dimension-cell {
+    padding: 0 !important;
+    vertical-align: middle;
 }

@@ -8,7 +8,9 @@
     <!-- Styling section -->
     <link rel="stylesheet" href="./styles/styles.css">
     <link rel="stylesheet" href="./styles/filter-styles.css">
+
     <link rel="stylesheet" href="./styles/pivotTable.css">
+    <link rel="stylesheet" href=".styles/pivot-table-animations.css">
 
     <script src="./javascripts/pivotTableUtils.js"></script>
 
@@ -306,9 +308,6 @@
                 </div>
                 
                 <div class="tab-controls">
-                    <button id="showBtn" class="btn btn-outline">
-                        <i class="fas fa-download"></i> Show Pivot Table
-                    </button>
                     <button id="resetBtn" class="btn btn-outline">
                         <i class="fas fa-sync-alt"></i> Reset UI
                     </button>
@@ -338,8 +337,48 @@
                             <div id="availableFields" class="fields-list"></div>
                         </div>
                     </div>
-                    
-                    <div class="drop-zones">
+                    <!-- New container for the three drop zones -->
+                    <div class="three-drop-zones">
+                        <!-- Row Fields -->
+                        <div class="card drop-zone">
+                            <div class="card-header">
+                                <div class="card-title">
+                                    <i class="fas fa-arrows-alt-v"></i>
+                                    <span>Row Fields</span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div id="rowFields" class="pivot-fields rows"></div>
+                            </div>
+                        </div> 
+
+                        <!-- Column Fields -->
+                        <div class="card drop-zone">
+                            <div class="card-header">
+                                <div class="card-title">
+                                    <i class="fas fa-arrows-alt-h"></i>
+                                    <span>Column Fields</span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div id="columnFields" class="pivot-fields columns"></div>
+                            </div>
+                        </div>                                             
+                        
+                        <!-- Value Fields -->
+                        <div class="card drop-zone">
+                            <div class="card-header">
+                                <div class="card-title">
+                                    <i class="fas fa-calculator"></i>
+                                    <span>Value Fields</span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div id="valueFields" class="pivot-fields values"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- <div class="drop-zones">
                         <div class="card drop-zone">
                             <div class="card-header">
                                 <div class="card-title">
@@ -387,7 +426,7 @@
                                 <div id="valueFields" class="pivot-fields values"></div>
                             </div>
                         </div>
-                    </div>
+                    </div> -->
                 </div>
             </div>
             

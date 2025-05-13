@@ -110,17 +110,17 @@ class EnhancedFilterSystem {
    * Initialize the filter system
    */
   initialize() {
-    console.log('Initializing Enhanced Filter System...');
+    console.log('✅ Status: Initializing Enhanced Filter System...');
     
     // Make sure we have a valid state reference
     if (!this.state) {
-      console.log('No state reference, cannot initialize filters');
+      console.log('✅ Status: No state reference, cannot initialize filters');
       return false;
     }
     
     // Make sure data is loaded
     if (!this.state.factData || !this.state.dimensions) {
-      console.log('Data not loaded yet, cannot initialize filters');
+      console.log('✅ Status: Data not loaded yet, cannot initialize filters');
       return false;
     }
     
@@ -132,7 +132,7 @@ class EnhancedFilterSystem {
     this.setupApplyButton();
     this.populateFilters();
     
-    console.log('Enhanced Filter System initialized successfully');
+    console.log('✅ Status: Enhanced Filter System initialized successfully');
     return true;
   }
 
@@ -141,24 +141,24 @@ class EnhancedFilterSystem {
    * Initialize storage for original hierarchies to support filtering
    */
   initializeHierarchyFilters() {
-    console.log("Initializing hierarchical dimension filtering...");
+    console.log("✅ Status: Initializing hierarchical dimension filtering...");
     
     // Create storage for original hierarchies if needed
     this.state._originalHierarchies = this.state._originalHierarchies || {};
     
     // Store original hierarchies if not already stored
     if (this.state.hierarchies) {
-      const hierarchyKeys = ['gmid_display', 'item_cost_type', 'material_type', 'year', 'mc', 'smartcode'];
+      const hierarchyKeys = ['gmid_display', 'item_cost_type', 'material_type', 'year', 'mc', 'smartcode', 'cost_element'];
       
       hierarchyKeys.forEach(key => {
         if (this.state.hierarchies[key] && !this.state._originalHierarchies[key]) {
           this.state._originalHierarchies[key] = this.state.hierarchies[key];
-          console.log(`Stored original ${key} hierarchy`);
+          console.log(`✅ Status: Stored original ${key} hierarchy`);
         }
       });
     }
     
-    console.log("Hierarchical dimension filtering initialized");
+    console.log("✅ Status: Hierarchical dimension filtering initialized");
   }
 
   
@@ -169,7 +169,7 @@ class EnhancedFilterSystem {
     // Get the filter content container
     const filterContent = this.elements.filterContent;
     if (!filterContent) {
-      console.error("Filter content container not found");
+      console.error("❌ Alert! Filter content container not found");
       return;
     }
     
@@ -546,7 +546,7 @@ class EnhancedFilterSystem {
    * Populate all filter components with data from dimensions
    */
   populateFilters() {
-    console.log('Populating filter components with data...');
+    console.log('✅ Status: Populating filter components with data...');
     
     // Get state reference if not already available
     if (!this.state) {
@@ -554,7 +554,7 @@ class EnhancedFilterSystem {
       
       // If still not available, wait and retry
       if (!this.state) {
-        console.log('State not yet available, waiting...');
+        console.log('⏳ Status: State not yet available, waiting...');
         setTimeout(() => this.populateFilters(), 500);
         return;
       }
@@ -562,7 +562,7 @@ class EnhancedFilterSystem {
     
     // Wait for data to be loaded
     if (!this.state.factData || !this.state.dimensions) {
-      console.log('Waiting for BOM data to be loaded...', window.App ? 'App is available' : 'No App object');
+      console.log('⏳ Status: Waiting for BOM data to be loaded...', window.App ? 'App is available' : 'No App object');
       setTimeout(() => this.populateFilters(), 500);
       return;
     }
@@ -583,7 +583,7 @@ class EnhancedFilterSystem {
    * @param {Object} dimension - Dimension configuration
    */
   populateHierarchicalFilter(dimension) {
-    console.log(`Populating hierarchical filter for ${dimension.label}...`);
+    console.log(`⏳ Status: Populating hierarchical filter for ${dimension.label}...`);
     
     const treeContainer = document.getElementById(`${dimension.id}TreeContainer`);
     if (!treeContainer) {
@@ -668,7 +668,7 @@ class EnhancedFilterSystem {
    * @param {String} labelField - Field to use for label
    */
   buildFlatHierarchy(data, root, nodesMap, idField, labelField) {
-    console.log(`Building flat hierarchy for ${root.hierarchyName} using ${idField} and ${labelField}`);
+    console.log(`⏳ Status: Building flat hierarchy for ${root.hierarchyName} using ${idField} and ${labelField}`);
     
     const valueMap = new Map();
     
@@ -680,7 +680,7 @@ class EnhancedFilterSystem {
       }
     });
     
-    console.log(`Found ${valueMap.size} unique values for flat hierarchy`);
+    console.log(`✅ Status: Found ${valueMap.size} unique values for flat hierarchy`);
     
     // Create nodes for each value
     valueMap.forEach((description, code) => {
@@ -714,7 +714,7 @@ class EnhancedFilterSystem {
       return aLabel.localeCompare(bLabel);
     });
     
-    console.log(`Built flat hierarchy with ${root.children.length} children of root`);
+    console.log(`✅ Status: Built flat hierarchy with ${root.children.length} children of root`);
   }
 
 
@@ -723,7 +723,7 @@ class EnhancedFilterSystem {
    * @param {Object} dimension - The dimension that caused the empty result
    */
   handleEmptyFilterResult(dimension) {
-    console.log(`Filter on ${dimension.label} resulted in NO matching records`);
+    console.log(`⏳ Status: Filter on ${dimension.label} resulted in NO matching records`);
     
     // Set flag to indicate empty result
     this.state._emptyFilterResult = true;
@@ -991,7 +991,7 @@ class EnhancedFilterSystem {
    * @param {Object} dimension - Dimension configuration
    */
   populateSimpleFilter(dimension) {
-    console.log(`Populating simple filter for ${dimension.label}...`);
+    console.log(`⏳ Status: Populating simple filter for ${dimension.label}...`);
     
     const checkboxList = document.getElementById(`${dimension.id}CheckboxList`);
     if (!checkboxList) {
@@ -1415,7 +1415,7 @@ class EnhancedFilterSystem {
    * Apply all filters to the data
    */
   applyAllFilters(){
-    console.log('Applying all filters...');
+    console.log('⏳ Status: Applying all filters...');
     console.time('ApplyFilters');
     
     // Store original data reference
@@ -1453,8 +1453,8 @@ class EnhancedFilterSystem {
     this.updateFilteredRecordsCount(filteredData.length);
     
     // Log filter performance details
-    console.log(`Filtering complete: ${originalData.length} -> ${filteredData.length} records (${((filteredData.length / originalData.length) * 100).toFixed(2)}%)`);
-    console.log('Filter reductions:', filterReductions);
+    console.log(`✅ Status: Filtering complete: ${originalData.length} -> ${filteredData.length} records (${((filteredData.length / originalData.length) * 100).toFixed(2)}%)`);
+    console.log('✅ Status: Filter reductions:', filterReductions);
     console.timeEnd('ApplyFilters');
     
     // Refresh pivot table
@@ -1466,7 +1466,7 @@ class EnhancedFilterSystem {
    * Rebuild filtered hierarchies based on current selections
    */
   rebuildFilteredHierarchies() {
-    console.log("Rebuilding hierarchies based on filter selections...");
+    console.log("⏳ Status: Rebuilding hierarchies based on filter selections...");
     
     // Rebuild each hierarchy
     this.rebuildGmidHierarchyWithFilters();     
@@ -1484,7 +1484,7 @@ class EnhancedFilterSystem {
    * Rebuild GMID display hierarchy based on filters
    */
   rebuildGmidHierarchyWithFilters() {
-    console.log("Rebuilding GMID display hierarchy based on filters...");
+    console.log("⏳ Status: Rebuilding GMID display hierarchy based on filters...");
     
     // 1. Get the current ROOT_GMID filter selections
     const rootGmidFilter = this.filterSelections.rootGmid;
@@ -1509,7 +1509,7 @@ class EnhancedFilterSystem {
       selectedRootGmids = [...allRootGmids];
     }
     
-    console.log(`Selected ROOT_GMIDs: ${selectedRootGmids.length} of ${allRootGmids.length}`);
+    console.log(`✅ Status: Selected ROOT_GMIDs: ${selectedRootGmids.length} of ${allRootGmids.length}`);
     
     // 4. Only rebuild if we're filtering (otherwise use the original hierarchy)
     if (selectedRootGmids.length < allRootGmids.length) {
@@ -1522,15 +1522,15 @@ class EnhancedFilterSystem {
       // Store in state
       this.state.hierarchies.gmid_display = filteredHierarchy;
       
-      console.log(`Rebuilt GMID hierarchy with ${selectedRootGmids.length} ROOT_GMIDs`);
+      // console.log(`✅ Status: Rebuilt GMID hierarchy with ${selectedRootGmids.length} ROOT_GMIDs`);
       return true;
     } else {
-      console.log("All ROOT_GMIDs selected, no need to rebuild hierarchy");
+      // console.log("✅ Status: All ROOT_GMIDs selected, no need to rebuild hierarchy");
       
       // Restore original hierarchy if we previously filtered
       if (this.state._originalHierarchies && this.state._originalHierarchies.gmid_display) {
         this.state.hierarchies.gmid_display = this.state._originalHierarchies.gmid_display;
-        console.log("Restored original GMID hierarchy");
+        // console.log("✅ Status: Restored original GMID hierarchy");
       }
       
       return false;
@@ -1542,7 +1542,7 @@ class EnhancedFilterSystem {
    * Rebuild ITEM_COST_TYPE hierarchy based on filter selections
    */
   rebuildItemCostTypeHierarchy() {
-    console.log("Rebuilding ITEM_COST_TYPE hierarchy based on filters...");
+    console.log("⏳ Status: Rebuilding ITEM_COST_TYPE hierarchy based on filters...");
     
     // Get the filter selections for item cost type
     const itemCostTypeFilter = this.filterSelections.itemCostType;
@@ -1567,7 +1567,7 @@ class EnhancedFilterSystem {
       selectedItemCostTypes = [...allItemCostTypes];
     }
     
-    console.log(`Selected ITEM_COST_TYPEs: ${selectedItemCostTypes.length} of ${allItemCostTypes.length}`);
+    console.log(`✅ Status: Selected ITEM_COST_TYPEs: ${selectedItemCostTypes.length} of ${allItemCostTypes.length}`);
     
     // Only rebuild if we're filtering (otherwise use the original hierarchy)
     if (selectedItemCostTypes.length < allItemCostTypes.length) {
@@ -1585,15 +1585,15 @@ class EnhancedFilterSystem {
       // Store in state
       this.state.hierarchies.item_cost_type = filteredHierarchy;
       
-      console.log(`Rebuilt ITEM_COST_TYPE hierarchy with ${selectedItemCostTypes.length} types`);
+      // console.log(`✅ Status: Rebuilt ITEM_COST_TYPE hierarchy with ${selectedItemCostTypes.length} types`);
       return true;
     } else {
-      console.log("All ITEM_COST_TYPEs selected, no need to rebuild hierarchy");
+      // console.log("✅ Status: All ITEM_COST_TYPEs selected, no need to rebuild hierarchy");
       
       // Restore original hierarchy if we previously filtered
       if (this.state._originalHierarchies && this.state._originalHierarchies.item_cost_type) {
         this.state.hierarchies.item_cost_type = this.state._originalHierarchies.item_cost_type;
-        console.log("Restored original ITEM_COST_TYPE hierarchy");
+        // console.log("✅ Status: Restored original ITEM_COST_TYPE hierarchy");
       }
       
       return false;
@@ -1604,7 +1604,7 @@ class EnhancedFilterSystem {
    * Rebuild MATERIAL_TYPE hierarchy based on filter selections
    */
   rebuildMaterialTypeHierarchy() {
-    console.log("Rebuilding MATERIAL_TYPE hierarchy based on filters...");
+    console.log("⏳ Status: Rebuilding MATERIAL_TYPE hierarchy based on filters...");
     
     // Get the filter selections for material type
     const materialTypeFilter = this.filterSelections.materialType;
@@ -1629,7 +1629,7 @@ class EnhancedFilterSystem {
       selectedMaterialTypes = [...allMaterialTypes];
     }
     
-    console.log(`Selected MATERIAL_TYPEs: ${selectedMaterialTypes.length} of ${allMaterialTypes.length}`);
+    // console.log(`✅ Status: Selected MATERIAL_TYPEs: ${selectedMaterialTypes.length} of ${allMaterialTypes.length}`);
     
     // Only rebuild if we're filtering (otherwise use the original hierarchy)
     if (selectedMaterialTypes.length < allMaterialTypes.length) {
@@ -1647,15 +1647,15 @@ class EnhancedFilterSystem {
       // Store in state
       this.state.hierarchies.material_type = filteredHierarchy;
       
-      console.log(`Rebuilt MATERIAL_TYPE hierarchy with ${selectedMaterialTypes.length} types`);
+      // console.log(`✅ Status: Rebuilt MATERIAL_TYPE hierarchy with ${selectedMaterialTypes.length} types`);
       return true;
     } else {
-      console.log("All MATERIAL_TYPEs selected, no need to rebuild hierarchy");
+      // console.log("✅ Status: All MATERIAL_TYPEs selected, no need to rebuild hierarchy");
       
       // Restore original hierarchy if we previously filtered
       if (this.state._originalHierarchies && this.state._originalHierarchies.material_type) {
         this.state.hierarchies.material_type = this.state._originalHierarchies.material_type;
-        console.log("Restored original MATERIAL_TYPE hierarchy");
+        // console.log("✅ Status: Restored original MATERIAL_TYPE hierarchy");
       }
       
       return false;
@@ -1667,7 +1667,7 @@ class EnhancedFilterSystem {
    * Rebuild YEAR hierarchy based on filter selections
    */
   rebuildYearHierarchy() {
-    console.log("Rebuilding YEAR hierarchy based on filters...");
+    console.log("⏳ Status: Rebuilding YEAR hierarchy based on filters...");
     
     // Get the filter selections for business year
     const yearFilter = this.filterSelections.businessYear;
@@ -1692,7 +1692,7 @@ class EnhancedFilterSystem {
       selectedYears = [...allYears];
     }
     
-    console.log(`Selected YEARS: ${selectedYears.length} of ${allYears.length}`);
+    console.log(`✅ Status: Selected YEARS: ${selectedYears.length} of ${allYears.length}`);
     
     // Only rebuild if we're filtering (otherwise use the original hierarchy)
     if (selectedYears.length < allYears.length) {
@@ -1710,15 +1710,15 @@ class EnhancedFilterSystem {
       // Store in state
       this.state.hierarchies.year = filteredHierarchy;
       
-      console.log(`Rebuilt YEAR hierarchy with ${selectedYears.length} years`);
+      // console.log(`✅ Status: Rebuilt YEAR hierarchy with ${selectedYears.length} years`);
       return true;
     } else {
-      console.log("All YEARs selected, no need to rebuild hierarchy");
+      // console.log("✅ Status: All YEARs selected, no need to rebuild hierarchy");
       
       // Restore original hierarchy if we previously filtered
       if (this.state._originalHierarchies && this.state._originalHierarchies.year) {
         this.state.hierarchies.year = this.state._originalHierarchies.year;
-        console.log("Restored original YEAR hierarchy");
+        // console.log("✅ Status: Restored original YEAR hierarchy");
       }
       
       return false;
@@ -1730,7 +1730,7 @@ class EnhancedFilterSystem {
    * Rebuild MC hierarchy based on filter selections
    */
   rebuildMcHierarchy() {
-    console.log("Rebuilding MC hierarchy based on filters...");
+    console.log("⏳ Status: Rebuilding MC hierarchy based on filters...");
     
     // Get the filter selections for MC
     const mcFilter = this.filterSelections.managementCentre;
@@ -1755,7 +1755,7 @@ class EnhancedFilterSystem {
       selectedMCs = [...allMCs];
     }
     
-    console.log(`Selected MCs: ${selectedMCs.length} of ${allMCs.length}`);
+    console.log(`✅ Status: Selected MCs: ${selectedMCs.length} of ${allMCs.length}`);
     
     // Only rebuild if we're filtering (otherwise use the original hierarchy)
     if (selectedMCs.length < allMCs.length) {
@@ -1773,15 +1773,15 @@ class EnhancedFilterSystem {
       // Store in state
       this.state.hierarchies.mc = filteredHierarchy;
         
-      console.log(`Rebuilt MC hierarchy with ${selectedMCs.length} MCs`);
+      // console.log(`✅ Status: Rebuilt MC hierarchy with ${selectedMCs.length} MCs`);
       return true;
     } else {
-      console.log("All MCs selected, no need to rebuild hierarchy");
+      // console.log("✅ Status: All MCs selected, no need to rebuild hierarchy");
       
       // Restore original hierarchy if we previously filtered
       if (this.state._originalHierarchies && this.state._originalHierarchies.mc) {
         this.state.hierarchies.mc = this.state._originalHierarchies.mc;
-        console.log("Restored original MC hierarchy");
+        // console.log("✅ Status: Restored original MC hierarchy");
       }
       
       return false;
@@ -1796,7 +1796,7 @@ class EnhancedFilterSystem {
    * @returns {Object} - Hierarchy object with root, nodesMap and original data
    */
   buildFilteredGmidDisplayHierarchy(data, selectedRootGmids = null) {
-    console.log(`Building GMID display hierarchy${selectedRootGmids ? ' with ROOT_GMID filtering' : ''}...`);
+    console.log(`⏳ Status: Building GMID display hierarchy${selectedRootGmids ? ' with ROOT_GMID filtering' : ''}...`);
     
     // Check if we should apply ROOT_GMID filtering
     const applyRootGmidFilter = selectedRootGmids && 
@@ -1804,12 +1804,12 @@ class EnhancedFilterSystem {
                                 selectedRootGmids.length > 0;
     
     if (applyRootGmidFilter) {
-      console.log(`Filtering GMID hierarchy to include only ${selectedRootGmids.length} selected ROOT_GMIDs`);
+      // console.log(`✅ Status: Filtering GMID hierarchy to include only ${selectedRootGmids.length} selected ROOT_GMIDs`);
       
       // Filter the dimension data to only include records with selected ROOT_GMIDs
       data = data.filter(item => item.ROOT_GMID && selectedRootGmids.includes(item.ROOT_GMID));
       
-      console.log(`Filtered to ${data.length} GMID dimension records`);
+      // console.log(`✅ Status: Filtered to ${data.length} GMID dimension records`);
     }
     
     // Create root node
@@ -1948,8 +1948,8 @@ class EnhancedFilterSystem {
     });
     
     // Debug: Log how many nodes we created at each level
-    console.log("Nodes created per level:", levelCounts);
-    console.log("Total nodes in hierarchy:", Object.keys(nodesMap).length);
+    console.log("✅ Status: Nodes created per level:", levelCounts);
+    console.log("✅ Status: Total nodes in hierarchy:", Object.keys(nodesMap).length);
     
     // Sort nodes at each level
     const sortHierarchyNodes = (node) => {
@@ -1981,7 +1981,7 @@ class EnhancedFilterSystem {
    * @returns {Object} - Hierarchy object with root, nodesMap, and flatData
    */
   buildFilteredItemCostTypeHierarchy(data) {
-    console.log(`Building filtered ITEM_COST_TYPE hierarchy with ${data.length} records...`);
+    console.log(`⏳ Status: Building filtered ITEM_COST_TYPE hierarchy with ${data.length} records...`);
     
     // Create root node
     const root = {
@@ -2047,7 +2047,7 @@ class EnhancedFilterSystem {
       return aLabel.localeCompare(bLabel);
     });
     
-    console.log(`Built filtered ITEM_COST_TYPE hierarchy with ${Object.keys(nodesMap).length} nodes`);
+    console.log(`✅ Status: Built filtered ITEM_COST_TYPE hierarchy with ${Object.keys(nodesMap).length} nodes`);
     
     return {
       root: root,
@@ -2063,7 +2063,7 @@ class EnhancedFilterSystem {
    * @returns {Object} - Hierarchy object with root, nodesMap, and flatData
    */
   buildFilteredMaterialTypeHierarchy(data) {
-    console.log(`Building filtered MATERIAL_TYPE hierarchy with ${data.length} records...`);
+    console.log(`⏳ Status: Building filtered MATERIAL_TYPE hierarchy with ${data.length} records...`);
     
     // Create root node
     const root = {
@@ -2129,7 +2129,7 @@ class EnhancedFilterSystem {
       return aLabel.localeCompare(bLabel);
     });
     
-    console.log(`Built filtered MATERIAL_TYPE hierarchy with ${Object.keys(nodesMap).length} nodes`);
+    console.log(`✅ Status: Built filtered MATERIAL_TYPE hierarchy with ${Object.keys(nodesMap).length} nodes`);
     
     return {
       root: root,
@@ -2145,7 +2145,7 @@ class EnhancedFilterSystem {
    * @returns {Object} - Hierarchy object with root, nodesMap, and flatData
    */
   buildFilteredYearHierarchy(data) {
-    console.log(`Building filtered YEAR hierarchy with ${data.length} records...`);
+    console.log(`⏳ Status: Building filtered YEAR hierarchy with ${data.length} records...`);
     
     // Create root node
     const root = {
@@ -2204,7 +2204,7 @@ class EnhancedFilterSystem {
       return yearA - yearB;
     });
     
-    console.log(`Built filtered YEAR hierarchy with ${Object.keys(nodesMap).length} nodes`);
+    console.log(`✅ Status: Built filtered YEAR hierarchy with ${Object.keys(nodesMap).length} nodes`);
     
     return {
       root: root,
@@ -2220,7 +2220,7 @@ class EnhancedFilterSystem {
    * @returns {Object} - Hierarchy object with root, nodesMap, and flatData
    */
   buildFilteredMcHierarchy(data) {
-    console.log(`Building filtered MC hierarchy with ${data.length} records...`);
+    console.log(`⏳ Status: Building filtered MC hierarchy with ${data.length} records...`);
     
     // Create root node
     const root = {
@@ -2289,7 +2289,7 @@ class EnhancedFilterSystem {
       });
     }
     
-    console.log(`Built filtered MC hierarchy with ${Object.keys(nodesMap).length} nodes`);
+    console.log(`✅ Status: Built filtered MC hierarchy with ${Object.keys(nodesMap).length} nodes`);
     
     return {
       root: root,
@@ -2303,7 +2303,7 @@ class EnhancedFilterSystem {
    * Rebuild Legal Entity hierarchy based on filter selections
    */
   rebuildLegalEntityHierarchy() {
-    console.log("Rebuilding Legal Entity hierarchy based on filters...");
+    console.log("⏳ Status: Rebuilding Legal Entity hierarchy based on filters...");
     
     // Get the filter selections for Legal Entity
     const leFilter = this.filterSelections.legalEntity;
@@ -2328,7 +2328,7 @@ class EnhancedFilterSystem {
       selectedLEs = [...allLEs];
     }
     
-    console.log(`Selected LEs: ${selectedLEs.length} of ${allLEs.length}`);
+    console.log(`⏳ Status: Selected LEs: ${selectedLEs.length} of ${allLEs.length}`);
     
     // Only rebuild if we're filtering (otherwise use the original hierarchy)
     if (selectedLEs.length < allLEs.length) {
@@ -2346,12 +2346,12 @@ class EnhancedFilterSystem {
           record.LE && selectedLEs.includes(record.LE)
         );
         
-        console.log(`Filtered FACT data based on LE: ${originalFactData.length} -> ${this.state.filteredData.length} records`);
+        console.log(`✅ Status: Filtered FACT data based on LE: ${originalFactData.length} -> ${this.state.filteredData.length} records`);
         
         // Check if any records remain after filtering
         if (this.state.filteredData.length === 0) {
           // Create an empty hierarchy when no data matches
-          console.log("No records match LE filter, creating empty hierarchy");
+          console.log("✅ Status: No records match LE filter, creating empty hierarchy");
           this.createEmptyHierarchy(this.filterMeta.legalEntity);
           
           // Set a flag to indicate we have an empty result set
@@ -2374,15 +2374,15 @@ class EnhancedFilterSystem {
       // 5. Store filtered hierarchy in state
       this.state.hierarchies.le = filteredHierarchy;
         
-      console.log(`Rebuilt LE hierarchy with ${selectedLEs.length} legal entities from ${filteredDimData.length} dimension records`);
+      // console.log(`✅ Status: Rebuilt LE hierarchy with ${selectedLEs.length} legal entities from ${filteredDimData.length} dimension records`);
       return true;
     } else {
-      console.log("All Legal Entities selected, no need to rebuild hierarchy");
+      // console.log("✅ Status: All Legal Entities selected, no need to rebuild hierarchy");
       
       // Restore original hierarchy if we previously filtered
       if (this.state._originalHierarchies && this.state._originalHierarchies.le) {
         this.state.hierarchies.le = this.state._originalHierarchies.le;
-        console.log("Restored original LE hierarchy");
+        // console.log("✅ Status: Restored original LE hierarchy");
       }
       
       return false;
@@ -2394,7 +2394,7 @@ class EnhancedFilterSystem {
    * Rebuild Cost Element hierarchy based on filter selections
    */
   rebuildCostElementHierarchy() {
-    console.log("Rebuilding Cost Element hierarchy based on filters...");
+    console.log("⏳ Status: Rebuilding Cost Element hierarchy based on filters...");
     
     // Get the filter selections for Cost Element
     const ceFilter = this.filterSelections.costElement;
@@ -2419,7 +2419,7 @@ class EnhancedFilterSystem {
       selectedCEs = [...allCEs];
     }
     
-    console.log(`Selected Cost Elements: ${selectedCEs.length} of ${allCEs.length}`);
+    console.log(`✅ Status: Selected Cost Elements: ${selectedCEs.length} of ${allCEs.length}`);
     
     // Only rebuild if we're filtering (otherwise use the original hierarchy)
     if (selectedCEs.length < allCEs.length) {
@@ -2437,12 +2437,12 @@ class EnhancedFilterSystem {
           record.COST_ELEMENT && selectedCEs.includes(record.COST_ELEMENT)
         );
         
-        console.log(`Filtered FACT data based on COST_ELEMENT: ${originalFactData.length} -> ${this.state.filteredData.length} records`);
+        console.log(`✅ Status: Filtered FACT data based on COST_ELEMENT: ${originalFactData.length} -> ${this.state.filteredData.length} records`);
         
         // Check if any records remain after filtering
         if (this.state.filteredData.length === 0) {
           // Create an empty hierarchy when no data matches
-          console.log("No records match COST_ELEMENT filter, creating empty hierarchy");
+          console.log("✅ Status: No records match COST_ELEMENT filter, creating empty hierarchy");
           this.createEmptyHierarchy(this.filterMeta.costElement);
           
           // Set a flag to indicate we have an empty result set
@@ -2465,15 +2465,15 @@ class EnhancedFilterSystem {
       // 5. Store filtered hierarchy in state
       this.state.hierarchies.cost_element = filteredHierarchy;
         
-      console.log(`Rebuilt Cost Element hierarchy with ${selectedCEs.length} cost elements from ${filteredDimData.length} dimension records`);
+      // console.log(`✅ Status: Rebuilt Cost Element hierarchy with ${selectedCEs.length} cost elements from ${filteredDimData.length} dimension records`);
       return true;
     } else {
-      console.log("All Cost Elements selected, no need to rebuild hierarchy");
+      // console.log("✅ Status: All Cost Elements selected, no need to rebuild hierarchy");
       
       // Restore original hierarchy if we previously filtered
       if (this.state._originalHierarchies && this.state._originalHierarchies.cost_element) {
         this.state.hierarchies.cost_element = this.state._originalHierarchies.cost_element;
-        console.log("Restored original Cost Element hierarchy");
+        // console.log("✅ Status: Restored original Cost Element hierarchy");
       }
       
       return false;
@@ -2485,7 +2485,7 @@ class EnhancedFilterSystem {
    * Rebuild Smartcode hierarchy based on filter selections
    */
   rebuildSmartcodeHierarchy() {
-    console.log("Rebuilding Smartcode hierarchy based on filters...");
+    console.log("⏳ Status: Rebuilding Smartcode hierarchy based on filters...");
     
     // Get the filter selections for Smartcode
     const scFilter = this.filterSelections.smartcode;
@@ -2510,7 +2510,7 @@ class EnhancedFilterSystem {
       selectedSCs = [...allSCs];
     }
     
-    console.log(`Selected Smartcodes: ${selectedSCs.length} of ${allSCs.length}`);
+    console.log(`✅ Status: Selected Smartcodes: ${selectedSCs.length} of ${allSCs.length}`);
     
     // Only rebuild if we're filtering (otherwise use the original hierarchy)
     if (selectedSCs.length < allSCs.length) {
@@ -2536,12 +2536,12 @@ class EnhancedFilterSystem {
           record.ROOT_SMARTCODE && selectedSCs.includes(record.ROOT_SMARTCODE)
         );
         
-        console.log(`Filtered FACT data based on SMARTCODE: ${originalFactData.length} -> ${this.state.filteredData.length} records`);
+        console.log(`✅ Status: Filtered FACT data based on SMARTCODE: ${originalFactData.length} -> ${this.state.filteredData.length} records`);
         
         // Check if any records remain after filtering
         if (this.state.filteredData.length === 0) {
           // Create an empty hierarchy when no data matches
-          console.log("No records match SMARTCODE filter, creating empty hierarchy");
+          console.log("✅ Status: No records match SMARTCODE filter, creating empty hierarchy");
           
           // Create an empty hierarchy with just a root node
           const emptyHierarchy = {
@@ -2576,15 +2576,15 @@ class EnhancedFilterSystem {
       // 4. Store filtered hierarchy in state
       this.state.hierarchies.smartcode = filteredHierarchy;
         
-      console.log(`Rebuilt Smartcode hierarchy with ${selectedSCs.length} smartcodes from ${filteredDimData.length} dimension records`);
+      // console.log(`✅ Status: Rebuilt Smartcode hierarchy with ${selectedSCs.length} smartcodes from ${filteredDimData.length} dimension records`);
       return true;
     } else {
-      console.log("All Smartcodes selected, no need to rebuild hierarchy");
+      // console.log("✅ Status: All Smartcodes selected, no need to rebuild hierarchy");
       
       // Restore original hierarchy if we previously filtered
       if (this.state._originalHierarchies && this.state._originalHierarchies.smartcode) {
         this.state.hierarchies.smartcode = this.state._originalHierarchies.smartcode;
-        console.log("Restored original Smartcode hierarchy");
+        // console.log("✅ Status: Restored original Smartcode hierarchy");
       }
       
       return false;
@@ -2603,7 +2603,7 @@ class EnhancedFilterSystem {
    * @param {String} pathSeparator - The separator used in PATH field ('/' or '//')
    */
   buildPathHierarchy(data, root, nodesMap, factIdField, pathSeparator = '//') {
-    console.log(`Building PATH hierarchy for ${root.hierarchyName} with ${data.length} records using separator "${pathSeparator}"`);
+    console.log(`⏳ Status: Building PATH hierarchy for ${root.hierarchyName} with ${data.length} records using separator "${pathSeparator}"`);
     
     // Maps to track nodes by path
     const nodeByPath = new Map();
@@ -2686,7 +2686,7 @@ class EnhancedFilterSystem {
         }
       } catch (err) {
         invalidPathCount++;
-        console.error(`Error processing path for ${root.hierarchyName}: ${item.PATH}`, err);
+        console.error(`❌ Alert! Error processing path for ${root.hierarchyName}: ${item.PATH}`, err);
       }
     });
     
@@ -2710,7 +2710,7 @@ class EnhancedFilterSystem {
     
     sortNodes(root);
     
-    console.log(`PATH hierarchy for ${root.hierarchyName} built with ${Object.keys(nodesMap).length} nodes`);
+    console.log(`✅ Status: PATH hierarchy for ${root.hierarchyName} built with ${Object.keys(nodesMap).length} nodes`);
     
     // Handle case where no valid hierarchies were created
     if (Object.keys(nodesMap).length <= 1) {
@@ -2731,7 +2731,7 @@ class EnhancedFilterSystem {
  * @returns {Object} - Hierarchy object with root, nodesMap, and flatData
  */
   buildFilteredLegalEntityHierarchy(data) {
-    console.log(`Building filtered legal entity hierarchy with ${data.length} records...`);
+    console.log(`⏳ Status: Building filtered legal entity hierarchy with ${data.length} records...`);
     
     // Create root node
     const root = {
@@ -2758,20 +2758,20 @@ class EnhancedFilterSystem {
       try {
         // Extract unique PATH values for analysis
         const paths = data.filter(item => item.PATH).map(item => item.PATH);
-        console.log(`Found ${paths.length} unique PATH values for Legal Entities`);
+        console.log(`✅ Status: Found ${paths.length} unique PATH values for Legal Entities`);
         
         // Get common delimiter (should be '//')
         const pathSeparator = '//';
         
-        console.log(`Using path separator: "${pathSeparator}" for Legal Entity hierarchy`);
+        // console.log(`Using path separator: "${pathSeparator}" for Legal Entity hierarchy`);
         
         // Build the hierarchy using the robust path processing
         this.buildPathHierarchy(data, root, nodesMap, 'LE', pathSeparator);
         
         // Log hierarchy building success
-        console.log(`Successfully built Legal Entity hierarchy: ${root.children.length} top-level nodes, ${Object.keys(nodesMap).length} total nodes`);
+        console.log(`✅ Status: Successfully built Legal Entity hierarchy: ${root.children.length} top-level nodes, ${Object.keys(nodesMap).length} total nodes`);
       } catch (error) {
-        console.error("Error building Legal Entity hierarchy:", error);
+        console.error("❌ Alert! Error building Legal Entity hierarchy:", error);
         // Fall back to flat structure on error
         this.buildFlatHierarchy(data, root, nodesMap, 'LE', 'LE_DESC');
       }
@@ -2783,7 +2783,7 @@ class EnhancedFilterSystem {
     // Ensure root has children flag set correctly
     root.hasChildren = root.children.length > 0;
     
-    console.log(`Built filtered LE hierarchy with ${Object.keys(nodesMap).length} nodes`);
+    console.log(`✅ Status: Built filtered LE hierarchy with ${Object.keys(nodesMap).length} nodes`);
     
     return {
       root: root,
@@ -2799,7 +2799,7 @@ class EnhancedFilterSystem {
    * @returns {Object} - Hierarchy object with root, nodesMap, and flatData
    */
   buildFilteredCostElementHierarchy(data) {
-    console.log(`Building filtered Cost Element hierarchy with ${data.length} records...`);
+    console.log(`⏳ Status: Building filtered Cost Element hierarchy with ${data.length} records...`);
     
     // Create root node
     const root = {
@@ -2826,21 +2826,21 @@ class EnhancedFilterSystem {
       try {
         // Extract unique PATH values for analysis
         const paths = data.filter(item => item.PATH).map(item => item.PATH);
-        console.log(`Found ${paths.length} unique PATH values for Cost Elements`);
+        console.log(`✅ Status: Found ${paths.length} unique PATH values for Cost Elements`);
         
         // Get common delimiter (should be '//')
         // Use // as the default path separator as specified
         const pathSeparator = '//';
         
-        console.log(`Using path separator: "${pathSeparator}" for Cost Element hierarchy`);
+        // console.log(`✅ Status: Using path separator: "${pathSeparator}" for Cost Element hierarchy`);
         
         // Build the hierarchy using the robust path processing
         this.buildPathHierarchy(data, root, nodesMap, 'COST_ELEMENT', pathSeparator);
         
         // Log hierarchy building success
-        console.log(`Successfully built Cost Element hierarchy: ${root.children.length} top-level nodes, ${Object.keys(nodesMap).length} total nodes`);
+        console.log(`✅ Status: Successfully built Cost Element hierarchy: ${root.children.length} top-level nodes, ${Object.keys(nodesMap).length} total nodes`);
       } catch (error) {
-        console.error("Error building Cost Element hierarchy:", error);
+        console.error("❌ Alert! Error building Cost Element hierarchy:", error);
         // Fall back to flat structure on error
         this.buildFlatHierarchy(data, root, nodesMap, 'COST_ELEMENT', 'COST_ELEMENT_DESC');
       }
@@ -2852,7 +2852,7 @@ class EnhancedFilterSystem {
     // Ensure root has children flag set correctly
     root.hasChildren = root.children.length > 0;
     
-    console.log(`Built filtered Cost Element hierarchy with ${Object.keys(nodesMap).length} nodes`);
+    console.log(`✅ Status: Built filtered Cost Element hierarchy with ${Object.keys(nodesMap).length} nodes`);
     
     return {
       root: root,
@@ -2868,7 +2868,7 @@ class EnhancedFilterSystem {
    * @returns {Object} - Hierarchy object with root, nodesMap, and flatData
    */
   buildFilteredSmartcodeHierarchy(data) {
-    console.log(`Building filtered Smartcode hierarchy with ${data.length} records...`);
+    console.log(`⏳ Status: Building filtered Smartcode hierarchy with ${data.length} records...`);
     
     // Create root node
     const root = {
@@ -2937,7 +2937,7 @@ class EnhancedFilterSystem {
       });
     }
     
-    console.log(`Built filtered Smartcode hierarchy with ${Object.keys(nodesMap).length} nodes`);
+    console.log(`✅ Status: Built filtered Smartcode hierarchy with ${Object.keys(nodesMap).length} nodes`);
     
     return {
       root: root,
@@ -3036,7 +3036,7 @@ class EnhancedFilterSystem {
       return data;
     }
     
-    console.log(`Applying ${dimension.label} filter (${this.filterSelections[dimension.id].size} excluded)...`);
+    console.log(`✅ Status: Applying ${dimension.label} filter (${this.filterSelections[dimension.id].size} excluded)...`);
     
     const startTime = performance.now();
     let filteredData;
@@ -3053,7 +3053,7 @@ class EnhancedFilterSystem {
     }
     
     const endTime = performance.now();
-    console.log(`${dimension.label} filter applied in ${(endTime - startTime).toFixed(2)}ms: ${data.length} -> ${filteredData.length} records`);
+    console.log(`✅ Status: ${dimension.label} filter applied in ${(endTime - startTime).toFixed(2)}ms: ${data.length} -> ${filteredData.length} records`);
     
     return filteredData;
   }
@@ -3069,7 +3069,7 @@ class EnhancedFilterSystem {
     // Get hierarchy
     const hierarchy = this.state.hierarchies[dimension.dimensionKey];
     if (!hierarchy || !hierarchy.root) {
-      console.warn(`Hierarchy not found for ${dimension.label}, falling back to direct filtering`);
+      console.warn(`⚠️ Warning: Hierarchy not found for ${dimension.label}, falling back to direct filtering`);
       return data.filter(record => {
         const value = record[dimension.factField];
         return value !== undefined && !this.filterSelections[dimension.id].has(value);
@@ -3103,7 +3103,7 @@ class EnhancedFilterSystem {
       }
     });
     
-    console.log(`Collected ${excludedFactIds.size} excluded factIds for ${dimension.label}`);
+    console.log(`✅ Status: Collected ${excludedFactIds.size} excluded factIds for ${dimension.label}`);
     
     // If we have no excluded factIds and no selected nodes, everything is selected
     if (excludedFactIds.size === 0 && this.filterSelections[dimension.id].size === 0) {
@@ -3116,7 +3116,7 @@ class EnhancedFilterSystem {
       return value !== undefined && !excludedFactIds.has(value);
     });
     
-    console.log(`Applied ${dimension.label} filter: ${data.length} -> ${filteredData.length} records`);
+    console.log(`✅ Status: Applied ${dimension.label} filter: ${data.length} -> ${filteredData.length} records`);
     
     return filteredData;
   }
@@ -3246,17 +3246,17 @@ class EnhancedFilterSystem {
    * Refresh the pivot table with filtered data
    */
   refreshPivotTable() {
-    console.log('Refreshing pivot table with filtered data...');
+    console.log('⏳ Status: Refreshing pivot table with filtered data...');
     
     // Check if we have a pivot table generation function
     if (window.App && window.App.pivotTable && window.App.pivotTable.generatePivotTable) {
       window.App.pivotTable.generatePivotTable();
-      console.log('Pivot table refreshed');
+      console.log('✅ Status: Pivot table refreshed');
     } else if (window.generatePivotTable) {
       window.generatePivotTable();
-      console.log('Pivot table refreshed');
+      console.log('✅ Status: Pivot table refreshed');
     } else {
-      console.warn('Pivot table refresh function not found');
+      console.warn('⚠️ Warning: Pivot table refresh function not found');
     }
   }
 }
@@ -3274,7 +3274,7 @@ function attemptInitialization() {
   
   // Check if window.App exists and has data
   if (window.App && window.App.state && window.App.state.factData && window.App.state.factData.length > 0) {
-    console.log("Data detected, initializing filter system");
+    console.log("⏳ Status: Data detected, initializing filter system");
     enhancedFilterSystem.state = window.App.state;
     enhancedFilterSystem.initialize();
     return true;
@@ -3282,7 +3282,7 @@ function attemptInitialization() {
   
   // Check if window.appState exists directly
   if (window.appState && window.appState.factData && window.appState.factData.length > 0) {
-    console.log("appState data detected, initializing filter system");
+    console.log("⏳ Status: AppState data detected, initializing filter system");
     enhancedFilterSystem.state = window.appState;
     enhancedFilterSystem.initialize();
     return true;
@@ -3290,12 +3290,12 @@ function attemptInitialization() {
   
   // If we've tried too many times, stop trying
   if (initAttempts >= maxInitAttempts) {
-    console.warn("Gave up waiting for data to initialize filter system");
+    console.warn("⚠️ Warning: Gave up waiting for data to initialize filter system");
     return false;
   }
   
   // Try again in 1 second
-  console.log(`Waiting for BOM data to be available... (attempt ${initAttempts})`);
+  console.log(`⏳ Status: Waiting for BOM data to be available... (attempt ${initAttempts})`);
   setTimeout(attemptInitialization, 1000);
   return false;
 }

@@ -1,12 +1,12 @@
 /**
- * Enhanced multiDimensionPivotHandler.js
- * 
  * This module provides functionality for handling multiple dimensions in pivot tables.
  * It processes data across multiple dimensions, handles filtering, rendering, and user interactions
  * for multi-dimensional pivot tables.
  */
 
 import stateModule from './state.js';
+import data from './data.js'
+
 
 // Get reference to application state
 const state = stateModule.state;
@@ -194,6 +194,44 @@ const multiDimensionPivotHandler = {
         return result;
     },
 
+
+    /**
+     * Gets a user-friendly display name for a dimension
+     * 
+     * @param {string} hierarchyField - The hierarchy field ID (e.g., "DIM_PRODUCT")
+     * @returns {string} - A formatted display name (e.g., "Product")
+     */
+    getDimensionDisplayName: function(hierarchyField) {
+        if (!hierarchyField) return '';
+        
+        // Remove DIM_ prefix
+        let name = hierarchyField.replace('DIM_', '');
+        
+        // Format specific dimension names
+        const formattedNames = {
+            'LE': 'Legal Entity',
+            'MC': 'Management Center',
+            'COST_ELEMENT': 'Cost Element',
+            'SMARTCODE': 'Smart Code',
+            'GMID_DISPLAY': 'GMID',
+            'ITEM_COST_TYPE': 'Item Cost Type',
+            'MATERIAL_TYPE': 'Material Type',
+            'YEAR': 'Year'
+        };
+        
+        // Return formatted name or format the original
+        if (formattedNames[name]) {
+            return formattedNames[name];
+        }
+        
+        // Format camel case or underscores
+        return name
+            .replace(/_/g, ' ')
+            .replace(/([A-Z])/g, ' $1')
+            .replace(/^\w/, c => c.toUpperCase());
+    },
+
+
     /**
      * Extracts the dimension name from a hierarchy field
      * 
@@ -206,6 +244,7 @@ const multiDimensionPivotHandler = {
         }
         return hierarchyField.replace('DIM_', '').toLowerCase();
     },
+
 
     /**
      * Filters data by multiple dimension criteria
@@ -251,6 +290,7 @@ const multiDimensionPivotHandler = {
         return filteredData;
     },
 
+
     /**
      * Filter data by a single dimension
      */
@@ -271,6 +311,7 @@ const multiDimensionPivotHandler = {
         // This is a safety measure in case pivotTable is not initialized yet
         return this.basicFilterByDimension(data, dimensionDef, dimName);
     },
+
     
     /**
      * Basic dimension filtering as a fallback
@@ -307,9 +348,10 @@ const multiDimensionPivotHandler = {
         }
         
         // Fallback - couldn't apply specific filtering
-        console.warn(`Basic filtering fallback - no specific filter for dimension: ${dimName}`);
+        // console.warn(`⚠️ Warning: Basic filtering fallback - no specific filter for dimension: ${dimName}`);
         return data;
     },
+
     
     /**
      * Get fact id field name for a dimension
@@ -328,6 +370,7 @@ const multiDimensionPivotHandler = {
         
         return factIdFieldMap[dimName.toLowerCase()] || null;
     },
+
     
     /**
      * Get path field name for a dimension
@@ -344,6 +387,7 @@ const multiDimensionPivotHandler = {
         return pathFieldMap[dimName.toLowerCase()] || null;
     },
 
+
     /**
      * Renders a single dimension cell within a multi-dimension row
      * 
@@ -353,13 +397,18 @@ const multiDimensionPivotHandler = {
      */
     renderDimensionCell: function(dimensionDef, index) {
         const dimName = dimensionDef.hierarchyField ? dimensionDef.hierarchyField.replace('DIM_', '').toLowerCase() : '';
-        const indentation = dimensionDef.level ? dimensionDef.level * 20 : 0; // 20px per level
+        const level = dimensionDef.level || 0;
+        const indentClass = `indent-level-${level}`; // Use class-based indentation
         
-        // Add cell with proper indentation and expand/collapse control
-        let cellHtml = `<td class="hierarchy-cell dimension-cell" 
-                       data-dimension="${dimName}" 
-                       data-dimension-index="${index}"
-                       style="padding-left: ${indentation}px;">`;
+        // Determine if this is a parent node for visual indicators
+        const isParent = dimensionDef.hasChildren === true;
+        const parentClass = isParent ? 'hierarchy-parent' : '';
+        
+        // Add cell with proper class-based indentation and expand/collapse control
+        let cellHtml = `<td class="hierarchy-cell dimension-cell ${indentClass} ${parentClass}" 
+                           data-dimension="${dimName}" 
+                           data-dimension-index="${index}"
+                           data-level="${level}">`;
         
         // Add expand/collapse control only if it has children
         if (dimensionDef.hasChildren) {
@@ -369,7 +418,6 @@ const multiDimensionPivotHandler = {
                 data-hierarchy="${dimName}" 
                 data-zone="row"
                 data-dimension-index="${index}"
-                onclick="window.handleMultiDimensionExpandCollapseClick(event)"
                 title="Expand/collapse this item"></span>`;
         } else {
             cellHtml += `<span class="leaf-node"></span>`;
@@ -381,6 +429,7 @@ const multiDimensionPivotHandler = {
         return cellHtml;
     },
 
+
     /**
      * Renders all cells for a multi-dimension row
      * 
@@ -388,39 +437,62 @@ const multiDimensionPivotHandler = {
      * @returns {string} - HTML string for all row cells
      */
     renderMultiDimensionRowCells: function(rowDef) {
-        if (!rowDef.dimensions || !Array.isArray(rowDef.dimensions)) {
-            // Single dimension - use standard rendering
-            const dimName = rowDef.hierarchyField ? rowDef.hierarchyField.replace('DIM_', '').toLowerCase() : '';
-            const indentation = rowDef.level ? rowDef.level * 20 : 0;
+        if (!rowDef || !rowDef.dimensions) return '<td class="hierarchy-cell">No data</td>';
+        
+        // Create a cell with the multi-dimension-cell class
+        let cellsHtml = '<td class="hierarchy-cell multi-dimension-cell">';
+        
+        // Render each dimension in order with proper indentation and clear visual distinction
+        rowDef.dimensions.forEach((dimensionDef, index) => {
+            const level = dimensionDef.level || 0;
+            const dimName = dimensionDef.hierarchyField ? 
+                        dimensionDef.hierarchyField.replace('DIM_', '').toLowerCase() : '';
             
-            let cellHtml = `<td class="hierarchy-cell" style="padding-left: ${indentation}px;">`;
+            // Get the field label for this dimension for display
+            const fieldLabel = this.getDimensionDisplayName(dimensionDef.hierarchyField);
             
-            if (rowDef.hasChildren) {
-                const expandClass = rowDef.expanded ? 'expanded' : 'collapsed';
-                cellHtml += `<span class="expand-collapse ${expandClass}" 
-                    data-node-id="${rowDef._id}" 
-                    data-hierarchy="${dimName}" 
-                    data-zone="row"
-                    onclick="window.handleExpandCollapseClick(event)"
-                    title="Expand/collapse this item"></span>`;
-            } else {
-                cellHtml += `<span class="leaf-node"></span>`;
+            // Add a wrapper div for this dimension with proper styling
+            cellsHtml += `<div class="dimension-row" 
+                            data-dimension="${dimName}" 
+                            data-dimension-index="${index}"
+                            data-level="${level}">`;
+            
+            // Add dimension type label 
+            cellsHtml += `<div class="dimension-type">${fieldLabel}</div>`;
+            
+            // Value container with proper indentation
+            cellsHtml += `<div class="dimension-value">`;
+            
+            // Indent based on level
+            const indentPx = 20 * level;
+            if (level > 0) {
+                cellsHtml += `<span class="dimension-indent" style="width:${indentPx}px"></span>`;
             }
             
-            cellHtml += `<span class="dimension-label">${rowDef.label}</span>`;
-            cellHtml += '</td>';
+            // Add expand/collapse control only if it has children
+            if (dimensionDef.hasChildren === true) {
+                const expandClass = dimensionDef.expanded ? 'expanded' : 'collapsed';
+                cellsHtml += `<span class="expand-collapse ${expandClass}" 
+                    data-node-id="${dimensionDef._id}" 
+                    data-hierarchy="${dimName}" 
+                    data-zone="row"
+                    data-dimension-index="${index}"
+                    onclick="window.handleMultiDimensionExpandCollapseClick(event)"
+                    title="Expand/collapse this item"></span>`;
+            } else {
+                cellsHtml += `<span class="leaf-node"></span>`;
+            }
             
-            return cellHtml;
-        }
-
-        // Multiple dimensions - render each in its own cell
-        let cellsHtml = '';
-        rowDef.dimensions.forEach((dimensionDef, index) => {
-            cellsHtml += this.renderDimensionCell(dimensionDef, index);
+            cellsHtml += `<span class="dimension-label">${dimensionDef.label || dimensionDef._id}</span>`;
+            cellsHtml += '</div>'; // Close dimension-value
+            cellsHtml += '</div>'; // Close dimension-row
         });
+        
+        cellsHtml += '</td>'; // Close hierarchy-cell
         
         return cellsHtml;
     },
+
 
     /**
      * Determines if a multi-dimension row should be visible based on expansion state
@@ -461,6 +533,7 @@ const multiDimensionPivotHandler = {
             return this.basicIsNodeVisible(tempRow, allRows);
         });
     },
+
     
     /**
      * Basic node visibility check as a fallback
@@ -489,55 +562,74 @@ const multiDimensionPivotHandler = {
         return true; // All ancestors are expanded
     },
 
+
     /**
      * Event handler for expand/collapse controls in multi-dimension rows
      * 
      * @param {Event} e - Click event
      */
     handleMultiDimensionExpandCollapseClick: function(e) {
-        e.stopPropagation();
+        // Make sure we're handling the actual button click, not its children
+        let target = e.target;
         
-        const nodeId = e.target.getAttribute('data-node-id');
-        const hierarchyName = e.target.getAttribute('data-hierarchy');
-        const zone = e.target.getAttribute('data-zone') || 'row';
-        const dimensionIndex = parseInt(e.target.getAttribute('data-dimension-index') || '0', 10);
+        // If clicked on a child element, find the actual button
+        if (!target.classList.contains('expand-collapse')) {
+            target = target.closest('.expand-collapse');
+            if (!target) return; // Exit if no button found
+        }
         
-        if (!nodeId || !hierarchyName) return;
+        const nodeId = target.getAttribute('data-node-id');
+        const hierarchyName = target.getAttribute('data-hierarchy');
+        const zone = target.getAttribute('data-zone') || 'row';
+        const dimensionIndex = parseInt(target.getAttribute('data-dimension-index') || '0', 10);
         
-        console.log("Multi-dimension expand/collapse:", {
-            nodeId,
-            hierarchyName,
-            zone,
-            dimensionIndex
+        console.log("Multi-dimension expand/collapse clicked:", { 
+            nodeId, hierarchyName, zone, dimensionIndex 
         });
         
-        // Ensure state.expandedNodes exists
+        // Get reference to state
+        const state = window.App?.state || stateModule.state;
+        
+        // Ensure node exists in state
+        let node = null;
+        
+        if (hierarchyName && state.hierarchies && state.hierarchies[hierarchyName]) {
+            // Look in the specified hierarchy
+            node = state.hierarchies[hierarchyName].nodesMap?.[nodeId];
+        }
+        
+        if (!node) {
+            console.error(`❌ Alert! Node ${nodeId} not found in ${hierarchyName} hierarchy`);
+            return;
+        }
+        
+        // Toggle node expansion in state
         state.expandedNodes = state.expandedNodes || {};
         state.expandedNodes[hierarchyName] = state.expandedNodes[hierarchyName] || {};
         state.expandedNodes[hierarchyName][zone] = state.expandedNodes[hierarchyName][zone] || {};
         
-        // Toggle node expansion in state
-        state.expandedNodes[hierarchyName][zone][nodeId] = !state.expandedNodes[hierarchyName][zone][nodeId];
+        // Toggle the expansion state
+        const newState = !state.expandedNodes[hierarchyName][zone][nodeId];
+        state.expandedNodes[hierarchyName][zone][nodeId] = newState;
         
-        // Also update the node in the hierarchy
-        if (state.hierarchies && state.hierarchies[hierarchyName]) {
-            const node = state.hierarchies[hierarchyName].nodesMap[nodeId];
-            if (node) {
-                node.expanded = state.expandedNodes[hierarchyName][zone][nodeId];
-            }
-        }
+        // Also update the node's expanded property directly
+        node.expanded = newState;
         
-        // Update the visual state of the expand/collapse icon
-        const expandClass = state.expandedNodes[hierarchyName][zone][nodeId] ? 'expanded' : 'collapsed';
-        e.target.className = `expand-collapse ${expandClass}`;
+        console.log(`Node ${nodeId} expansion set to: ${newState}`);
         
-        // Regenerate pivot table
-        if (typeof window.refreshPivotTable === 'function') {
+        // Update the visual state of the button IMMEDIATELY for feedback
+        target.classList.toggle('expanded');
+        target.classList.toggle('collapsed');
+        
+        // Regenerate pivot table with a small delay to allow visual feedback
+        setTimeout(() => {
             window.refreshPivotTable();
-        } else if (typeof window.generatePivotTable === 'function') {
-            window.generatePivotTable();
-        }
-    }
+        }, 10);
+        
+        // Prevent event from bubbling up
+        e.stopPropagation();
+    },
+
 };
 
 export default multiDimensionPivotHandler;

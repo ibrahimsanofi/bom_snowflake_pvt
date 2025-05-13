@@ -24,21 +24,6 @@ function setDefaultFields() {
 
 
 /**
- * Display a status message with type-based styling
- * @param {string} message - The message to display
- * @param {string} type - The type of message (success, error, info)
- * @param {object} elements - DOM elements object containing uploadStatus
- */
-function showStatus(message, type, elements) {
-    if (elements && elements.uploadStatus) {
-        elements.uploadStatus.innerHTML = `<div class="status-bar status-${type}">${message}</div>`;
-    } else {
-        console.log(`✅ Status: Status (${type}): ${message}`);
-    }
-}
-
-
-/**
  * Renders available fields in the field panel
  * @param {object} elements - DOM elements object containing availableFields container
  */
@@ -207,193 +192,6 @@ function renderFieldContainer(container, fieldIds) {
 
 
 /**
- * Renders filter controls for the active filter fields
- * Creates a tree-style UI for hierarchical dimensions and text inputs for regular dimensions
- */
-function renderFilterControls() {
-    // Create or get the filter container
-    let filterContainer = document.getElementById('pivotFilterControls');
-    if (!filterContainer) {
-        // Create the container if it doesn't exist
-        filterContainer = document.createElement('div');
-        filterContainer.id = 'pivotFilterControls';
-        filterContainer.className = 'pivot-filter-controls';
-        
-        // Insert filter container before the pivot table
-        const pivotTableContainer = document.getElementById('pivotTableContainer');
-        if (pivotTableContainer) {
-            pivotTableContainer.parentNode.insertBefore(filterContainer, pivotTableContainer);
-        }
-    }
-    
-    // Clear existing filters
-    filterContainer.innerHTML = '';
-    
-    // Hide container if no filter fields
-    if (!state.filterFields || state.filterFields.length === 0) {
-        filterContainer.style.display = 'none';
-        return;
-    }
-    
-    // Show the container
-    filterContainer.style.display = 'block';
-    
-    // Add a header
-    const header = document.createElement('div');
-    header.className = 'filter-header';
-    header.textContent = 'Filters:';
-    filterContainer.appendChild(header);
-    
-    // Render each filter field
-    state.filterFields.forEach(fieldId => {
-        // Find the field definition
-        const field = state.availableFields.find(f => f.id === fieldId);
-        if (!field) return; // Skip if field not found
-        
-        // Create filter control container
-        const filterControl = document.createElement('div');
-        filterControl.className = 'filter-control';
-        
-        // Create filter label
-        const filterLabel = document.createElement('span');
-        filterLabel.className = 'filter-label';
-        filterLabel.textContent = field.label + ': ';
-        filterControl.appendChild(filterLabel);
-        
-        // Create different filter controls based on field type
-        if (field.hierarchical) {
-            // Render tree-style filter for hierarchical dimensions
-            renderHierarchicalFilter(filterControl, field, fieldId);
-        } else {
-            // Render text input filter for non-hierarchical dimensions
-            renderTextFilter(filterControl, field, fieldId);
-        }
-        
-        // Add the completed filter control to the container
-        filterContainer.appendChild(filterControl);
-    });
-}
-
-
-/**
- * Renders a hierarchical tree-style filter for dimension fields
- * @param {HTMLElement} filterControl - The parent filter control element
- * @param {object} field - The field definition
- * @param {string} fieldId - The field ID
- */
-function renderHierarchicalFilter(filterControl, field, fieldId) {
-    // Get dimension name and hierarchy
-    const dimName = field.id.replace('DIM_', '').toLowerCase();
-    const hierarchy = state.hierarchies[dimName];
-    
-    // Only proceed if hierarchy exists and has a root node
-    if (hierarchy && hierarchy.root) {
-        // Create container for tree control
-        const treeContainer = document.createElement('div');
-        treeContainer.className = 'filter-tree-container';
-        
-        // Initialize filter tree state if not already set
-        if (!state.filterTreeState) {
-            state.filterTreeState = {};
-        }
-        if (!state.filterTreeState[fieldId]) {
-            state.filterTreeState[fieldId] = { 'ROOT': true }; // Root is expanded by default
-        }
-        
-        // Create "All" option at the top
-        renderAllOption(treeContainer, fieldId);
-        
-        // Start building tree from the root node
-        buildTreeNode(hierarchy.root, treeContainer, fieldId);
-        
-        // Add clear button if filter is active
-        renderClearButton(treeContainer, fieldId);
-        
-        // Add the tree container to the filter control
-        filterControl.appendChild(treeContainer);
-    }
-}
-
-
-/**
- * Renders the "All" option at the top of a hierarchical filter
- * @param {HTMLElement} treeContainer - The tree container element
- * @param {string} fieldId - The field ID
- */
-function renderAllOption(treeContainer, fieldId) {
-    const allOption = document.createElement('div');
-    allOption.className = 'filter-tree-item';
-    
-    // Create radio button for "All"
-    const allRadio = document.createElement('input');
-    allRadio.type = 'radio';
-    allRadio.name = `filter-${fieldId}`;
-    allRadio.value = 'ALL';
-    allRadio.id = `filter-${fieldId}-ALL`;
-    
-    // Check if "All" is selected (no active filter)
-    if (!state.activeFilters || !state.activeFilters[fieldId]) {
-        allRadio.checked = true;
-    }
-    
-    // Add change event for "All" option
-    allRadio.addEventListener('change', function() {
-        if (this.checked) {
-            // Clear filter for this field
-            state.activeFilters = state.activeFilters || {};
-            state.activeFilters[fieldId] = null;
-            
-            // Regenerate pivot table
-            generatePivotTable();
-        }
-    });
-    
-    // Create label for "All" option
-    const allLabel = document.createElement('label');
-    allLabel.setAttribute('for', `filter-${fieldId}-ALL`);
-    allLabel.textContent = 'All';
-    allLabel.className = 'filter-tree-label';
-    
-    // Add elements to the container
-    allOption.appendChild(allRadio);
-    allOption.appendChild(allLabel);
-    treeContainer.appendChild(allOption);
-}
-
-
-/**
- * Renders a clear button for an active filter
- * @param {HTMLElement} treeContainer - The tree container element
- * @param {string} fieldId - The field ID
- */
-function renderClearButton(treeContainer, fieldId) {
-    // Only add clear button if filter is active
-    if (state.activeFilters && state.activeFilters[fieldId]) {
-        const clearButton = document.createElement('button');
-        clearButton.className = 'clear-filter';
-        clearButton.textContent = 'Clear Filter';
-        clearButton.addEventListener('click', function() {
-            // Clear the filter
-            state.activeFilters[fieldId] = null;
-            
-            // Check the "All" radio button
-            const allRadio = document.getElementById(`filter-${fieldId}-ALL`);
-            if (allRadio) allRadio.checked = true;
-            
-            // Regenerate pivot table
-            generatePivotTable();
-        });
-        
-        // Add clear button to control
-        const clearContainer = document.createElement('div');
-        clearContainer.className = 'filter-clear-container';
-        clearContainer.appendChild(clearButton);
-        treeContainer.appendChild(clearContainer);
-    }
-}
-
-
-/**
  * Renders an expand/collapse control for nodes with children
  * @param {HTMLElement} nodeItem - The node item element
  * @param {object} node - The node data
@@ -493,80 +291,6 @@ function renderChildrenContainer(nodeContainer, node, fieldId, level) {
     });
     
     nodeContainer.appendChild(childrenContainer);
-}
-
-
-/**
- * Renders a text input filter for non-hierarchical dimensions
- * @param {HTMLElement} filterControl - The filter control element
- * @param {object} field - The field definition
- * @param {string} fieldId - The field ID
- */
-function renderTextFilter(filterControl, field, fieldId) {
-    // Create text input
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.className = 'filter-input';
-    input.setAttribute('data-field', fieldId);
-    input.placeholder = 'Filter value...';
-    
-    // Set current value if filter is active
-    if (state.activeFilters && state.activeFilters[fieldId]) {
-        input.value = state.activeFilters[fieldId];
-        input.classList.add('has-filter');
-    }
-    
-    // Create apply button
-    const button = document.createElement('button');
-    button.className = 'filter-button';
-    button.textContent = 'Apply';
-    button.addEventListener('click', function() {
-        applyTextFilter(input);
-    });
-    
-    // Add enter key support for the input
-    input.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            applyTextFilter(input);
-        }
-    });
-    
-    // Add elements to the filter control
-    filterControl.appendChild(input);
-    filterControl.appendChild(button);
-    
-    // Add clear button if filter is active
-    if (state.activeFilters && state.activeFilters[fieldId]) {
-        renderTextFilterClearButton(filterControl, input);
-    }
-}
-
-
-/**
- * Renders a clear button for text filters
- * @param {HTMLElement} filterControl - The filter control element
- * @param {HTMLInputElement} input - The filter input element
- */
-function renderTextFilterClearButton(filterControl, input) {
-    const clearButton = document.createElement('button');
-    clearButton.className = 'clear-filter';
-    clearButton.textContent = 'Clear';
-    clearButton.addEventListener('click', function() {
-        const fieldId = input.getAttribute('data-field');
-        
-        // Clear the filter
-        state.activeFilters[fieldId] = null;
-        input.value = '';
-        input.classList.remove('has-filter');
-        
-        // Remove the clear button
-        this.remove();
-        
-        // Regenerate pivot table
-        generatePivotTable();
-    });
-    
-    filterControl.appendChild(clearButton);
 }
 
 
@@ -705,56 +429,6 @@ function getDropTarget(element) {
  * 
  * @param {DragEvent} e - The drag over event
  */
-// function handleDragOver(e) {
-//     const dropTarget = getDropTarget(e.target);
-
-//     if (dropTarget) {
-//         const targetId = dropTarget.id;
-//         const dataTransfer = e.dataTransfer;
-
-//         let dropAllowed = false;
-
-//         // Always allow dropping back to available fields (but only in correct section)
-//         if (targetId === 'availableFields') {
-//             const dragging = document.querySelector('.dragging');
-//             if (dragging) {
-//                 const fieldType = dragging.getAttribute('data-type');
-//                 if (fieldType === 'dimension' && e.target.closest('.field-category-header')?.textContent === 'Dimensions') {
-//                     dropAllowed = true;
-//                 } else if (fieldType === 'fact' && e.target.closest('.field-category-header')?.textContent === 'Measures') {
-//                     dropAllowed = true;
-//                 }
-//             }
-//         } else {
-//             const dragging = document.querySelector('.dragging');
-//             let fieldType = null;
-//             if (dragging) {
-//                 fieldType = dragging.getAttribute('data-type');
-//             }
-//             if (targetId === 'valueFields') {
-//                 if (fieldType === 'fact') {
-//                     dropAllowed = true;
-//                 }
-//             } else if (
-//                 targetId === 'rowFields' ||
-//                 targetId === 'columnFields' ||
-//                 targetId === 'filterFields'
-//             ) {
-//                 if (fieldType === 'dimension') {
-//                     dropAllowed = true;
-//                 }
-//             }
-//         }
-
-//         if (dropAllowed) {
-//             e.preventDefault();
-//             dataTransfer.dropEffect = 'move';
-//         } else {
-//             // Explicitly block forbidden drop
-//             dataTransfer.dropEffect = 'none';
-//         }
-//     }
-// }
 function handleDragOver(e) {
     const dropTarget = getDropTarget(e.target);
 
@@ -902,9 +576,9 @@ function handleDrop(e) {
     renderAvailableFields(elements);
     
     // Regenerate the pivot table
-    if (window.generatePivotTable) {
-        window.generatePivotTable();
-    }
+    // if (window.generatePivotTable) {
+    //     window.generatePivotTable();
+    // }
 }
 
 
@@ -985,7 +659,7 @@ function insertFieldAtPosition(fieldId, targetContainer) {
  */
 function initializeHierarchyExpansion(fieldId, zone) {
     const dimName = fieldId.replace('DIM_', '').toLowerCase();
-    if (['le', 'gmid_display', 'smartcode', 'cost_element'].includes(dimName)) {
+    if (['le', 'gmid_display', 'smartcode', 'cost_element', 'cost_item_type', 'material_type', 'mc', 'year'].includes(dimName)) {
         // Initialize expansion state for this dimension if it doesn't exist
         state.expandedNodes[dimName] = state.expandedNodes[dimName] || {};
         state.expandedNodes[dimName][zone] = state.expandedNodes[dimName][zone] || {};
@@ -1011,9 +685,9 @@ function updateFieldOrder() {
     state.filterFields = filterFieldElements.map(el => el.getAttribute('data-field'));
     
     // Regenerate the pivot table with the new field order
-    if (window.generatePivotTable) {
-        window.generatePivotTable();
-    }
+    // if (window.generatePivotTable) {
+    //     window.generatePivotTable();
+    // }
 }
 
 
@@ -1031,6 +705,95 @@ function handleDragEnd(e) {
         // Update the field order based on the current DOM structure
         updateFieldOrder();
     }
+}
+
+
+/**
+ * Handles the Reset UI button click
+ * Clears all fields from Row, Column, and Value zones
+ * @param {Event} e - The click event
+ */
+function handleResetUI(e) {
+    // Prevent default button behavior
+    if (e) {
+        e.preventDefault();
+    }
+    
+    console.log("⏳ Status: Resetting UI - Clearing all field zones...");
+    
+    // Reset fields in state
+    state.rowFields = [];
+    state.columnFields = [];
+    state.valueFields = [];
+    
+    // Get field containers
+    const elements = {
+        rowFields: document.getElementById('rowFields'),
+        columnFields: document.getElementById('columnFields'),
+        valueFields: document.getElementById('valueFields'),
+        availableFields: document.getElementById('availableFields')
+    };
+    
+    // Clear the fields in the UI
+    if (elements.rowFields) elements.rowFields.innerHTML = '';
+    if (elements.columnFields) elements.columnFields.innerHTML = '';
+    if (elements.valueFields) elements.valueFields.innerHTML = '';
+    
+    // Re-render available fields to ensure all fields appear there
+    renderAvailableFields(elements);
+    
+    console.log("✅ Status: UI Reset complete - All field zones cleared");
+    
+    // Regenerate the pivot table (empty)
+    if (window.generatePivotTable) {
+        window.generatePivotTable();
+    }
+}
+
+
+/**
+ * Initializes the Reset UI button functionality
+ * Binds the click event to the button
+ */
+function initializeResetUIButton() {
+    const resetButton = document.getElementById('resetUIButton');
+    if (resetButton) {
+        resetButton.addEventListener('click', handleResetUI);
+        console.log("✅ Status: Reset UI button initialized");
+    }
+}
+
+
+// Add this to your init or document ready function to set up the Reset UI button
+function setupResetUI() {
+    // Wait for DOM to be fully loaded
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        initializeResetUIButton();
+    } else {
+        document.addEventListener('DOMContentLoaded', initializeResetUIButton);
+    }
+}
+
+/**
+ * Set up global event handlers
+ */
+function setupGlobalHandlers() {
+    // [Existing code]
+    // Make handleExpandCollapseClick globally available
+    window.handleExpandCollapseClick = this.handleExpandCollapseClick.bind(this);
+
+    // Make generatePivotTable globally available
+    window.generatePivotTable = this.generatePivotTable.bind(this);
+    
+    // Make handleMultiDimensionExpandCollapseClick globally available
+    window.handleMultiDimensionExpandCollapseClick = 
+        multiDimensionPivotHandler.handleMultiDimensionExpandCollapseClick;
+    
+    // Make refreshPivotTable globally available
+    window.refreshPivotTable = this.generatePivotTable.bind(this);
+    
+    // Add this line to make handleResetUI globally available
+    window.handleResetUI = this.handleResetUI.bind(this);
 }
 
 
@@ -1411,147 +1174,6 @@ function setupRowCountUpdates() {
 
 
 /**
- * Renders all cells for a multi-dimension row
- * 
- * @param {Object} rowDef - The row definition (single or multi-dimension)
- * @returns {string} - HTML string for all row cells
- */
-function renderMultiDimensionRowCells(rowDef) {
-    if (!rowDef.dimensions || !Array.isArray(rowDef.dimensions)) {
-        // Single dimension - use standard rendering
-        const dimName = rowDef.hierarchyField ? rowDef.hierarchyField.replace('DIM_', '').toLowerCase() : '';
-        const indentation = rowDef.level ? rowDef.level * 20 : 0;
-        
-        let cellHtml = `<td class="hierarchy-cell" style="padding-left: ${indentation}px;">`;
-        
-        if (rowDef.hasChildren) {
-            const expandClass = rowDef.expanded ? 'expanded' : 'collapsed';
-            cellHtml += `<span class="expand-collapse ${expandClass}" 
-                data-node-id="${rowDef._id}" 
-                data-hierarchy="${dimName}" 
-                data-zone="row"
-                title="Expand/collapse this item"></span>`;
-        } else {
-            cellHtml += `<span class="leaf-node"></span>`;
-        }
-        
-        cellHtml += `<span class="dimension-label">${rowDef.label}</span>`;
-        cellHtml += '</td>';
-        
-        return cellHtml;
-    }
-
-    // Multiple dimensions - render each in its own cell
-    let cellsHtml = '';
-    rowDef.dimensions.forEach((dimensionDef, index) => {
-        cellsHtml += renderDimensionCell(dimensionDef, index);
-    });
-    
-    return cellsHtml;
-}
-
-
-/**
- * Renders a single dimension cell within a multi-dimension row
- * 
- * @param {Object} dimensionDef - The dimension definition
- * @param {number} index - The dimension index
- * @returns {string} - HTML string for the dimension cell
- */
-function renderDimensionCell(dimensionDef, index) {
-    const dimName = dimensionDef.hierarchyField ? dimensionDef.hierarchyField.replace('DIM_', '').toLowerCase() : '';
-    const indentation = dimensionDef.level ? dimensionDef.level * 20 : 0; // 20px per level
-    
-    // Add cell with proper indentation and expand/collapse control
-    let cellHtml = `<td class="hierarchy-cell dimension-cell" 
-                       data-dimension="${dimName}" 
-                       data-dimension-index="${index}"
-                       style="padding-left: ${indentation}px;">`;
-    
-    // Add expand/collapse control only if it has children
-    if (dimensionDef.hasChildren) {
-        const expandClass = dimensionDef.expanded ? 'expanded' : 'collapsed';
-        cellHtml += `<span class="expand-collapse ${expandClass}" 
-            data-node-id="${dimensionDef._id}" 
-            data-hierarchy="${dimName}" 
-            data-zone="row"
-            data-dimension-index="${index}"
-            title="Expand/collapse this item"></span>`;
-    } else {
-        cellHtml += `<span class="leaf-node"></span>`;
-    }
-    
-    cellHtml += `<span class="dimension-label">${dimensionDef.label}</span>`;
-    cellHtml += '</td>';
-    
-    return cellHtml;
-}
-
-
-/**
- * Determines if a multi-dimension row should be visible based on expansion state
- * 
- * @param {Object} row - The row definition (single or multi-dimension)
- * @param {Array} allRows - All rows in the pivot table
- * @returns {boolean} - Whether the row should be visible
- */
-function isMultiDimensionRowVisible(row, allRows) {
-    if (!row.dimensions || !Array.isArray(row.dimensions)) {
-        // For single dimension rows, use the existing visibility check
-        return utils.isNodeVisible(row, allRows);
-    }
-    
-    // For multi-dimension rows, check visibility of each dimension
-    return row.dimensions.every(dimensionDef => {
-        // ROOT nodes are always visible
-        if (dimensionDef._id === 'ROOT') {
-            return true;
-        }
-        
-        // Create a temporary row object for the util function
-        const tempRow = {
-            _id: dimensionDef._id,
-            hierarchyField: dimensionDef.hierarchyField,
-            path: dimensionDef.path
-        };
-        
-        // Use the existing visibility check
-        return utils.isNodeVisible(tempRow, allRows);
-    });
-}
-
-
-/**
- * Enhanced handleMultiDimensionExpandCollapseClick that uses enhanced toggle function
- */
-function handleMultiDimensionExpandCollapseClick(e) {
-    const nodeId = e.target.getAttribute('data-node-id');
-    const hierarchyName = e.target.getAttribute('data-hierarchy');
-    const zone = e.target.getAttribute('data-zone') || 'row';
-    const dimensionIndex = parseInt(e.target.getAttribute('data-dimension-index') || '0', 10);
-    
-    if (nodeId && hierarchyName) {
-        // Toggle node expansion in state
-        state.expandedNodes[hierarchyName] = state.expandedNodes[hierarchyName] || {};
-        state.expandedNodes[hierarchyName][zone] = state.expandedNodes[hierarchyName][zone] || {};
-        state.expandedNodes[hierarchyName][zone][nodeId] = !state.expandedNodes[hierarchyName][zone][nodeId];
-        
-        // Toggle in the hierarchy structure using enhanced function
-        hierarchyHandler.enhancedToggleNodeExpansion(hierarchyName, nodeId, state.hierarchies, zone);
-        
-        // Update the UI to show the expand/collapse status
-        const expandClass = state.expandedNodes[hierarchyName][zone][nodeId] ? 'expanded' : 'collapsed';
-        e.target.className = `expand-collapse ${expandClass}`;
-        
-        // Regenerate pivot table
-        generatePivotTable();
-        
-        // Prevent event from bubbling up
-        e.stopPropagation();
-    }
-}
-
-/**
  * Update table status indicator
  * @param {string} tableName - Table name
  * @param {string} status - Status (waiting, loading, loaded, error)
@@ -1580,7 +1202,7 @@ export default {
     renderAvailableFields,
     renderFieldContainers,
     renderFieldContainer,
-    renderFilterControls,
+    // renderFilterControls,
     
     // Drag and drop functionality
     initDragAndDrop,
@@ -1589,12 +1211,12 @@ export default {
     handleDrop,
     handleDragEnd,
     enhanceDragDropReordering,
-    
-    // Multi-dimension UI
-    renderMultiDimensionRowCells,
-    renderDimensionCell,
-    isMultiDimensionRowVisible,
-    handleMultiDimensionExpandCollapseClick,
+
+    // UI reset
+    handleResetUI, 
+    initializeResetUIButton, 
+    setupResetUI,
+    setupGlobalHandlers,
 
     // Others
     initializeEnhancedConsole,
@@ -1609,7 +1231,6 @@ export default {
     renderExpandCollapseControl,
     renderChildrenContainer,
     renderNodeRadioButton,
-    showStatus,
     updateTableStatus
 
   };

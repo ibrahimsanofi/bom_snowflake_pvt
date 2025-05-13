@@ -1,7 +1,6 @@
 
 import stateModule from './state.js';
 import ui from './ui.js'
-// import filters from './filters.js';
 import pivotTable from './pivotTableEnhanced.js';
 
 
@@ -275,7 +274,24 @@ async function ingestData(elements, selectedFact = 'FACT_BOM') {
         console.log(`⏳ Status: Loading fact data from ${selectedFact}...`);
         ui.updateTableStatus(selectedFact, 'loading');
         
-        const { data: factData, error: factError } = await fetchDatabaseData(selectedFact);
+        // Definition switched from const to let to allow data filtering
+        let { data: factData, error: factError } = await fetchDatabaseData(selectedFact);
+
+        console.log(`✅ Status: Loaded fact data ${selectedFact}: ${factData.length} rows`);
+
+        // This step is crucial in performance enhancement. It filters out fact rows with zero/null/empty values for the measures 
+        console.log(`⏳ Status: Filtering out null/empty/zero fact data from ${selectedFact}...`);
+
+        factData = factData.filter(row => {
+            // Check if COST_UNIT has a valid value (not null/undefined/empty string and not zero)
+            const xHasValue = row.COST_UNIT !== null && row.COST_UNIT !== undefined && row.COST_UNIT !== 0 && row.COST_UNIT !== '';
+            
+            // Check if QTY_UNIT has a valid value (not null/undefined/empty string and not zero)
+            const yHasValue = row.QTY_UNIT !== null && row.QTY_UNIT !== undefined && row.QTY_UNIT !== 0 && row.QTY_UNIT !== '';
+            
+            // Keep this row if either x or y has a valid value
+            return xHasValue || yHasValue;
+        });
         
         if (factError || !factData) {
             ui.updateTableStatus(selectedFact, 'error');
@@ -285,7 +301,7 @@ async function ingestData(elements, selectedFact = 'FACT_BOM') {
         // Store fact data
         state.factData = factData;
         ui.updateTableStatus(selectedFact, 'loaded', factData.length);
-        console.log(`✅ Status: Loaded fact data ${selectedFact}: ${factData.length} rows`);
+        console.log(`✅ Status: Loaded working fact data ${selectedFact}: ${factData.length} rows`);
         
 
         // Confirm fact data is cached before moving on
@@ -340,11 +356,6 @@ async function ingestData(elements, selectedFact = 'FACT_BOM') {
             });
         });
 
-        // Handling root gmid filter bit here
-        // if (state.dimensions.gmid_display) {
-        //     initializeRootGmidFilter(state.dimensions.gmid_display);
-        // }
-        
 
         // 6. Process dimension data to build hierarchies
         try {
@@ -361,8 +372,6 @@ async function ingestData(elements, selectedFact = 'FACT_BOM') {
             state.hierarchies = {};
         }
         
-
-        // console.log("Dimension hierarchies built successfully");
         
         // 7. Set up UI elements
         ui.renderAvailableFields(elements);
@@ -373,14 +382,6 @@ async function ingestData(elements, selectedFact = 'FACT_BOM') {
         // 8. Initialize mappings AFTER data loading is complete
         console.log("⏳ Status: Initializing mappings now that data is loaded");
         initializeMappings();
-        
-
-        // 9. Set up filters
-        // setTimeout(() => {
-        //     if (filters && filters.initializeFilters) {
-        //         filters.initializeFilters();
-        //     }
-        // }, 1000);
         
         // Show success message
         console.log('✅ Status: Data loaded successfully from Snowflake database.', 'success', elements);
@@ -410,16 +411,7 @@ window.generatePivotTable = function() {
     // Are we using filtered data?
     if (stateModule.state.filteredData && stateModule.state.filteredData.length > 0) {
         console.log("⏳ Status: Using filteredData with length:", stateModule.state.filteredData.length);
-        
-        // Check data types in filtered data
-        // if (stateModule.state.filteredData.length > 0) {
-        //     const sample = stateModule.state.filteredData[0];
-        //     console.log("COST_UNIT type check:", {
-        //         value: sample.COST_UNIT,
-        //         type: typeof sample.COST_UNIT
-        //     });
-        // }
-        
+                
         // Store original factData reference (not just length)
         const originalFactData = stateModule.state.factData;
         
@@ -459,9 +451,6 @@ function processHierarchicalFields(fieldIds, axisType) {
             return;
         }
         
-        // Print field details for debugging
-        // console.log(`Processing field: ${field.id}, type: ${field.type}`);
-        
         // Get dimension name (lowercase without DIM_ prefix)
         const dimName = field.id.replace('DIM_', '').toLowerCase();
         // console.log(`Processing dimension: ${dimName}`);
@@ -477,9 +466,7 @@ function processHierarchicalFields(fieldIds, axisType) {
             console.error(`Invalid hierarchy for ${dimName}`);
             return;
         }
-        
-        // console.log(`Found hierarchy for ${dimName} with root node: ${hierarchy.root.label}`);
-        
+                
         // Store the field for reference
         result.hierarchyFields.push(field);
         
@@ -509,8 +496,6 @@ function processHierarchicalFields(fieldIds, axisType) {
             console.error(`Error flattening ${dimName} hierarchy:`, error);
             flattenedNodes = [hierarchy.root]; // At least include the root
         }
-        
-        // console.log(`Flattened ${flattenedNodes.length} nodes for ${dimName}`);
         
         // Dimension-specific processing
         if (dimName === 'material_type') {
@@ -3100,7 +3085,7 @@ function buildLegalEntityMapping(legalEntityData, bomData) {
                 // Add to leToPaths
                 mapping.leToPaths[row.LE] = 'UNKNOWN/' + row.LE;
                 
-                console.warn(`Added fallback mapping for unmapped LE code: ${row.LE}`);
+                // console.warn(`Added fallback mapping for unmapped LE code: ${row.LE}`);
             }
         });
     }
@@ -4070,6 +4055,7 @@ export default {
     buildItemCostTypeHierarchy,
     processDimensionHierarchies,
     getNodeById,
+    getFactIdField,
     flattenHierarchy,
     enhancedToggleNodeExpansion,
     
