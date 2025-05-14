@@ -756,7 +756,7 @@ function handleResetUI(e) {
  * Binds the click event to the button
  */
 function initializeResetUIButton() {
-    const resetButton = document.getElementById('resetUIButton');
+    const resetButton = document.getElementById('resetBtn');
     if (resetButton) {
         resetButton.addEventListener('click', handleResetUI);
         console.log("✅ Status: Reset UI button initialized");

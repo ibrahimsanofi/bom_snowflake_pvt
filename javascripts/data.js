@@ -2863,11 +2863,10 @@ function buildGmidDisplayMapping(gmidDisplayData, bomData) {
                 const lastSegment = pathSegments[pathSegments.length - 1];
                 
                 // If the last segment is '#', use the entire PATH_GMID as the COMPONENT_GMID
-                if (lastSegment === '#') {
-                    componentGmid = row.PATH_GMID;
+                if (pathSegments[pathSegments.length - 1] === '#') {
+                    gmid = pathSegments.length > 1 ? pathSegments[pathSegments.length - 2] : (item.COMPONENT_GMID || "Unknown GMID");
                 } else {
-                    // Otherwise, use the COMPONENT_GMID value
-                    componentGmid = row.COMPONENT_GMID || "Unknown GMID";
+                    gmid = item.COMPONENT_GMID || "Unknown GMID";
                 }
             } else {
                 componentGmid = row.COMPONENT_GMID || "Unknown GMID";

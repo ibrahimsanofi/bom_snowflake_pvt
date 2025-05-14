@@ -276,13 +276,16 @@ class EnhancedFilterSystem {
     filterHeader.style.alignItems = 'center';
     filterHeader.style.marginBottom = '8px';
     
-    // Add label and selection count
+    // Add label and dynamic selection count (placeholder removed)
     filterHeader.innerHTML = `
       <span class="filter-component-label" style="font-weight: 600; color: #1e293b;">${dimension.label}</span>
       <span class="selection-count" id="${dimension.id}SelectionCount" 
             style="font-size: 0.75rem; color: #64748b; background-color: #f8fafc; 
-                   padding: 2px 6px; border-radius: 10px;">All selected</span>
+                   padding: 2px 6px; border-radius: 10px;"></span>
     `;
+    // Immediately update the selection count after creating the element
+    // (This function generically computes the "selected / total" based on the filter type)
+    this.updateSelectionCount(dimension);
     
     // Create the dropdown container
     const dropdownContainer = document.createElement('div');
@@ -543,6 +546,15 @@ class EnhancedFilterSystem {
   
 
   /**
+   * Update selection counts for all filter dimensions
+   */
+  updateAllSelectionCounts() {
+    Object.values(this.filterMeta).forEach(dimension => {
+      this.updateSelectionCount(dimension);
+    });
+  }
+
+  /**
    * Populate all filter components with data from dimensions
    */
   populateFilters() {
@@ -575,6 +587,9 @@ class EnhancedFilterSystem {
         this.populateSimpleFilter(dimension);
       }
     });
+    
+    // Immediately update all selection counts once filters are available
+    this.updateAllSelectionCounts();
   }
   
 
@@ -1205,23 +1220,12 @@ class EnhancedFilterSystem {
       }
     }
     
-    // Update the display
-    if (selectedCount === totalCount) {
-      countElement.textContent = 'All selected';
-    } else {
-      countElement.textContent = `${selectedCount} / ${totalCount}`;
-    }
+    countElement.textContent = `${selectedCount} / ${totalCount}`;
     
-    // Update selection text in dropdown button
+    // Update selection text in dropdown button so it shows only "x items"
     const selectionText = document.querySelector(`#${dimension.id}Dropdown .selection-text`);
     if (selectionText) {
-      if (selectedCount === totalCount) {
-        selectionText.textContent = `All ${dimension.label}s`;
-      } else if (selectedCount === 0) {
-        selectionText.textContent = 'None selected';
-      } else {
-        selectionText.textContent = `${selectedCount} selected`;
-      }
+      selectionText.textContent = `${selectedCount} items`;
     }
   }
   
