@@ -616,20 +616,6 @@ class EnhancedFilterSystem {
     // Clear container
     treeContainer.innerHTML = '';
     
-    // Add 'Select All' option at the top
-    const selectAllOption = document.createElement('div');
-    selectAllOption.className = 'filter-all-option';
-    selectAllOption.innerHTML = `
-      <input type="checkbox" id="${dimension.id}SelectAllCheckbox" checked>
-      <label for="${dimension.id}SelectAllCheckbox">Select All</label>
-    `;
-    treeContainer.appendChild(selectAllOption);
-    
-    // Add separator
-    const separator = document.createElement('div');
-    separator.className = 'filter-separator';
-    treeContainer.appendChild(separator);
-    
     // Create tree nodes container
     const treeNodes = document.createElement('div');
     treeNodes.className = 'filter-tree-nodes';
@@ -637,43 +623,9 @@ class EnhancedFilterSystem {
     
     // Render root node and its children
     this.renderHierarchyNode(treeNodes, hierarchy.root, dimension, 0);
-    
-    // Set up select all checkbox
-    const selectAllCheckbox = document.getElementById(`${dimension.id}SelectAllCheckbox`);
-    if (selectAllCheckbox) {
-      // Initialize state
-      this.expandedFilterNodes[dimension.id] = { 'ROOT': true };
-      
-      selectAllCheckbox.addEventListener('change', (e) => {
-        const checked = e.target.checked;
-        
-        // Update all checkboxes in the tree
-        const checkboxes = treeContainer.querySelectorAll('input[type="checkbox"]');
-        checkboxes.forEach(checkbox => {
-          if (checkbox !== selectAllCheckbox) {
-            checkbox.checked = checked;
-          }
-        });
-        
-        // Update filter selections
-        if (checked) {
-          // Select all by clearing the selections (empty means all selected)
-          this.filterSelections[dimension.id] = new Set();
-        } else {
-          // Deselect all by collecting all node IDs
-          this.filterSelections[dimension.id] = new Set();
-          this.collectAllNodeIds(hierarchy.root, dimension).forEach(id => {
-            this.filterSelections[dimension.id].add(id);
-          });
-        }
-        
-        // Update the selection count
-        this.updateSelectionCount(dimension);
-      });
-    }
   }
 
-
+  
   /**
    * Build a helper method for flat hierarchy building
    * @param {Array} data - The dimension data
