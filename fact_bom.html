@@ -848,6 +848,31 @@
             //     filterIcon.classList.remove('fa-chevron-up');
             //     filterIcon.classList.add('fa-chevron-down');
             // }
+
+            const collapseAllBtn = document.getElementById('collapseAllBtn');
+            const expandAllBtn = document.getElementById('expandAllBtn');
+
+            collapseAllBtn.addEventListener('click', () => {
+                console.log("Collapse All clicked");
+                // Loop through all expand/collapse controls and trigger click if expanded
+                const controls = document.querySelectorAll('.expand-collapse');
+                controls.forEach(control => {
+                    if (control.classList.contains('expanded')) {
+                        control.click();
+                    }
+                });
+            });
+
+            expandAllBtn.addEventListener('click', () => {
+                console.log("Expand All clicked");
+                // Loop through all expand/collapse controls and trigger click if collapsed
+                const controls = document.querySelectorAll('.expand-collapse');
+                controls.forEach(control => {
+                    if (control.classList.contains('collapsed')) {
+                        control.click();
+                    }
+                });
+            });
         });
     </script>
 </body>

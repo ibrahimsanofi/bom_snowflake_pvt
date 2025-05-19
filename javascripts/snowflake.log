@@ -527,3 +527,36 @@
 {"level":"INFO","message":"[3:17:38.805 PM]: Easy Logging is disabled as no config has been found"}
 {"level":"INFO","message":"[3:17:42.141 PM]: Connection[id: abb30f9b-131d-4c2a-9da2-9584ca2bd184] - authentication successful using: EXTERNALBROWSER"}
 {"level":"INFO","message":"[3:17:42.144 PM]: Connection[id: abb30f9b-131d-4c2a-9da2-9584ca2bd184] - connected successfully after 3346.9460000000004 milliseconds"}
+{"level":"INFO","message":"[11:40:07.508 AM]: Creating new connection object"}
+{"level":"INFO","message":"[11:40:07.542 AM]: Creating Connection[id: d87c2149-b5f3-4f12-a912-0463b9a7b483] with host: SANOFI-EMEA_IA.snowflakecomputing.com, account: SANOFI-EMEA_IA, accessUrl: https://SANOFI-EMEA_IA.snowflakecomputing.com, user: AYMEN.GASSEM@SANOFI.COM, role: ONEMNS_PROD_ANALYTICS_PROC, database: ONEMNS_PROD, schema: DMT_BOM, warehouse: ONEMNS_PROD_WH_ANALYTICS, proxy was not configured, password is not provided, region: undefined, authenticator: EXTERNALBROWSER, ocsp mode: FAIL_OPEN, os: win32, os version: 10.0.22631"}
+{"level":"INFO","message":"[11:40:07.543 AM]: Connection[id: d87c2149-b5f3-4f12-a912-0463b9a7b483] additional details: passcode in password is provided, passcode is not provided, private key is not provided, application: undefined, client name: snowflake-sdk, client version: 2.0.3, retry timeout: 300, private key path: undefined, private key pass is not provided, client store temporary credential: false, browser response timeout: 120000"}
+{"level":"INFO","message":"[11:40:07.544 AM]: Connection[id: d87c2149-b5f3-4f12-a912-0463b9a7b483] - connection object created successfully."}
+{"level":"INFO","message":"[11:40:07.545 AM]: Connection[id: d87c2149-b5f3-4f12-a912-0463b9a7b483] - async connecting. Associated Snowflake domain: GLOBAL"}
+{"level":"INFO","message":"[11:40:07.546 AM]: Trying to initialize Easy Logging"}
+{"level":"INFO","message":"[11:40:07.553 AM]: No client config detected."}
+{"level":"INFO","message":"[11:40:07.554 AM]: No config file path found. Client config will not be used."}
+{"level":"INFO","message":"[11:40:07.555 AM]: Easy Logging is disabled as no config has been found"}
+{"level":"INFO","message":"[11:40:11.313 AM]: Connection[id: d87c2149-b5f3-4f12-a912-0463b9a7b483] - authentication successful using: EXTERNALBROWSER"}
+{"level":"INFO","message":"[11:40:11.323 AM]: Connection[id: d87c2149-b5f3-4f12-a912-0463b9a7b483] - connected successfully after 3777.6468999999997 milliseconds"}
+{"level":"INFO","message":"[4:15:48.330 PM]: Creating new connection object"}
+{"level":"INFO","message":"[4:15:48.366 PM]: Creating Connection[id: 19a5b115-995b-4b2f-9efb-917199d5d79e] with host: SANOFI-EMEA_IA.snowflakecomputing.com, account: SANOFI-EMEA_IA, accessUrl: https://SANOFI-EMEA_IA.snowflakecomputing.com, user: AYMEN.GASSEM@SANOFI.COM, role: ONEMNS_PROD_ANALYTICS_PROC, database: ONEMNS_PROD, schema: DMT_BOM, warehouse: ONEMNS_PROD_WH_ANALYTICS, proxy was not configured, password is not provided, region: undefined, authenticator: EXTERNALBROWSER, ocsp mode: FAIL_OPEN, os: win32, os version: 10.0.22631"}
+{"level":"INFO","message":"[4:15:48.367 PM]: Connection[id: 19a5b115-995b-4b2f-9efb-917199d5d79e] additional details: passcode in password is provided, passcode is not provided, private key is not provided, application: undefined, client name: snowflake-sdk, client version: 2.0.3, retry timeout: 300, private key path: undefined, private key pass is not provided, client store temporary credential: false, browser response timeout: 120000"}
+{"level":"INFO","message":"[4:15:48.368 PM]: Connection[id: 19a5b115-995b-4b2f-9efb-917199d5d79e] - connection object created successfully."}
+{"level":"INFO","message":"[4:15:48.369 PM]: Connection[id: 19a5b115-995b-4b2f-9efb-917199d5d79e] - async connecting. Associated Snowflake domain: GLOBAL"}
+{"level":"INFO","message":"[4:15:48.370 PM]: Trying to initialize Easy Logging"}
+{"level":"INFO","message":"[4:15:48.376 PM]: No client config detected."}
+{"level":"INFO","message":"[4:15:48.377 PM]: No config file path found. Client config will not be used."}
+{"level":"INFO","message":"[4:15:48.377 PM]: Easy Logging is disabled as no config has been found"}
+{"level":"INFO","message":"[4:15:53.075 PM]: Connection[id: 19a5b115-995b-4b2f-9efb-917199d5d79e] - authentication successful using: EXTERNALBROWSER"}
+{"level":"INFO","message":"[4:15:53.078 PM]: Connection[id: 19a5b115-995b-4b2f-9efb-917199d5d79e] - connected successfully after 4708.593699999999 milliseconds"}
+{"level":"INFO","message":"[9:06:19.683 AM]: Creating new connection object"}
+{"level":"INFO","message":"[9:06:19.763 AM]: Creating Connection[id: 45c9953f-2971-4ec9-a294-7f71ffe71a7d] with host: SANOFI-EMEA_IA.snowflakecomputing.com, account: SANOFI-EMEA_IA, accessUrl: https://SANOFI-EMEA_IA.snowflakecomputing.com, user: AYMEN.GASSEM@SANOFI.COM, role: ONEMNS_PROD_ANALYTICS_PROC, database: ONEMNS_PROD, schema: DMT_BOM, warehouse: ONEMNS_PROD_WH_ANALYTICS, proxy was not configured, password is not provided, region: undefined, authenticator: EXTERNALBROWSER, ocsp mode: FAIL_OPEN, os: win32, os version: 10.0.22631"}
+{"level":"INFO","message":"[9:06:19.764 AM]: Connection[id: 45c9953f-2971-4ec9-a294-7f71ffe71a7d] additional details: passcode in password is provided, passcode is not provided, private key is not provided, application: undefined, client name: snowflake-sdk, client version: 2.0.3, retry timeout: 300, private key path: undefined, private key pass is not provided, client store temporary credential: false, browser response timeout: 120000"}
+{"level":"INFO","message":"[9:06:19.765 AM]: Connection[id: 45c9953f-2971-4ec9-a294-7f71ffe71a7d] - connection object created successfully."}
+{"level":"INFO","message":"[9:06:19.766 AM]: Connection[id: 45c9953f-2971-4ec9-a294-7f71ffe71a7d] - async connecting. Associated Snowflake domain: GLOBAL"}
+{"level":"INFO","message":"[9:06:19.768 AM]: Trying to initialize Easy Logging"}
+{"level":"INFO","message":"[9:06:19.784 AM]: No client config detected."}
+{"level":"INFO","message":"[9:06:19.785 AM]: No config file path found. Client config will not be used."}
+{"level":"INFO","message":"[9:06:19.785 AM]: Easy Logging is disabled as no config has been found"}
+{"level":"INFO","message":"[9:06:23.942 AM]: Connection[id: 45c9953f-2971-4ec9-a294-7f71ffe71a7d] - authentication successful using: EXTERNALBROWSER"}
+{"level":"INFO","message":"[9:06:23.947 AM]: Connection[id: 45c9953f-2971-4ec9-a294-7f71ffe71a7d] - connected successfully after 4180.865099999999 milliseconds"}
