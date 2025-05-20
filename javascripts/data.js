@@ -1,7 +1,7 @@
 
 import stateModule from './state.js';
 import ui from './ui.js'
-import pivotTable from './pivotTableEnhanced.js';
+import pivotTable from './pivotTable.js';
 
 
 // Get reference to application state
@@ -2864,9 +2864,9 @@ function buildGmidDisplayMapping(gmidDisplayData, bomData) {
                 
                 // If the last segment is '#', use the entire PATH_GMID as the COMPONENT_GMID
                 if (pathSegments[pathSegments.length - 1] === '#') {
-                    gmid = pathSegments.length > 1 ? pathSegments[pathSegments.length - 2] : (item.COMPONENT_GMID || "Unknown GMID");
+                    componentGmid = pathSegments.length > 1 ? pathSegments[pathSegments.length - 2] : (item.COMPONENT_GMID || "Unknown GMID");
                 } else {
-                    gmid = item.COMPONENT_GMID || "Unknown GMID";
+                    componentGmid = row.COMPONENT_GMID || "Unknown GMID";
                 }
             } else {
                 componentGmid = row.COMPONENT_GMID || "Unknown GMID";
@@ -4024,6 +4024,7 @@ function setupFactDataInterception() {
 
 
 // Export signature
+
 export default {
     // Data processing
     getItemCostTypeDesc, 

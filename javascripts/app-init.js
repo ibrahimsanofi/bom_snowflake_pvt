@@ -4,7 +4,7 @@
 import stateModule from './state.js';
 
 // Other relevant modules are imported too
-import pivotTable from './pivotTableEnhanced.js';
+import pivotTable from './pivotTable.js';
 import core from './core.js';
 import data from './data.js';
 import ui from './ui.js';
@@ -31,18 +31,18 @@ function initializeApp() {
     const elements = core.getDomElements();
 
     // Immediate fix for persistent loading indicator
-    window.addEventListener('DOMContentLoaded', function() {
-        console.log("✅ Status: DOM loaded - applying immediate loading screen fix");
+    // window.addEventListener('DOMContentLoaded', function() {
+    //     console.log("✅ Status: DOM loaded - applying immediate loading screen fix");
         
-        // Force hide loading indicator after 2 seconds
-        setTimeout(function() {
-          const appContent = document.getElementById('appContent');
-          if (appContent) {
-            console.warn("⚠️ Warning: Forcing app content to display");
-            appContent.style.display = 'block';
-          }
-        }, 2000);
-    });   
+    //     // Force hide loading indicator after 2 seconds
+    //     setTimeout(function() {
+    //       const appContent = document.getElementById('appContent');
+    //       if (appContent) {
+    //         console.warn("⚠️ Warning: Forcing app content to display");
+    //         appContent.style.display = 'block';
+    //       }
+    //     }, 2000);
+    // });   
     
     // STEP 3:  Set up console enhancements
     ui.initializeEnhancedConsole();
@@ -74,7 +74,7 @@ function initializeApp() {
     };
     
     // Initialize pivot table
-    pivotTable.init(state);    
+    // pivotTable.init(state);    
 
     // STEP 6: Make modules available globally
     window.App = {
