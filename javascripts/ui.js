@@ -672,22 +672,26 @@ function initializeHierarchyExpansion(fieldId, zone) {
  * Updates the order of fields in state based on current DOM order
  */
 function updateFieldOrder() {
-    // Get the current order of fields in each container
-    const rowFieldElements = Array.from(document.getElementById('rowFields').querySelectorAll('.field'));
-    const columnFieldElements = Array.from(document.getElementById('columnFields').querySelectorAll('.field'));
-    const valueFieldElements = Array.from(document.getElementById('valueFields').querySelectorAll('.field'));
-    // const filterFieldElements = Array.from(document.getElementById('filterFields').querySelectorAll('.field'));
-    
-    // Update state arrays with the new order
+    const rowContainer = document.getElementById('rowFields');
+    const columnContainer = document.getElementById('columnFields');
+    const valueContainer = document.getElementById('valueFields');
+    const filterContainer = document.getElementById('filterFields');
+
+    // Use conditional checks to avoid calling querySelectorAll on null
+    const rowFieldElements = rowContainer ? Array.from(rowContainer.querySelectorAll('.field')) : [];
+    const columnFieldElements = columnContainer ? Array.from(columnContainer.querySelectorAll('.field')) : [];
+    const valueFieldElements = valueContainer ? Array.from(valueContainer.querySelectorAll('.field')) : [];
+    const filterFieldElements = filterContainer ? Array.from(filterContainer.querySelectorAll('.field')) : [];
+
     state.rowFields = rowFieldElements.map(el => el.getAttribute('data-field'));
     state.columnFields = columnFieldElements.map(el => el.getAttribute('data-field'));
     state.valueFields = valueFieldElements.map(el => el.getAttribute('data-field'));
-    // state.filterFields = filterFieldElements.map(el => el.getAttribute('data-field'));
-    
-    // Regenerate the pivot table with the new field order
-    // if (window.generatePivotTable) {
-    //     window.generatePivotTable();
-    // }
+    state.filterFields = filterFieldElements.map(el => el.getAttribute('data-field'));
+
+    // Optionally trigger pivot table generation only if the container exists
+    if (document.getElementById('pivotTableHeader') && window.generatePivotTable) {
+        window.generatePivotTable();
+    }
 }
 
 
@@ -756,23 +760,10 @@ function handleResetUI(e) {
  * Binds the click event to the button
  */
 function initializeResetUIButton() {
-    // Find the Reset UI button with the correct ID
     const resetButton = document.getElementById('resetBtn');
-    
     if (resetButton) {
         resetButton.addEventListener('click', handleResetUI);
-        console.log("✅ Status: Reset UI button initialized with ID 'resetBtn'");
-    } else {
-        console.warn("⚠️ Warning: Button with ID 'btnReset' not found. Trying alternative methods...");
-        
-        // Try querying by other selectors as fallback
-        const alternativeButton = document.querySelector('.refresh-btn, button.refresh, button:contains("Reset")');
-        if (alternativeButton) {
-            alternativeButton.addEventListener('click', handleResetUI);
-            console.log("✅ Status: Reset button found with alternative selector and initialized");
-        } else {
-            console.error("❌ Error: Could not find Reset UI button with any method");
-        }
+        console.log("✅ Status: Reset UI button initialized");
     }
 }
 
@@ -1206,12 +1197,6 @@ function updateTableStatus(tableName, status, rowCount) {
         rowCountElement.textContent = `${rowCount.toLocaleString()} rows`;
     }
 }
-
-
-// Initialize the Reset UI button when the document is ready
-document.addEventListener('DOMContentLoaded', function() {
-    initializeResetUIButton();
-});
 
 
 // Export signature

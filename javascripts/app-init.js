@@ -4,7 +4,7 @@
 import stateModule from './state.js';
 
 // Other relevant modules are imported too
-import pivotTable from './pivotTable.js';
+import pivotTable from './pivotTableEnhanced.js';
 import core from './core.js';
 import data from './data.js';
 import ui from './ui.js';
@@ -74,7 +74,7 @@ function initializeApp() {
     };
     
     // Initialize pivot table
-    // pivotTable.init(state);    
+    pivotTable.init(state);    
 
     // STEP 6: Make modules available globally
     window.App = {

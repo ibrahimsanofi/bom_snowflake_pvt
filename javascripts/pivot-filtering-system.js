@@ -39,63 +39,66 @@ class EnhancedFilterSystem {
     
     // Filter metadata for each dimension
     this.filterMeta = {
-      legalEntity: {
-        id: 'legalEntity',
-        label: 'Legal Entity',
-        dimensionKey: 'le',
-        factField: 'LE',
-        hierarchical: true
-      },
-      rootGmid: {
-        id: 'rootGmid',
-        label: 'Root GMID',
-        dimensionKey: 'gmid_display',
-        factField: 'ROOT_GMID',
-        hierarchical: false
-      },
-      smartcode: {
-        id: 'smartcode',
-        label: 'Smartcode',
-        dimensionKey: 'smartcode',
-        factField: 'ROOT_SMARTCODE',
-        hierarchical: false
-      },
-      costElement: {
-        id: 'costElement',
-        label: 'Cost Element',
-        dimensionKey: 'cost_element',
-        factField: 'COST_ELEMENT',
-        hierarchical: true
-      },
-      businessYear: {
-        id: 'businessYear',
-        label: 'Business Year',
-        dimensionKey: 'year',
-        factField: 'ZYEAR',
-        hierarchical: false
-      },
-      itemCostType: {
-        id: 'itemCostType',
-        label: 'Item Cost Type',
-        dimensionKey: 'item_cost_type',
-        factField: 'ITEM_COST_TYPE',
-        hierarchical: false
-      },
-      materialType: {
-        id: 'materialType',
-        label: 'Material Type',
-        dimensionKey: 'material_type',
-        factField: 'COMPONENT_MATERIAL_TYPE',
-        hierarchical: false
-      },
-      managementCentre: {
-        id: 'managementCentre',
-        label: 'MGT Centre',
-        dimensionKey: 'mc',
-        factField: 'MC',
-        hierarchical: true
-      }
-    };
+  legalEntity: {
+    id: 'legalEntity',
+    label: 'Legal Entity',
+    dimensionKey: 'le',
+    factField: 'LE',
+    hierarchical: true
+  },
+  rootGmid: {
+    id: 'rootGmid',
+    label: 'Root DISPLAY',
+    dimensionKey: 'gmid_display',
+    factField: 'ROOT_GMID',
+    displayField: 'ROOT_DISPLAY', 
+    filterField: 'ROOT_GMID',     
+    hierarchical: false
+  },
+  smartcode: {
+    id: 'smartcode',
+    label: 'Smartcode',
+    dimensionKey: 'smartcode',
+    factField: 'ROOT_SMARTCODE',
+    hierarchical: false
+  },
+  costElement: {
+    id: 'costElement',
+    label: 'Cost Element',
+    dimensionKey: 'cost_element',
+    factField: 'COST_ELEMENT',
+    hierarchical: true
+  },
+  businessYear: {
+    id: 'businessYear',
+    label: 'Business Year',
+    dimensionKey: 'year',
+    factField: 'ZYEAR',
+    hierarchical: false
+  },
+  itemCostType: {
+    id: 'itemCostType',
+    label: 'Item Cost Type',
+    dimensionKey: 'item_cost_type',
+    factField: 'ITEM_COST_TYPE',
+    hierarchical: false
+  },
+  materialType: {
+    id: 'materialType',
+    label: 'Material Type',
+    dimensionKey: 'material_type',
+    factField: 'COMPONENT_MATERIAL_TYPE',
+    hierarchical: false
+  },
+  managementCentre: {
+    id: 'managementCentre',
+    label: 'MGT Centre',
+    dimensionKey: 'mc',
+    factField: 'MC',
+    hierarchical: true
+  }
+};
+
     
     // Performance tracking
     this.perfTracking = {
@@ -132,6 +135,12 @@ class EnhancedFilterSystem {
     this.setupApplyButton();
     this.populateFilters();
     
+    // Automatically apply filters on initialization
+    // This will solve the issue of showing zeros until button click
+    setTimeout(() => {
+        this.applyAllFilters();
+    }, 500);
+    
     console.log('✅ Status: Enhanced Filter System initialized successfully');
     return true;
   }
@@ -148,7 +157,7 @@ class EnhancedFilterSystem {
     
     // Store original hierarchies if not already stored
     if (this.state.hierarchies) {
-      const hierarchyKeys = ['gmid_display', 'item_cost_type', 'material_type', 'year', 'mc', 'smartcode', 'cost_element'];
+      const hierarchyKeys = ['le', 'gmid_display', 'item_cost_type', 'material_type', 'year', 'mc', 'smartcode', 'cost_element'];
       
       hierarchyKeys.forEach(key => {
         if (this.state.hierarchies[key] && !this.state._originalHierarchies[key]) {
@@ -734,32 +743,58 @@ class EnhancedFilterSystem {
    * Create an empty hierarchy for a dimension
    * @param {Object} dimension - The dimension configuration
    */
+  // createEmptyHierarchy(dimension) {
+  //   const dimName = dimension.dimensionKey;
+    
+  //   // If original hierarchy doesn't exist, we can't do anything
+  //   if (!this.state.hierarchies[dimName]) return;
+    
+  //   // Create an empty hierarchy with just a root node
+  //   const emptyHierarchy = {
+  //     root: {
+  //       id: `${dimName.toUpperCase()}_ROOT`,
+  //       label: `All ${dimension.label}s (No matching records)`,
+  //       children: [],
+  //       level: 0,
+  //       expanded: true,
+  //       isLeaf: true,
+  //       hasChildren: false,
+  //       path: [`${dimName.toUpperCase()}_ROOT`],
+  //       hierarchyName: dimName
+  //     },
+  //     nodesMap: { [`${dimName.toUpperCase()}_ROOT`]: this.state.hierarchies[dimName].root },
+  //     flatData: []
+  //   };
+    
+  //   // Store the empty hierarchy
+  //   this.state.hierarchies[dimName] = emptyHierarchy;
+  // }
   createEmptyHierarchy(dimension) {
-    const dimName = dimension.dimensionKey;
-    
-    // If original hierarchy doesn't exist, we can't do anything
-    if (!this.state.hierarchies[dimName]) return;
-    
-    // Create an empty hierarchy with just a root node
-    const emptyHierarchy = {
-      root: {
-        id: `${dimName.toUpperCase()}_ROOT`,
-        label: `All ${dimension.label}s (No matching records)`,
-        children: [],
-        level: 0,
-        expanded: true,
-        isLeaf: true,
-        hasChildren: false,
-        path: [`${dimName.toUpperCase()}_ROOT`],
-        hierarchyName: dimName
-      },
-      nodesMap: { [`${dimName.toUpperCase()}_ROOT`]: this.state.hierarchies[dimName].root },
-      flatData: []
-    };
-    
-    // Store the empty hierarchy
-    this.state.hierarchies[dimName] = emptyHierarchy;
-  }
+  const dimName = dimension.dimensionKey;
+  
+  // If original hierarchy doesn't exist, we can't do anything
+  if (!this.state.hierarchies[dimName]) return;
+  
+  // Create an empty hierarchy with just a root node
+  const emptyHierarchy = {
+    root: {
+      id: `${dimName.toUpperCase()}_ROOT`,
+      label: `All ${dimension.label}s (No matching records)`,
+      children: [],
+      level: 0,
+      expanded: true,
+      isLeaf: true,
+      hasChildren: false,
+      path: [`${dimName.toUpperCase()}_ROOT`],
+      hierarchyName: dimName
+    },
+    nodesMap: { [`${dimName.toUpperCase()}_ROOT`]: this.state.hierarchies[dimName].root },
+    flatData: []
+  };
+  
+  // Store the empty hierarchy
+  this.state.hierarchies[dimName] = emptyHierarchy;
+}
 
   
   /**
@@ -1020,103 +1055,202 @@ class EnhancedFilterSystem {
    * @param {Object} dimension - Dimension configuration
    * @returns {Array} - Array of unique values with label and value properties
    */
+  // getUniqueValuesForDimension(dimension) {
+  //   const valueSet = new Set();
+  //   const labelMap = new Map();
+  //   const result = [];
+    
+  //   switch (dimension.id) {
+  //     case 'rootGmid':
+  //       // Extract from gmid_display dimension using ROOT_DISPLAY for labels but ROOT_GMID for values
+  //       if (this.state.dimensions.gmid_display) {
+  //         this.state.dimensions.gmid_display.forEach(item => {
+  //           if (item.ROOT_GMID && !valueSet.has(item.ROOT_GMID)) {
+  //             valueSet.add(item.ROOT_GMID);
+  //             // Use ROOT_DISPLAY as label if available, otherwise use ROOT_GMID
+  //             labelMap.set(item.ROOT_GMID, item.ROOT_DISPLAY || item.ROOT_GMID);
+  //           }
+  //         });
+  //       }
+  //       break;
+        
+  //     case 'smartcode':
+  //       // Extract from smartcode dimension
+  //       if (this.state.dimensions.smartcode) {
+  //         this.state.dimensions.smartcode.forEach(item => {
+  //           if (item.SMARTCODE && !valueSet.has(item.SMARTCODE)) {
+  //             valueSet.add(item.SMARTCODE);
+  //             labelMap.set(item.SMARTCODE, item.SMARTCODE);
+  //           }
+  //         });
+  //       }
+  //       break;
+        
+  //     case 'businessYear':
+  //       // Extract from year dimension
+  //       if (this.state.dimensions.year) {
+  //         this.state.dimensions.year.forEach(item => {
+  //           if (item.YEAR && !valueSet.has(item.YEAR)) {
+  //             valueSet.add(item.YEAR);
+  //             labelMap.set(item.YEAR, item.YEAR.toString());
+  //           }
+  //         });
+  //       }
+  //       break;
+        
+  //     case 'itemCostType':
+  //       // Extract from item_cost_type dimension
+  //       if (this.state.dimensions.item_cost_type) {
+  //         this.state.dimensions.item_cost_type.forEach(item => {
+  //           if (item.ITEM_COST_TYPE && !valueSet.has(item.ITEM_COST_TYPE)) {
+  //             valueSet.add(item.ITEM_COST_TYPE);
+  //             labelMap.set(item.ITEM_COST_TYPE, item.ITEM_COST_TYPE_DESC || item.ITEM_COST_TYPE);
+  //           }
+  //         });
+  //       }
+  //       break;
+        
+  //     case 'materialType':
+  //       // Extract from material_type dimension
+  //       if (this.state.dimensions.material_type) {
+  //         this.state.dimensions.material_type.forEach(item => {
+  //           if (item.MATERIAL_TYPE && !valueSet.has(item.MATERIAL_TYPE)) {
+  //             valueSet.add(item.MATERIAL_TYPE);
+  //             labelMap.set(item.MATERIAL_TYPE, item.MATERIAL_TYPE_DESC || item.MATERIAL_TYPE);
+  //           }
+  //         });
+  //       }
+  //       break;
+        
+  //     default:
+  //       // If no dimension data is available, extract from fact data
+  //       if (this.state.factData && this.state.factData.length > 0 && dimension.factField) {
+  //         // For large datasets, limit the number of records to check
+  //         const sampleSize = Math.min(10000, this.state.factData.length);
+  //         const sampleData = this.state.factData.slice(0, sampleSize);
+          
+  //         sampleData.forEach(record => {
+  //           if (record[dimension.factField] !== undefined && record[dimension.factField] !== null) {
+  //             valueSet.add(record[dimension.factField]);
+  //           }
+  //         });
+          
+  //         valueSet.forEach(value => {
+  //           labelMap.set(value, value.toString());
+  //         });
+  //       }
+  //       break;
+  //   }
+    
+  //   // Convert to array format
+  //   valueSet.forEach(value => {
+  //     result.push({
+  //       value: value,      // This is the actual value used for filtering
+  //       id: value,         // This is the id used in DOM
+  //       label: labelMap.get(value) || value.toString() // This is the display label
+  //     });
+  //   });
+    
+  //   return result;
+  // }
   getUniqueValuesForDimension(dimension) {
     const valueSet = new Set();
     const labelMap = new Map();
     const result = [];
     
     switch (dimension.id) {
-      case 'rootGmid':
-        // Extract from gmid_display dimension
-        if (this.state.dimensions.gmid_display) {
-          this.state.dimensions.gmid_display.forEach(item => {
-            if (item.ROOT_GMID && !valueSet.has(item.ROOT_GMID)) {
-              valueSet.add(item.ROOT_GMID);
-              labelMap.set(item.ROOT_GMID, item.ROOT_GMID);
+        case 'rootGmid':
+            // Extract from gmid_display dimension using ROOT_DISPLAY for labels but ROOT_GMID for values
+            if (this.state.dimensions.gmid_display) {
+                this.state.dimensions.gmid_display.forEach(item => {
+                    if (item.ROOT_GMID && !valueSet.has(item.ROOT_GMID)) {
+                        valueSet.add(item.ROOT_GMID);
+                        // Use ROOT_DISPLAY as label if available, otherwise use ROOT_GMID
+                        labelMap.set(item.ROOT_GMID, item.ROOT_DISPLAY || item.ROOT_GMID);
+                    }
+                });
             }
-          });
-        }
-        break;
-        
-      case 'smartcode':
-        // Extract from smartcode dimension
-        if (this.state.dimensions.smartcode) {
-          this.state.dimensions.smartcode.forEach(item => {
-            if (item.SMARTCODE && !valueSet.has(item.SMARTCODE)) {
-              valueSet.add(item.SMARTCODE);
-              labelMap.set(item.SMARTCODE, item.SMARTCODE);
+            break;
+            
+        case 'smartcode':
+            // Extract from smartcode dimension
+            if (this.state.dimensions.smartcode) {
+                this.state.dimensions.smartcode.forEach(item => {
+                    if (item.SMARTCODE && !valueSet.has(item.SMARTCODE)) {
+                        valueSet.add(item.SMARTCODE);
+                        labelMap.set(item.SMARTCODE, item.SMARTCODE);
+                    }
+                });
             }
-          });
-        }
-        break;
-        
-      case 'businessYear':
-        // Extract from year dimension
-        if (this.state.dimensions.year) {
-          this.state.dimensions.year.forEach(item => {
-            if (item.YEAR && !valueSet.has(item.YEAR)) {
-              valueSet.add(item.YEAR);
-              labelMap.set(item.YEAR, item.YEAR.toString());
+            break;
+            
+        case 'businessYear':
+            // Extract from year dimension
+            if (this.state.dimensions.year) {
+                this.state.dimensions.year.forEach(item => {
+                    if (item.YEAR && !valueSet.has(item.YEAR)) {
+                        valueSet.add(item.YEAR);
+                        labelMap.set(item.YEAR, item.YEAR.toString());
+                    }
+                });
             }
-          });
-        }
-        break;
-        
-      case 'itemCostType':
-        // Extract from item_cost_type dimension
-        if (this.state.dimensions.item_cost_type) {
-          this.state.dimensions.item_cost_type.forEach(item => {
-            if (item.ITEM_COST_TYPE && !valueSet.has(item.ITEM_COST_TYPE)) {
-              valueSet.add(item.ITEM_COST_TYPE);
-              labelMap.set(item.ITEM_COST_TYPE, item.ITEM_COST_TYPE_DESC || item.ITEM_COST_TYPE);
+            break;
+            
+        case 'itemCostType':
+            // Extract from item_cost_type dimension
+            if (this.state.dimensions.item_cost_type) {
+                this.state.dimensions.item_cost_type.forEach(item => {
+                    if (item.ITEM_COST_TYPE && !valueSet.has(item.ITEM_COST_TYPE)) {
+                        valueSet.add(item.ITEM_COST_TYPE);
+                        labelMap.set(item.ITEM_COST_TYPE, item.ITEM_COST_TYPE_DESC || item.ITEM_COST_TYPE);
+                    }
+                });
             }
-          });
-        }
-        break;
-        
-      case 'materialType':
-        // Extract from material_type dimension
-        if (this.state.dimensions.material_type) {
-          this.state.dimensions.material_type.forEach(item => {
-            if (item.MATERIAL_TYPE && !valueSet.has(item.MATERIAL_TYPE)) {
-              valueSet.add(item.MATERIAL_TYPE);
-              labelMap.set(item.MATERIAL_TYPE, item.MATERIAL_TYPE_DESC || item.MATERIAL_TYPE);
+            break;
+            
+        case 'materialType':
+            // Extract from material_type dimension
+            if (this.state.dimensions.material_type) {
+                this.state.dimensions.material_type.forEach(item => {
+                    if (item.MATERIAL_TYPE && !valueSet.has(item.MATERIAL_TYPE)) {
+                        valueSet.add(item.MATERIAL_TYPE);
+                        labelMap.set(item.MATERIAL_TYPE, item.MATERIAL_TYPE_DESC || item.MATERIAL_TYPE);
+                    }
+                });
             }
-          });
-        }
-        break;
-        
-      default:
-        // If no dimension data is available, extract from fact data
-        if (this.state.factData && this.state.factData.length > 0 && dimension.factField) {
-          // For large datasets, limit the number of records to check
-          const sampleSize = Math.min(10000, this.state.factData.length);
-          const sampleData = this.state.factData.slice(0, sampleSize);
-          
-          sampleData.forEach(record => {
-            if (record[dimension.factField] !== undefined && record[dimension.factField] !== null) {
-              valueSet.add(record[dimension.factField]);
+            break;
+            
+        default:
+            // If no dimension data is available, extract from fact data
+            if (this.state.factData && this.state.factData.length > 0 && dimension.factField) {
+                // For large datasets, limit the number of records to check
+                const sampleSize = Math.min(10000, this.state.factData.length);
+                const sampleData = this.state.factData.slice(0, sampleSize);
+                
+                sampleData.forEach(record => {
+                    if (record[dimension.factField] !== undefined && record[dimension.factField] !== null) {
+                        valueSet.add(record[dimension.factField]);
+                    }
+                });
+                
+                valueSet.forEach(value => {
+                    labelMap.set(value, value.toString());
+                });
             }
-          });
-          
-          valueSet.forEach(value => {
-            labelMap.set(value, value.toString());
-          });
-        }
-        break;
+            break;
     }
     
     // Convert to array format
     valueSet.forEach(value => {
-      result.push({
-        value: value,
-        id: value,
-        label: labelMap.get(value) || value.toString()
-      });
+        result.push({
+            value: value,      // This is the actual value used for filtering
+            id: value,         // This is the id used in DOM
+            label: labelMap.get(value) || value.toString() // This is the display label
+        });
     });
     
     return result;
-  }
+}
   
 
   /**
@@ -1370,7 +1504,43 @@ class EnhancedFilterSystem {
   /**
    * Apply all filters to the data
    */
-  applyAllFilters(){
+//   applyAllFilters(){
+//   console.log('⏳ Status: Applying all filters...');
+//   console.time('ApplyFilters');
+  
+//   // Store original data reference
+//   const originalData = this.state.factData;
+//   this.perfTracking.recordsBeforeFilter = originalData.length;
+  
+//   // Store original hierarchies if not already stored
+//   this.initializeHierarchyFilters();
+  
+//   // Start with all data for filtering
+//   this.state.filteredData = [...originalData];
+  
+//   // Capture current filter selections and rebuild hierarchies
+//   this.rebuildFilteredHierarchies();
+  
+//   // Track filter reductions
+//   const filterReductions = {};
+  
+//   // Log the filtered data count
+//   const filteredCount = this.state.filteredData ? this.state.filteredData.length : 0;
+//   this.perfTracking.recordsAfterFilter = filteredCount;
+  
+//   // Update UI
+//   this.updateDataVolumeIndicator(originalData.length, filteredCount);
+//   this.updateFilteredRecordsCount(filteredCount);
+  
+//   // Log filter performance details
+//   console.log(`✅ Status: Filtering complete: ${originalData.length} -> ${filteredCount} records (${((filteredCount / originalData.length) * 100).toFixed(2)}%)`);
+//   console.log('✅ Status: Filter reductions:', filterReductions);
+//   console.timeEnd('ApplyFilters');
+  
+//   // Refresh pivot table
+//   this.refreshPivotTable();
+// }
+applyAllFilters() {
     console.log('⏳ Status: Applying all filters...');
     console.time('ApplyFilters');
     
@@ -1381,41 +1551,58 @@ class EnhancedFilterSystem {
     // Store original hierarchies if not already stored
     this.initializeHierarchyFilters();
     
-    // Capture current filter selections and rebuild hierarchies
-    this.rebuildFilteredHierarchies();
+    // Start with a fresh copy of the original data
+    this.state.filteredData = [...originalData];
     
-    // Start with all data for filtering
-    let filteredData = [...originalData];
-    
-    // Track filter reductions
+    // Track filter reductions for logging
     const filterReductions = {};
     
-    // Apply each filter
+    // Apply each filter in sequence
     Object.values(this.filterMeta).forEach(dimension => {
-      const beforeCount = filteredData.length;
-      filteredData = this.applyFilter(filteredData, dimension);
-      const afterCount = filteredData.length;
-      
-      // Record the reduction for this filter
-      filterReductions[dimension.label] = beforeCount - afterCount;
+        const beforeCount = this.state.filteredData.length;
+        
+        // Skip if no selections (all selected)
+        if (this.filterSelections[dimension.id].size === 0) {
+            filterReductions[dimension.label] = 0;
+            return;
+        }
+        
+        // Apply filter to state.filteredData
+        if (dimension.hierarchical) {
+            // Apply hierarchical filter
+            this.state.filteredData = this.applyHierarchicalFilter(this.state.filteredData, dimension);
+        } else {
+            // Apply simple filter
+            this.state.filteredData = this.state.filteredData.filter(record => {
+                const value = record[dimension.factField];
+                return value !== undefined && !this.filterSelections[dimension.id].has(value);
+            });
+        }
+        
+        const afterCount = this.state.filteredData.length;
+        filterReductions[dimension.label] = beforeCount - afterCount;
     });
     
-    // Store filtered data
-    this.state.filteredData = filteredData;
-    this.perfTracking.recordsAfterFilter = filteredData.length;
+    // Rebuild filtered hierarchies based on current filter selections
+    this.rebuildFilteredHierarchies();
+    
+    // Store record counts for UI feedback
+    const filteredCount = this.state.filteredData ? this.state.filteredData.length : 0;
+    this.perfTracking.recordsAfterFilter = filteredCount;
     
     // Update UI
-    this.updateDataVolumeIndicator(originalData.length, filteredData.length);
-    this.updateFilteredRecordsCount(filteredData.length);
+    this.updateDataVolumeIndicator(originalData.length, filteredCount);
+    this.updateFilteredRecordsCount(filteredCount);
     
     // Log filter performance details
-    console.log(`✅ Status: Filtering complete: ${originalData.length} -> ${filteredData.length} records (${((filteredData.length / originalData.length) * 100).toFixed(2)}%)`);
+    console.log(`✅ Status: Filtering complete: ${originalData.length} -> ${filteredCount} records (${((filteredCount / originalData.length) * 100).toFixed(2)}%)`);
     console.log('✅ Status: Filter reductions:', filterReductions);
     console.timeEnd('ApplyFilters');
     
-    // Refresh pivot table
+    // Apply filtered data to pivot table generation
     this.refreshPivotTable();
-  }
+}
+
 
 
   /**
@@ -1439,6 +1626,87 @@ class EnhancedFilterSystem {
   /**
    * Rebuild GMID display hierarchy based on filters
    */
+  // rebuildGmidHierarchyWithFilters() {
+  //   console.log("⏳ Status: Rebuilding GMID display hierarchy based on filters...");
+    
+  //   // 1. Get the current ROOT_GMID filter selections
+  //   const rootGmidFilter = this.filterSelections.rootGmid;
+    
+  //   // 2. Get all available ROOT_GMIDs
+  //   const allRootGmids = [];
+  //   if (this.state.dimensions && this.state.dimensions.gmid_display) {
+  //     this.state.dimensions.gmid_display.forEach(item => {
+  //       if (item.ROOT_GMID && !allRootGmids.includes(item.ROOT_GMID)) {
+  //         allRootGmids.push(item.ROOT_GMID);
+  //       }
+  //     });
+  //   }
+    
+  //   // 3. Determine selected ROOT_GMIDs (empty set means all selected)
+  //   let selectedRootGmids = [];
+  //   if (rootGmidFilter && rootGmidFilter.size > 0) {
+  //     // We store excluded GMIDs, so we need to invert the selection
+  //     selectedRootGmids = allRootGmids.filter(gmid => !rootGmidFilter.has(gmid));
+  //   } else {
+  //     // All ROOT_GMIDs are selected
+  //     selectedRootGmids = [...allRootGmids];
+  //   }
+    
+  //   console.log(`✅ Status: Selected ROOT_GMIDs: ${selectedRootGmids.length} of ${allRootGmids.length}`);
+    
+  //   // 4. First filter the fact data based on selected ROOT_GMIDs
+  //   if (this.state.factData && this.state.factData.length > 0) {
+  //     const originalFactData = this.state.factData;
+      
+  //     // Create filtered data if it doesn't exist yet
+  //     if (!this.state.filteredData) {
+  //       this.state.filteredData = [...originalFactData];
+  //     }
+      
+  //     // Apply ROOT_GMID filter to fact data (may already be filtered by other dimensions)
+  //     this.state.filteredData = this.state.filteredData.filter(record => 
+  //       record.ROOT_GMID && selectedRootGmids.includes(record.ROOT_GMID)
+  //     );
+      
+  //     console.log(`✅ Status: Filtered FACT data based on ROOT_GMID: ${originalFactData.length} -> ${this.state.filteredData.length} records`);
+      
+  //     // Check if any records remain after filtering
+  //     if (this.state.filteredData.length === 0) {
+  //       // Create an empty hierarchy when no data matches
+  //       console.log("✅ Status: No records match ROOT_GMID filter, creating empty hierarchy");
+  //       this.createEmptyHierarchy(this.filterMeta.rootGmid);
+        
+  //       // Set a flag to indicate we have an empty result set
+  //       this.state._emptyFilterResult = true;
+  //       return true;
+  //     }
+  //   }
+    
+  //   // 5. Only rebuild if we're filtering (otherwise use the original hierarchy)
+  //   if (selectedRootGmids.length < allRootGmids.length) {
+  //     // Get the original dimension data
+  //     const originalDimData = this.state.dimensions.gmid_display;
+      
+  //     // Build the filtered hierarchy
+  //     const filteredHierarchy = this.buildFilteredGmidDisplayHierarchy(originalDimData, selectedRootGmids);
+      
+  //     // Store in state
+  //     this.state.hierarchies.gmid_display = filteredHierarchy;
+      
+  //     console.log(`✅ Status: Rebuilt GMID hierarchy with ${selectedRootGmids.length} ROOT_GMIDs`);
+  //     return true;
+  //   } else {
+  //     console.log("✅ Status: All ROOT_GMIDs selected, no need to rebuild hierarchy");
+      
+  //     // Restore original hierarchy if we previously filtered
+  //     if (this.state._originalHierarchies && this.state._originalHierarchies.gmid_display) {
+  //       this.state.hierarchies.gmid_display = this.state._originalHierarchies.gmid_display;
+  //       console.log("✅ Status: Restored original GMID hierarchy");
+  //     }
+      
+  //     return false;
+  //   }
+  // }
   rebuildGmidHierarchyWithFilters() {
     console.log("⏳ Status: Rebuilding GMID display hierarchy based on filters...");
     
@@ -1448,50 +1716,79 @@ class EnhancedFilterSystem {
     // 2. Get all available ROOT_GMIDs
     const allRootGmids = [];
     if (this.state.dimensions && this.state.dimensions.gmid_display) {
-      this.state.dimensions.gmid_display.forEach(item => {
-        if (item.ROOT_GMID && !allRootGmids.includes(item.ROOT_GMID)) {
-          allRootGmids.push(item.ROOT_GMID);
-        }
-      });
+        this.state.dimensions.gmid_display.forEach(item => {
+            if (item.ROOT_GMID && !allRootGmids.includes(item.ROOT_GMID)) {
+                allRootGmids.push(item.ROOT_GMID);
+            }
+        });
     }
     
     // 3. Determine selected ROOT_GMIDs (empty set means all selected)
     let selectedRootGmids = [];
     if (rootGmidFilter && rootGmidFilter.size > 0) {
-      // We store excluded GMIDs, so we need to invert the selection
-      selectedRootGmids = allRootGmids.filter(gmid => !rootGmidFilter.has(gmid));
+        // We store excluded GMIDs, so we need to invert the selection
+        selectedRootGmids = allRootGmids.filter(gmid => !rootGmidFilter.has(gmid));
     } else {
-      // All ROOT_GMIDs are selected
-      selectedRootGmids = [...allRootGmids];
+        // All ROOT_GMIDs are selected
+        selectedRootGmids = [...allRootGmids];
     }
     
     console.log(`✅ Status: Selected ROOT_GMIDs: ${selectedRootGmids.length} of ${allRootGmids.length}`);
     
-    // 4. Only rebuild if we're filtering (otherwise use the original hierarchy)
-    if (selectedRootGmids.length < allRootGmids.length) {
-      // Get the original dimension data
-      const originalDimData = this.state.dimensions.gmid_display;
-      
-      // Build the filtered hierarchy
-      const filteredHierarchy = this.buildFilteredGmidDisplayHierarchy(originalDimData, selectedRootGmids);
-      
-      // Store in state
-      this.state.hierarchies.gmid_display = filteredHierarchy;
-      
-      // console.log(`✅ Status: Rebuilt GMID hierarchy with ${selectedRootGmids.length} ROOT_GMIDs`);
-      return true;
-    } else {
-      // console.log("✅ Status: All ROOT_GMIDs selected, no need to rebuild hierarchy");
-      
-      // Restore original hierarchy if we previously filtered
-      if (this.state._originalHierarchies && this.state._originalHierarchies.gmid_display) {
-        this.state.hierarchies.gmid_display = this.state._originalHierarchies.gmid_display;
-        // console.log("✅ Status: Restored original GMID hierarchy");
-      }
-      
-      return false;
+    // 4. First filter the fact data based on selected ROOT_GMIDs
+    if (this.state.factData && this.state.factData.length > 0) {
+        const originalFactData = this.state.factData;
+        
+        // Create filtered data if it doesn't exist yet
+        if (!this.state.filteredData) {
+            this.state.filteredData = [...originalFactData];
+        }
+        
+        // Apply ROOT_GMID filter to fact data (may already be filtered by other dimensions)
+        this.state.filteredData = this.state.filteredData.filter(record => 
+            !record.ROOT_GMID || selectedRootGmids.includes(record.ROOT_GMID)
+        );
+        
+        console.log(`✅ Status: Filtered FACT data based on ROOT_GMID: ${originalFactData.length} -> ${this.state.filteredData.length} records`);
+        
+        // Check if any records remain after filtering
+        if (this.state.filteredData.length === 0) {
+            // Create an empty hierarchy when no data matches
+            console.log("✅ Status: No records match ROOT_GMID filter, creating empty hierarchy");
+            this.createEmptyHierarchy(this.filterMeta.rootGmid);
+            
+            // Set a flag to indicate we have an empty result set
+            this.state._emptyFilterResult = true;
+            return true;
+        }
     }
-  }
+    
+    // 5. Only rebuild if we're filtering (otherwise use the original hierarchy)
+    if (selectedRootGmids.length < allRootGmids.length) {
+        // Get the original dimension data
+        const originalDimData = this.state.dimensions.gmid_display;
+        
+        // Build the filtered hierarchy
+        const filteredHierarchy = this.buildFilteredGmidDisplayHierarchy(originalDimData, selectedRootGmids);
+        
+        // Store in state
+        this.state.hierarchies.gmid_display = filteredHierarchy;
+        
+        console.log(`✅ Status: Rebuilt GMID hierarchy with ${selectedRootGmids.length} ROOT_GMIDs`);
+        return true;
+    } else {
+        console.log("✅ Status: All ROOT_GMIDs selected, no need to rebuild hierarchy");
+        
+        // Restore original hierarchy if we previously filtered
+        if (this.state._originalHierarchies && this.state._originalHierarchies.gmid_display) {
+            this.state.hierarchies.gmid_display = this.state._originalHierarchies.gmid_display;
+            console.log("✅ Status: Restored original GMID hierarchy");
+        }
+        
+        return false;
+    }
+}
+
 
 
   /**
@@ -1751,184 +2048,365 @@ class EnhancedFilterSystem {
    * @param {Array} selectedRootGmids - Array of selected ROOT_GMID values
    * @returns {Object} - Hierarchy object with root, nodesMap and original data
    */
+  // buildFilteredGmidDisplayHierarchy(data, selectedRootGmids = null) {
+  //   console.log(`⏳ Status: Building GMID display hierarchy${selectedRootGmids ? ' with ROOT_GMID filtering' : ''}...`);
+    
+  //   // Check if we should apply ROOT_GMID filtering
+  //   const applyRootGmidFilter = selectedRootGmids && 
+  //                               Array.isArray(selectedRootGmids) && 
+  //                               selectedRootGmids.length > 0;
+    
+  //   if (applyRootGmidFilter) {
+  //     // console.log(`✅ Status: Filtering GMID hierarchy to include only ${selectedRootGmids.length} selected ROOT_GMIDs`);
+      
+  //     // Filter the dimension data to only include records with selected ROOT_GMIDs
+  //     data = data.filter(item => item.ROOT_GMID && selectedRootGmids.includes(item.ROOT_GMID));
+      
+  //     // console.log(`✅ Status: Filtered to ${data.length} GMID dimension records`);
+  //   }
+    
+  //   // Create root node
+  //   const rootNode = { 
+  //     id: 'ROOT', 
+  //     label: 'All GMIDs', 
+  //     children: [], 
+  //     level: 0, 
+  //     path: ['ROOT'],
+  //     expanded: true,
+  //     isLeaf: false,
+  //     hasChildren: false
+  //   };
+    
+  //   // Map to store all nodes by their ID for quick lookup
+  //   const nodesMap = { 'ROOT': rootNode };
+    
+  //   // Debug: Keep track of how many nodes we're creating at each level
+  //   const levelCounts = { 0: 1 }; // Root node
+    
+  //   // Process each row in the data
+  //   data.forEach((item, index) => {
+  //     if (!item) {
+  //       console.warn(`Skipping null item at index ${index}`);
+  //       return;
+  //     }
+      
+  //     // Handle missing required fields
+  //     if (!item.PATH_GMID || !item.DISPLAY) {
+  //       return;
+  //     }
+      
+  //     // Split the PATH_GMID and DISPLAY columns by their respective delimiters
+  //     const pathSegments = item.PATH_GMID.split('/');
+  //     const displaySegments = item.DISPLAY.split('//');
+      
+  //     // Validate that we have matching segments
+  //     if (pathSegments.length !== displaySegments.length) {
+  //       return;
+  //     }
+      
+  //     // Determine the GMID for this row
+  //     let gmid;
+  //     if (pathSegments[pathSegments.length - 1] === '#') {
+  //       // When leaf segment is '#', use the entire PATH_GMID as COMPONENT_GMID
+  //       gmid = item.PATH_GMID;
+  //     } else {
+  //       // Otherwise, use the COMPONENT_GMID value
+  //       gmid = item.COMPONENT_GMID || "Unknown GMID";
+  //     }
+      
+  //     // Track the maximum level
+  //     const maxLevel = pathSegments.length;
+      
+  //     let currentNode = rootNode;
+  //     let currentPath = ['ROOT'];
+      
+  //     // Process each level
+  //     for (let i = 0; i < maxLevel; i++) {
+  //       const pathSegment = pathSegments[i];
+  //       const displaySegment = displaySegments[i];
+        
+  //       // Skip if segment is empty
+  //       if (!displaySegment || displaySegment.trim() === '') {
+  //         continue;
+  //       }
+        
+  //       // Create a unique node ID for this segment that's safe for DOM
+  //       // Using the path segment as part of the ID ensures uniqueness
+  //       const safeId = pathSegment.replace(/[^a-zA-Z0-9]/g, '_');
+  //       const nodeId = `LEVEL_${i+1}_${safeId}`;
+        
+  //       // Track nodes created at this level
+  //       levelCounts[i+1] = (levelCounts[i+1] || 0) + 1;
+        
+  //       // Check if we already have a node for this segment
+  //       if (!nodesMap[nodeId]) {
+  //         // Create a new node
+  //         const isLastLevel = i === maxLevel - 1;
+  //         const newNode = {
+  //           id: nodeId,
+  //           label: displaySegment.trim(),  // Using the DISPLAY segment as the label
+  //           levelNum: i + 1,
+  //           levelValue: pathSegment.trim(),  // Store the PATH_GMID segment for reference
+  //           children: [],
+  //           level: i + 1,
+  //           path: [...currentPath, nodeId],
+  //           expanded: i < 2, // Auto-expand first two levels
+  //           isLeaf: isLastLevel,
+  //           hasChildren: false,
+  //           // Store ROOT_GMID for filtering
+  //           rootGmid: item.ROOT_GMID,
+  //           // If this is the last level, associate with the GMID for filtering
+  //           factId: isLastLevel ? gmid : null
+  //         };
+          
+  //         nodesMap[nodeId] = newNode;
+          
+  //         // Add to parent's children
+  //         currentNode.children.push(newNode);
+  //         currentNode.isLeaf = false;
+  //         currentNode.hasChildren = true;
+  //       } else if (i === maxLevel - 1 && currentNode.id === nodesMap[nodeId].path[nodesMap[nodeId].path.length - 2]) {
+  //         // If this node already exists but is now a leaf at this level under the same parent,
+  //         // we need to handle potential multiple GMIDs mapping to the same node
+  //         const existingNode = nodesMap[nodeId];
+          
+  //         // If the node doesn't already have a factId, set it
+  //         if (!existingNode.factId) {
+  //           existingNode.factId = gmid;
+  //           existingNode.isLeaf = true;
+  //         } 
+  //         // If it already has a factId but this is a different GMID,
+  //         // we need to track both GMIDs
+  //         else if (existingNode.factId !== gmid) {
+  //           // Convert factId to array if it isn't already
+  //           if (!Array.isArray(existingNode.factId)) {
+  //             existingNode.factId = [existingNode.factId];
+  //           }
+  //           // Add this GMID if it's not already in the array
+  //           if (!existingNode.factId.includes(gmid)) {
+  //             existingNode.factId.push(gmid);
+  //           }
+  //         }
+          
+  //         // Mark as non-leaf if it has children
+  //         if (existingNode.children && existingNode.children.length > 0) {
+  //           existingNode.isLeaf = false;
+  //         }
+  //       }
+        
+  //       // Update current node and path for next level
+  //       currentNode = nodesMap[nodeId];
+  //       currentPath = [...currentPath, nodeId];
+  //     }
+  //   });
+    
+  //   // Debug: Log how many nodes we created at each level
+  //   console.log("✅ Status: Nodes created per level:", levelCounts);
+  //   console.log("✅ Status: Total nodes in hierarchy:", Object.keys(nodesMap).length);
+    
+  //   // Sort nodes at each level
+  //   const sortHierarchyNodes = (node) => {
+  //     if (node.children && node.children.length > 0) {
+  //       // Sort children by label
+  //       node.children.sort((a, b) => {
+  //         return a.label.localeCompare(b.label);
+  //       });
+        
+  //       // Recursively sort children's children
+  //       node.children.forEach(child => sortHierarchyNodes(child));
+  //     }
+  //   };
+    
+  //   sortHierarchyNodes(rootNode);
+    
+  //   // Return the hierarchy
+  //   return {
+  //     root: rootNode,
+  //     nodesMap: nodesMap,
+  //     flatData: data
+  //   };
+  // }
   buildFilteredGmidDisplayHierarchy(data, selectedRootGmids = null) {
-    console.log(`⏳ Status: Building GMID display hierarchy${selectedRootGmids ? ' with ROOT_GMID filtering' : ''}...`);
+  console.log(`⏳ Status: Building GMID display hierarchy${selectedRootGmids ? ' with ROOT_GMID filtering' : ''}...`);
+  
+  // Check if we should apply ROOT_GMID filtering
+  const applyRootGmidFilter = selectedRootGmids && 
+                             Array.isArray(selectedRootGmids) && 
+                             selectedRootGmids.length > 0;
+  
+  if (applyRootGmidFilter) {
+    console.log(`✅ Status: Filtering GMID hierarchy to include only ${selectedRootGmids.length} selected ROOT_GMIDs`);
     
-    // Check if we should apply ROOT_GMID filtering
-    const applyRootGmidFilter = selectedRootGmids && 
-                                Array.isArray(selectedRootGmids) && 
-                                selectedRootGmids.length > 0;
+    // Filter the dimension data to only include records with selected ROOT_GMIDs
+    data = data.filter(item => item.ROOT_GMID && selectedRootGmids.includes(item.ROOT_GMID));
     
-    if (applyRootGmidFilter) {
-      // console.log(`✅ Status: Filtering GMID hierarchy to include only ${selectedRootGmids.length} selected ROOT_GMIDs`);
-      
-      // Filter the dimension data to only include records with selected ROOT_GMIDs
-      data = data.filter(item => item.ROOT_GMID && selectedRootGmids.includes(item.ROOT_GMID));
-      
-      // console.log(`✅ Status: Filtered to ${data.length} GMID dimension records`);
+    console.log(`✅ Status: Filtered to ${data.length} GMID dimension records`);
+  }
+  
+  // Create root node
+  const rootNode = { 
+    id: 'ROOT', 
+    label: 'All GMIDs', 
+    children: [], 
+    level: 0, 
+    path: ['ROOT'],
+    expanded: true,
+    isLeaf: false,
+    hasChildren: false
+  };
+  
+  // Map to store all nodes by their ID for quick lookup
+  const nodesMap = { 'ROOT': rootNode };
+  
+  // Debug: Keep track of how many nodes we're creating at each level
+  const levelCounts = { 0: 1 }; // Root node
+  
+  // Process each row in the data
+  data.forEach((item, index) => {
+    if (!item) {
+      console.warn(`Skipping null item at index ${index}`);
+      return;
     }
     
-    // Create root node
-    const rootNode = { 
-      id: 'ROOT', 
-      label: 'All GMIDs', 
-      children: [], 
-      level: 0, 
-      path: ['ROOT'],
-      expanded: true,
-      isLeaf: false,
-      hasChildren: false
-    };
+    // Handle missing required fields
+    if (!item.PATH_GMID || !item.DISPLAY) {
+      return;
+    }
     
-    // Map to store all nodes by their ID for quick lookup
-    const nodesMap = { 'ROOT': rootNode };
+    // Split the PATH_GMID and DISPLAY columns by their respective delimiters
+    const pathSegments = item.PATH_GMID.split('/');
+    const displaySegments = item.DISPLAY.split('//');
     
-    // Debug: Keep track of how many nodes we're creating at each level
-    const levelCounts = { 0: 1 }; // Root node
+    // Validate that we have matching segments
+    if (pathSegments.length !== displaySegments.length) {
+      return;
+    }
     
-    // Process each row in the data
-    data.forEach((item, index) => {
-      if (!item) {
-        console.warn(`Skipping null item at index ${index}`);
-        return;
+    // Determine the GMID for this row
+    let gmid;
+    if (pathSegments[pathSegments.length - 1] === '#') {
+      // When leaf segment is '#', use the entire PATH_GMID as COMPONENT_GMID
+      gmid = item.PATH_GMID;
+    } else {
+      // Otherwise, use the COMPONENT_GMID value
+      gmid = item.COMPONENT_GMID || "Unknown GMID";
+    }
+    
+    // Track the maximum level
+    const maxLevel = pathSegments.length;
+    
+    let currentNode = rootNode;
+    let currentPath = ['ROOT'];
+    
+    // Process each level
+    for (let i = 0; i < maxLevel; i++) {
+      const pathSegment = pathSegments[i];
+      const displaySegment = displaySegments[i];
+      
+      // Skip if segment is empty
+      if (!displaySegment || displaySegment.trim() === '') {
+        continue;
       }
       
-      // Handle missing required fields
-      if (!item.PATH_GMID || !item.DISPLAY) {
-        return;
-      }
+      // Create a unique node ID for this segment that's safe for DOM
+      // Using the path segment as part of the ID ensures uniqueness
+      const safeId = pathSegment.replace(/[^a-zA-Z0-9]/g, '_');
+      const nodeId = `LEVEL_${i+1}_${safeId}`;
       
-      // Split the PATH_GMID and DISPLAY columns by their respective delimiters
-      const pathSegments = item.PATH_GMID.split('/');
-      const displaySegments = item.DISPLAY.split('//');
+      // Track nodes created at this level
+      levelCounts[i+1] = (levelCounts[i+1] || 0) + 1;
       
-      // Validate that we have matching segments
-      if (pathSegments.length !== displaySegments.length) {
-        return;
-      }
-      
-      // Determine the GMID for this row
-      let gmid;
-      if (pathSegments[pathSegments.length - 1] === '#') {
-        // When leaf segment is '#', use the entire PATH_GMID as COMPONENT_GMID
-        gmid = item.PATH_GMID;
-      } else {
-        // Otherwise, use the COMPONENT_GMID value
-        gmid = item.COMPONENT_GMID || "Unknown GMID";
-      }
-      
-      // Track the maximum level
-      const maxLevel = pathSegments.length;
-      
-      let currentNode = rootNode;
-      let currentPath = ['ROOT'];
-      
-      // Process each level
-      for (let i = 0; i < maxLevel; i++) {
-        const pathSegment = pathSegments[i];
-        const displaySegment = displaySegments[i];
+      // Check if we already have a node for this segment
+      if (!nodesMap[nodeId]) {
+        // Create a new node
+        const isLastLevel = i === maxLevel - 1;
+        const newNode = {
+          id: nodeId,
+          label: displaySegment.trim(),  // Using the DISPLAY segment as the label
+          levelNum: i + 1,
+          levelValue: pathSegment.trim(),  // Store the PATH_GMID segment for reference
+          children: [],
+          level: i + 1,
+          path: [...currentPath, nodeId],
+          expanded: i < 2, // Auto-expand first two levels
+          isLeaf: isLastLevel,
+          hasChildren: false,
+          // Store ROOT_GMID for filtering
+          rootGmid: item.ROOT_GMID,
+          // Store ROOT_DISPLAY for UI
+          rootDisplay: item.ROOT_DISPLAY,
+          // If this is the last level, associate with the GMID for filtering
+          factId: isLastLevel ? gmid : null
+        };
         
-        // Skip if segment is empty
-        if (!displaySegment || displaySegment.trim() === '') {
-          continue;
-        }
+        nodesMap[nodeId] = newNode;
         
-        // Create a unique node ID for this segment that's safe for DOM
-        // Using the path segment as part of the ID ensures uniqueness
-        const safeId = pathSegment.replace(/[^a-zA-Z0-9]/g, '_');
-        const nodeId = `LEVEL_${i+1}_${safeId}`;
+        // Add to parent's children
+        currentNode.children.push(newNode);
+        currentNode.isLeaf = false;
+        currentNode.hasChildren = true;
+      } else if (i === maxLevel - 1 && currentNode.id === nodesMap[nodeId].path[nodesMap[nodeId].path.length - 2]) {
+        // If this node already exists but is now a leaf at this level under the same parent,
+        // we need to handle potential multiple GMIDs mapping to the same node
+        const existingNode = nodesMap[nodeId];
         
-        // Track nodes created at this level
-        levelCounts[i+1] = (levelCounts[i+1] || 0) + 1;
-        
-        // Check if we already have a node for this segment
-        if (!nodesMap[nodeId]) {
-          // Create a new node
-          const isLastLevel = i === maxLevel - 1;
-          const newNode = {
-            id: nodeId,
-            label: displaySegment.trim(),  // Using the DISPLAY segment as the label
-            levelNum: i + 1,
-            levelValue: pathSegment.trim(),  // Store the PATH_GMID segment for reference
-            children: [],
-            level: i + 1,
-            path: [...currentPath, nodeId],
-            expanded: i < 2, // Auto-expand first two levels
-            isLeaf: isLastLevel,
-            hasChildren: false,
-            // Store ROOT_GMID for filtering
-            rootGmid: item.ROOT_GMID,
-            // If this is the last level, associate with the GMID for filtering
-            factId: isLastLevel ? gmid : null
-          };
-          
-          nodesMap[nodeId] = newNode;
-          
-          // Add to parent's children
-          currentNode.children.push(newNode);
-          currentNode.isLeaf = false;
-          currentNode.hasChildren = true;
-        } else if (i === maxLevel - 1 && currentNode.id === nodesMap[nodeId].path[nodesMap[nodeId].path.length - 2]) {
-          // If this node already exists but is now a leaf at this level under the same parent,
-          // we need to handle potential multiple GMIDs mapping to the same node
-          const existingNode = nodesMap[nodeId];
-          
-          // If the node doesn't already have a factId, set it
-          if (!existingNode.factId) {
-            existingNode.factId = gmid;
-            existingNode.isLeaf = true;
-          } 
-          // If it already has a factId but this is a different GMID,
-          // we need to track both GMIDs
-          else if (existingNode.factId !== gmid) {
-            // Convert factId to array if it isn't already
-            if (!Array.isArray(existingNode.factId)) {
-              existingNode.factId = [existingNode.factId];
-            }
-            // Add this GMID if it's not already in the array
-            if (!existingNode.factId.includes(gmid)) {
-              existingNode.factId.push(gmid);
-            }
+        // If the node doesn't already have a factId, set it
+        if (!existingNode.factId) {
+          existingNode.factId = gmid;
+          existingNode.isLeaf = true;
+        } 
+        // If it already has a factId but this is a different GMID,
+        // we need to track both GMIDs
+        else if (existingNode.factId !== gmid) {
+          // Convert factId to array if it isn't already
+          if (!Array.isArray(existingNode.factId)) {
+            existingNode.factId = [existingNode.factId];
           }
-          
-          // Mark as non-leaf if it has children
-          if (existingNode.children && existingNode.children.length > 0) {
-            existingNode.isLeaf = false;
+          // Add this GMID if it's not already in the array
+          if (!existingNode.factId.includes(gmid)) {
+            existingNode.factId.push(gmid);
           }
         }
         
-        // Update current node and path for next level
-        currentNode = nodesMap[nodeId];
-        currentPath = [...currentPath, nodeId];
+        // Mark as non-leaf if it has children
+        if (existingNode.children && existingNode.children.length > 0) {
+          existingNode.isLeaf = false;
+        }
       }
-    });
-    
-    // Debug: Log how many nodes we created at each level
-    console.log("✅ Status: Nodes created per level:", levelCounts);
-    console.log("✅ Status: Total nodes in hierarchy:", Object.keys(nodesMap).length);
-    
-    // Sort nodes at each level
-    const sortHierarchyNodes = (node) => {
-      if (node.children && node.children.length > 0) {
-        // Sort children by label
-        node.children.sort((a, b) => {
-          return a.label.localeCompare(b.label);
-        });
-        
-        // Recursively sort children's children
-        node.children.forEach(child => sortHierarchyNodes(child));
-      }
-    };
-    
-    sortHierarchyNodes(rootNode);
-    
-    // Return the hierarchy
-    return {
-      root: rootNode,
-      nodesMap: nodesMap,
-      flatData: data
-    };
-  }
+      
+      // Update current node and path for next level
+      currentNode = nodesMap[nodeId];
+      currentPath = [...currentPath, nodeId];
+    }
+  });
+  
+  // Debug: Log how many nodes we created at each level
+  console.log("✅ Status: Nodes created per level:", levelCounts);
+  console.log("✅ Status: Total nodes in hierarchy:", Object.keys(nodesMap).length);
+  
+  // Sort nodes at each level
+  const sortHierarchyNodes = (node) => {
+    if (node.children && node.children.length > 0) {
+      // Sort children by label
+      node.children.sort((a, b) => {
+        return a.label.localeCompare(b.label);
+      });
+      
+      // Recursively sort children's children
+      node.children.forEach(child => sortHierarchyNodes(child));
+    }
+  };
+  
+  sortHierarchyNodes(rootNode);
+  
+  // Return the hierarchy
+  return {
+    root: rootNode,
+    nodesMap: nodesMap,
+    flatData: data
+  };
+}
+
 
 
   /**
@@ -3222,7 +3700,7 @@ class EnhancedFilterSystem {
 const enhancedFilterSystem = new EnhancedFilterSystem();
 
 // Use a polling mechanism to safely initialize when data is available
-let maxInitAttempts = 180; // Will try for about 180 seconds
+let maxInitAttempts = 300; // Will try for about 300 seconds
 let initAttempts = 0;
 
 function attemptInitialization() {
