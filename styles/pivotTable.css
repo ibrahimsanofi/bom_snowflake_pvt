@@ -1,10 +1,10 @@
 /* ===========================================
-   Enhanced Pivot Table CSS with Proper Hierarchy Indentation
+   Enhanced Pivot Table CSS - COMPLETELY BORDERLESS HEADERS
    Features:
-   - Minimum 25% width for row dimensions when column dimensions exist
+   - 35% width for row dimensions when column dimensions exist
    - 75% width for row dimensions when no column dimensions
-   - Proper hierarchy indentation (not vertical alignment)
-   - No gaps between borders
+   - Proper hierarchy indentation with hierarchical expand/collapse controls
+   - NO BORDER GAPS in headers
    - Centralized uppercase headers
    =========================================== */
 
@@ -64,13 +64,14 @@ table {
     table-layout: fixed;
     width: 100%;
     min-width: 100%;
-    border: none;
+    border: 1px solid rgb(243, 238, 238);
     font-weight: normal !important;
 }
 
+/* CRITICAL: Keep light borders for structure */
 th, td {
+    border: 1px solid rgb(243, 238, 238) !important;
     padding: 0.5rem;
-    border: 1px solid var(--border-light);
     vertical-align: middle;
     margin: 0;
     box-sizing: border-box;
@@ -90,7 +91,7 @@ th, td {
     width: 25% !important;
 }
 
-/* When column dimensions exist - row dimensions get MINIMUM 35% for better text display */
+/* When column dimensions exist - row dimensions get 35% */
 .pivot-table-container.has-column-dimensions .row-dimension-header,
 .pivot-table-container.has-column-dimensions .row-dimension-cell {
     width: 35% !important;
@@ -101,34 +102,34 @@ th, td {
     width: 65% !important;
 }
 
-/* ---------- 4. COMPLETELY GAPLESS HEADER STRUCTURE ---------- */
+/* ---------- 4. HEADER STRUCTURE ---------- */
 .dimension-measures-row th {
     background-color: #f1f5f9;
     font-weight: 700;
     text-align: center;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    border: none !important;
+    border: 1px solid rgb(243, 238, 238) !important;
     padding: 12px;
     margin: 0 !important;
 }
 
 .measure-type-row th {
-    border: none !important;
+    border: 1px solid rgb(243, 238, 238) !important;
     margin: 0 !important;
     padding: 8px 10px;
 }
 
 .column-values-row th {
-    border: none !important;
+    border: 1px solid rgb(243, 238, 238) !important;
     margin: 0 !important;
     padding: 6px 8px;
 }
 
-/* Row dimension headers - NO INTERNAL BORDERS */
+/* Row dimension headers */
 .row-dimension-header {
     background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%);
-    border: none !important;
+    border: 1px solid rgb(243, 238, 238) !important;
     font-weight: 700;
     color: var(--dimension-text);
     text-align: center;
@@ -141,10 +142,10 @@ th, td {
     box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
 }
 
-/* Multiple dimensions - NO BORDERS BETWEEN THEM */
+/* Multiple dimensions */
 .row-dimension-header.dimension-0 {
     background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%);
-    border: none !important;
+    border: 1px solid rgb(243, 238, 238) !important;
     position: sticky;
     left: 0;
     z-index: 40;
@@ -156,7 +157,7 @@ th, td {
 
 .row-dimension-header.dimension-1 {
     background: linear-gradient(135deg, var(--dimension-bg-secondary) 0%, var(--dimension-bg-primary) 100%);
-    border: none !important;
+    border: 1px solid rgb(243, 238, 238) !important;
     position: sticky;
     z-index: 40;
     text-align: center;
@@ -165,7 +166,7 @@ th, td {
     color: var(--dimension-text);
 }
 
-/* Multi-dimension positioning with minimum 35% */
+/* Multi-dimension positioning with 35% */
 table.multi-column-rows .row-dimension-header.dimension-0 {
     width: calc(35% / 2);
     min-width: 150px;
@@ -178,7 +179,7 @@ table.multi-column-rows .row-dimension-header.dimension-1 {
     left: calc(35% / 2);
 }
 
-/* MEASURES header - centralized and uppercase */
+/* MEASURES header */
 .measures-header,
 .parent-dimension-header {
     background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
@@ -186,33 +187,30 @@ table.multi-column-rows .row-dimension-header.dimension-1 {
     text-align: center !important;
     text-transform: uppercase !important;
     letter-spacing: 1px !important;
-    border: none !important;
-    border-bottom: 1px solid var(--border-light) !important;
+    border: 1px solid rgb(243, 238, 238) !important;
     font-size: 0.9rem;
     color: var(--dimension-text) !important;
     padding: 12px;
     box-shadow: inset 0 -2px 0 var(--primary);
 }
 
-/* Measure type header - centralized and uppercase */
+/* Measure type header */
 .measure-type-header {
     background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%);
     text-align: center !important;
     text-transform: uppercase !important;
     font-weight: 700;
     letter-spacing: 0.5px;
-    border: none !important;
-    border-right: 1px solid var(--border-light) !important;
-    border-bottom: 1px solid var(--border-light) !important;
+    border: 1px solid rgb(243, 238, 238) !important;
     padding: 8px 10px;
     color: var(--primary) !important;
 }
 
-/* Corner cell styling - NO BORDERS */
+/* Corner cell styling */
 .corner-cell,
 .corner-cell-multiple {
     background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%);
-    border: none !important;
+    border: 1px solid rgb(243, 238, 238) !important;
     font-weight: 700;
     color: var(--dimension-text);
     text-align: center;
@@ -223,7 +221,6 @@ table.multi-column-rows .row-dimension-header.dimension-1 {
     top: 0;
     z-index: 50;
     box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
-    /* CRITICAL: Ensure corner cell fills the space */
     width: 35% !important;
     min-width: 300px;
     padding: 8px 12px;
@@ -246,7 +243,7 @@ table.multi-column-rows .row-dimension-header.dimension-1 {
 .corner-cell-0,
 .corner-cell-1 {
     background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%);
-    border: none !important;
+    border: 1px solid rgb(243, 238, 238) !important;
     font-weight: 700;
     color: var(--dimension-text);
     text-align: center;
@@ -270,68 +267,37 @@ table.multi-column-rows .corner-cell-1 {
     left: calc(35% / 2);
 }
 
-/* CRITICAL: Empty corner cells that should be invisible but maintain structure */
-.corner-cell.empty,
-.corner-cell-multiple.empty {
-    background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%) !important;
-    border: none !important;
-    border-right: 2px solid var(--border-light) !important;
-    border-bottom: 1px solid var(--border-light) !important;
-    /* Fill the space but don't show content */
-    color: transparent;
-    font-size: 0;
-}
-
-/* Dimension header styling */
-.dimension-header {
-    background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%) !important;
-    text-align: center !important;
-    font-weight: 600 !important;
-    border: none !important;
-    border-right: 1px solid var(--border-light) !important;
-    border-bottom: 1px solid var(--border-light) !important;
-    padding: 6px 8px;
-    font-size: 0.85rem;
-    color: var(--dimension-text);
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-}
-
-/* Row header styling */
-.row-header {
-    background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%);
-    border: none !important;
-    border-right: 2px solid var(--border-light) !important;
-    border-bottom: 1px solid var(--border-light) !important;
-    font-weight: 700;
-    color: var(--dimension-text);
-    text-align: center;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    position: sticky;
-    left: 0;
-    z-index: 40;
-}
-
 /* Column value headers */
 .column-value-header {
     text-align: center !important;
     font-weight: 600 !important;
     background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%) !important;
-    border: none !important;
-    border-right: 1px solid var(--border-light) !important;
-    border-bottom: 2px solid var(--border-dark) !important;
+    border: 1px solid rgb(243, 238, 238) !important;
     padding: 6px 8px;
     font-size: 0.85rem;
     width: 100px;
     min-width: 80px;
 }
 
+/* All other header classes */
+.dimension-header,
+.row-header,
+.value-header,
+.column-header {
+    border: 1px solid rgb(243, 238, 238) !important;
+    background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%);
+    text-align: center !important;
+    font-weight: 600 !important;
+    padding: 6px 8px;
+    font-size: 0.85rem;
+    color: var(--dimension-text);
+}
+
 /* Header row classes */
 .header-row,
 .measure-header-row,
 .column-header-row {
-    border: none;
+    border: 1px solid rgb(243, 238, 238) !important;
 }
 
 .measure-header-row th {
@@ -340,9 +306,7 @@ table.multi-column-rows .corner-cell-1 {
     text-align: center;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    border: none !important;
-    border-right: 1px solid var(--border-light) !important;
-    border-bottom: 1px solid var(--border-light) !important;
+    border: 1px solid rgb(243, 238, 238) !important;
     padding: 12px;
     color: var(--dimension-text);
 }
@@ -351,9 +315,7 @@ table.multi-column-rows .corner-cell-1 {
     background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%);
     text-align: center !important;
     font-weight: 600 !important;
-    border: none !important;
-    border-right: 1px solid var(--border-light) !important;
-    border-bottom: 2px solid var(--border-dark) !important;
+    border: 1px solid rgb(243, 238, 238) !important;
     padding: 6px 8px;
     font-size: 0.85rem;
     color: var(--dimension-text);
@@ -362,46 +324,27 @@ table.multi-column-rows .corner-cell-1 {
 .header-level-0,
 .header-level-1,
 .header-level-2 {
-    border: none;
+    border: 1px solid rgb(243, 238, 238) !important;
 }
 
-.column-header {
-    background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%);
-    text-align: center !important;
-    font-weight: 600 !important;
-    border: none !important;
-    border-right: 1px solid var(--border-light) !important;
-    border-bottom: 1px solid var(--border-light) !important;
-    padding: 6px 8px;
-    font-size: 0.85rem;
-    color: var(--dimension-text);
+/* Header structure */
+thead th {
+    border: 1px solid rgb(243, 238, 238) !important;
 }
 
-.column-header.leaf-node {
-    border-bottom: 2px solid var(--border-dark) !important;
-}
-
-.column-header.has-children {
-    font-weight: 700;
-    color: var(--primary);
-}
-
-/* Header structure - COMPLETELY BORDERLESS */
 thead tr:first-child th:first-child,
 thead tr:nth-child(2) th:first-child,
 thead tr:nth-child(3) th:first-child {
-    /* Ensure corner cells in all header rows are properly styled */
     background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%) !important;
-    border: none !important;
+    border: 1px solid rgb(243, 238, 238) !important;
     position: sticky;
     left: 0;
     z-index: 50;
 }
 
-/* Handle rowspan corner cells - NO BORDERS */
 thead tr:first-child th[rowspan] {
     background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%) !important;
-    border: none !important;
+    border: 1px solid rgb(243, 238, 238) !important;
     position: sticky;
     left: 0;
     z-index: 50;
@@ -414,59 +357,16 @@ thead tr:first-child th[rowspan] {
     padding: 8px 12px;
 }
 
-/* Ensure empty cells still maintain structure - NO BORDERS */
+/* Empty cells */
 th:empty,
 td:empty {
     background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%) !important;
-    border: none !important;
+    border: 1px solid rgb(243, 238, 238) !important;
     min-height: 40px;
     position: relative;
 }
 
-/* ALL header cells - NO BORDERS */
-thead th {
-    border: none !important;
-}
-
-/* ALL table cells - only minimal borders where absolutely necessary */
-th, td {
-    border: none !important;
-    padding: 0.5rem;
-    vertical-align: middle;
-    margin: 0;
-    box-sizing: border-box;
-    overflow: hidden;
-}
-
-/* Hierarchy cell styling */
-.hierarchy-cell {
-    background: var(--dimension-bg-primary) !important;
-    border: none !important;
-    border-right: 2px solid var(--border-light) !important;
-    border-bottom: 1px solid var(--border-light) !important;
-    position: sticky;
-    left: 0;
-    z-index: 20;
-    padding: 10px 12px !important;
-    vertical-align: top !important;
-    word-wrap: break-word;
-}
-
-.hierarchy-cell.multi-dimension-cell {
-    background: var(--dimension-bg-primary) !important;
-    border: none !important;
-    border-right: 2px solid var(--border-light) !important;
-    border-bottom: 1px solid var(--border-light) !important;
-}
-
-.hierarchy-cell.multi-dimension-cell {
-    background: var(--dimension-bg-primary) !important;
-    border: none !important;
-    border-right: 2px solid var(--border-light) !important;
-    border-bottom: 1px solid var(--border-light) !important;
-}
-
-/* ---------- 5. STICKY HEADER POSITIONING ---------- */
+/* ---------- 5. STICKY HEADER POSITIONING - NO GAPS ---------- */
 tr:nth-child(1) th {
     top: 0px;
     z-index: 31;
@@ -474,24 +374,23 @@ tr:nth-child(1) th {
 }
 
 tr:nth-child(2) th {
-    top: 45px;
+    top: 0px;
     z-index: 30;
     position: sticky;
 }
 
 tr:nth-child(3) th {
-    top: 85px;
+    top: 0px;
     z-index: 29;
     position: sticky;
 }
 
-/* ---------- 6. GAPLESS BODY STRUCTURE ---------- */
-/* Row dimension cells with better text handling */
+/* ---------- 6. BODY STRUCTURE ---------- */
+/* Row dimension cells */
 .row-dimension-cell {
     background: var(--dimension-bg-primary) !important;
-    border: none !important;
+    border: 1px solid rgb(243, 238, 238) !important;
     border-right: 2px solid var(--border-light) !important;
-    border-bottom: 1px solid var(--border-light) !important;
     box-sizing: border-box;
     z-index: 20;
     position: sticky;
@@ -517,12 +416,10 @@ tr:nth-child(odd) .row-dimension-cell {
     background: var(--dimension-hover) !important;
 }
 
-/* Multiple dimensions with NO GAPS */
+/* Multiple dimensions */
 .row-dimension-cell.dimension-0 {
     background: var(--dimension-bg-primary) !important;
-    border: none !important;
-    border-right: 1px solid var(--border-light) !important;
-    border-bottom: 1px solid var(--border-light) !important;
+    border: 1px solid rgb(243, 238, 238) !important;
     position: sticky;
     left: 0;
     z-index: 20;
@@ -530,14 +427,13 @@ tr:nth-child(odd) .row-dimension-cell {
 
 .row-dimension-cell.dimension-1 {
     background: var(--dimension-bg-secondary) !important;
-    border: none !important;
+    border: 1px solid rgb(243, 238, 238) !important;
     border-right: 2px solid var(--border-light) !important;
-    border-bottom: 1px solid var(--border-light) !important;
     position: sticky;
     z-index: 20;
 }
 
-/* Multi-dimension cell positioning with minimum 35% */
+/* Multi-dimension cell positioning */
 table.multi-column-rows .row-dimension-cell.dimension-0 {
     width: calc(35% / 2);
     min-width: 150px;
@@ -567,57 +463,224 @@ tr:nth-child(odd) .row-dimension-cell.dimension-1 {
     background: var(--dimension-bg-secondary) !important;
 }
 
-/* ---------- 7. PROPER HIERARCHY INDENTATION (NOT VERTICAL ALIGNMENT) ---------- */
-/* Level 0: Root level - no indentation */
-[data-level="0"] .dimension-label {
-    padding-left: 8px;
-    color: var(--dimension-text);
-    font-weight: 700;
-    font-size: 0.9rem;
+/* Hierarchy cell styling */
+.hierarchy-cell {
+    background: var(--dimension-bg-primary) !important;
+    border: 1px solid rgb(243, 238, 238) !important;
+    border-right: 2px solid var(--border-light) !important;
+    position: sticky;
+    left: 0;
+    z-index: 20;
+    padding: 10px 12px !important;
+    vertical-align: top !important;
+    word-wrap: break-word;
 }
 
-/* Level 1: First child level - moderate indentation */
-[data-level="1"] .dimension-label {
-    padding-left: 28px;
-    color: var(--primary);
-    font-weight: 600;
-    font-size: 0.85rem;
+.hierarchy-cell.multi-dimension-cell {
+    background: var(--dimension-bg-primary) !important;
+    border: 1px solid rgb(243, 238, 238) !important;
+    border-right: 2px solid var(--border-light) !important;
 }
 
-/* Level 2: Second child level - more indentation */
-[data-level="2"] .dimension-label {
-    padding-left: 48px;
-    color: var(--text);
+/* ---------- 7. PROPER HIERARCHY INDENTATION WITH CONTROLS ---------- */
+/* Base styles for all expand/collapse controls */
+.expand-collapse,
+.leaf-node {
+    display: inline-flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 18px !important;
+    height: 18px !important;
+    margin-right: 8px !important;
+    vertical-align: middle !important;
+    flex-shrink: 0 !important;
+}
+
+/* Base dimension label styles */
+.dimension-label {
     font-weight: 500;
-    font-size: 0.8rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--dimension-text);
+    display: inline-block;
+    vertical-align: middle;
+    max-width: calc(100% - 50px);
+    line-height: 1.4;
+    transition: color 0.2s ease;
 }
 
-/* Level 3: Third child level - even more indentation */
+/* Level 0: Root level (WORLDWIDE) - no indentation */
+[data-level="0"] .expand-collapse,
+[data-level="0"] .leaf-node {
+    margin-left: 4px !important;
+}
+
+[data-level="0"] .dimension-label {
+    padding-left: 4px !important;
+    color: var(--dimension-text) !important;
+    font-weight: 700 !important;
+    font-size: 0.9rem !important;
+}
+
+/* Level 1: First child level (GREATER CHINA, INSURANCE, etc.) - indented */
+[data-level="1"] .expand-collapse,
+[data-level="1"] .leaf-node {
+    margin-left: 24px !important;
+}
+
+[data-level="1"] .dimension-label {
+    padding-left: 0px !important;
+    color: var(--primary) !important;
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
+}
+
+/* Level 2: Second child level (LE CHINA, LE HONG KONG, etc.) - more indented */
+[data-level="2"] .expand-collapse,
+[data-level="2"] .leaf-node {
+    margin-left: 44px !important;
+}
+
+[data-level="2"] .dimension-label {
+    padding-left: 0px !important;
+    color: var(--text) !important;
+    font-weight: 500 !important;
+    font-size: 0.8rem !important;
+}
+
+/* Level 3: Third child level - even more indented */
+[data-level="3"] .expand-collapse,
+[data-level="3"] .leaf-node {
+    margin-left: 64px !important;
+}
+
 [data-level="3"] .dimension-label {
-    padding-left: 68px;
-    color: var(--text-light);
-    font-weight: 400;
-    font-size: 0.8rem;
+    padding-left: 0px !important;
+    color: var(--text-light) !important;
+    font-weight: 400 !important;
+    font-size: 0.8rem !important;
 }
 
-/* Level 4+: Deep nesting */
+/* Level 4+: Deep nesting - maximum indentation */
+[data-level="4"] .expand-collapse,
+[data-level="4"] .leaf-node,
+[data-level="5"] .expand-collapse,
+[data-level="5"] .leaf-node,
+[data-level="6"] .expand-collapse,
+[data-level="6"] .leaf-node {
+    margin-left: 84px !important;
+}
+
 [data-level="4"] .dimension-label,
 [data-level="5"] .dimension-label,
 [data-level="6"] .dimension-label {
-    padding-left: 88px;
-    color: var(--text-light);
-    font-weight: 400;
-    font-size: 0.75rem;
+    padding-left: 0px !important;
+    color: var(--text-light) !important;
+    font-weight: 400 !important;
+    font-size: 0.75rem !important;
 }
 
-/* ---------- 8. ENHANCED VALUE CELLS ---------- */
+/* Alternative approach: If data-level isn't working, use CSS classes */
+.hierarchy-level-0 .expand-collapse,
+.hierarchy-level-0 .leaf-node {
+    margin-left: 4px !important;
+}
+
+.hierarchy-level-0 .dimension-label {
+    padding-left: 4px !important;
+    color: var(--dimension-text) !important;
+    font-weight: 700 !important;
+    font-size: 0.9rem !important;
+}
+
+.hierarchy-level-1 .expand-collapse,
+.hierarchy-level-1 .leaf-node {
+    margin-left: 24px !important;
+}
+
+.hierarchy-level-1 .dimension-label {
+    padding-left: 0px !important;
+    color: var(--primary) !important;
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
+}
+
+.hierarchy-level-2 .expand-collapse,
+.hierarchy-level-2 .leaf-node {
+    margin-left: 44px !important;
+}
+
+.hierarchy-level-2 .dimension-label {
+    padding-left: 0px !important;
+    color: var(--text) !important;
+    font-weight: 500 !important;
+    font-size: 0.8rem !important;
+}
+
+.hierarchy-level-3 .expand-collapse,
+.hierarchy-level-3 .leaf-node {
+    margin-left: 64px !important;
+}
+
+.hierarchy-level-3 .dimension-label {
+    padding-left: 0px !important;
+    color: var(--text-light) !important;
+    font-weight: 400 !important;
+    font-size: 0.8rem !important;
+}
+
+/* Fallback: Manual indentation classes */
+.indent-0 .expand-collapse,
+.indent-0 .leaf-node {
+    margin-left: 4px !important;
+}
+
+.indent-0 .dimension-label {
+    padding-left: 4px !important;
+    font-weight: 700 !important;
+    color: var(--dimension-text) !important;
+}
+
+.indent-1 .expand-collapse,
+.indent-1 .leaf-node {
+    margin-left: 24px !important;
+}
+
+.indent-1 .dimension-label {
+    padding-left: 0px !important;
+    font-weight: 600 !important;
+    color: var(--primary) !important;
+}
+
+.indent-2 .expand-collapse,
+.indent-2 .leaf-node {
+    margin-left: 44px !important;
+}
+
+.indent-2 .dimension-label {
+    padding-left: 0px !important;
+    font-weight: 500 !important;
+    color: var(--text) !important;
+}
+
+.indent-3 .expand-collapse,
+.indent-3 .leaf-node {
+    margin-left: 64px !important;
+}
+
+.indent-3 .dimension-label {
+    padding-left: 0px !important;
+    font-weight: 400 !important;
+    color: var(--text-light) !important;
+}
+
+/* ---------- 8. VALUE CELLS ---------- */
 .value-cell {
     text-align: right !important;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;  /*var(--font-mono) !important;*/
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
     background-color: white !important;
-    border: none !important;
-    border-right: 1px solid var(--border-light) !important;
-    border-bottom: 1px solid var(--border-light) !important;
+    border: 1px solid rgb(243, 238, 238) !important;
     padding: 8px 12px 8px 8px !important;
     font-variant-numeric: tabular-nums;
     width: 100px !important;
@@ -628,7 +691,7 @@ tr:nth-child(odd) .row-dimension-cell.dimension-1 {
     transition: background-color 0.2s ease;
 }
 
-/* Zero values with cool styling */
+/* Zero values */
 .value-cell.zero-value {
     color: #94a3b8 !important;
     opacity: 0.6;
@@ -636,7 +699,7 @@ tr:nth-child(odd) .row-dimension-cell.dimension-1 {
     background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
 }
 
-/* Non-zero values with enhanced styling */
+/* Non-zero values */
 .value-cell.non-zero-value {
     color: var(--dimension-text) !important;
     font-weight: 600 !important;
@@ -664,7 +727,7 @@ tr:nth-child(odd) .row-dimension-cell.dimension-1 {
     font-weight: 600 !important;
 }
 
-/* ---------- 9. ENHANCED EXPAND/COLLAPSE CONTROLS ---------- */
+/* ---------- 9. HIERARCHICAL EXPAND/COLLAPSE CONTROLS ---------- */
 .expand-collapse {
     display: inline-flex !important;
     justify-content: center !important;
@@ -682,6 +745,8 @@ tr:nth-child(odd) .row-dimension-cell.dimension-1 {
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
     flex-shrink: 0 !important;
+    /* Remove default margin-left - this will be set by level-specific rules above */
+    margin-left: 0px !important;
 }
 
 .expand-collapse.collapsed:before {
@@ -713,6 +778,8 @@ tr:nth-child(odd) .row-dimension-cell.dimension-1 {
     vertical-align: middle !important;
     position: relative;
     flex-shrink: 0 !important;
+    /* Remove default margin-left - this will be set by level-specific rules above */
+    margin-left: 0px !important;
 }
 
 .leaf-node::after {
@@ -725,7 +792,8 @@ tr:nth-child(odd) .row-dimension-cell.dimension-1 {
     font-size: 8px;
 }
 
-/* ---------- 10. ENHANCED LABELS & TEXT FORMATTING ---------- */
+/* ---------- 10. LABELS & TEXT FORMATTING ---------- */
+/* Base dimension label - removed conflicting padding */
 .dimension-label {
     font-weight: 500;
     white-space: nowrap;
@@ -734,9 +802,11 @@ tr:nth-child(odd) .row-dimension-cell.dimension-1 {
     color: var(--dimension-text);
     display: inline-block;
     vertical-align: middle;
-    max-width: calc(100% - 30px);
+    max-width: calc(100% - 50px);
     line-height: 1.4;
     transition: color 0.2s ease;
+    /* Remove default padding - let hierarchy rules handle this */
+    padding-left: 0px !important;
 }
 
 /* Hover effect for labels */
@@ -744,10 +814,10 @@ tr:nth-child(odd) .row-dimension-cell.dimension-1 {
     color: var(--primary) !important;
 }
 
-/* ---------- 11. ENHANCED ROW STYLING ---------- */
+/* ---------- 11. ROW STYLING ---------- */
 tr {
     transition: background-color 0.2s ease;
-    border: none;
+    border: 1px solid rgb(243, 238, 238) !important;
 }
 
 tr:hover {
@@ -767,7 +837,6 @@ tr[data-level="0"]:hover {
 }
 
 /* ---------- 12. DYNAMIC WIDTH MANAGEMENT ---------- */
-/* JavaScript will add these classes dynamically */
 .pivot-table-container.no-column-dimensions {
     --row-dimension-width: 75%;
     --value-cell-width: 25%;
@@ -793,24 +862,17 @@ tr[data-level="0"]:hover {
 td[data-measure]:nth-child(even),
 th[data-measure]:nth-child(even) {
     background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
-    border-left: none !important;
 }
 
 td[data-measure]:nth-child(odd),
 th[data-measure]:nth-child(odd) {
     background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
-    border-left: none !important;
 }
 
-td[data-measure]:not(:last-child),
-th[data-measure]:not(:last-child) {
-    border-right: 1px solid var(--border-light) !important;
-}
-
-/* ---------- 14. TABLE LAYOUT ENHANCEMENTS ---------- */
+/* ---------- 14. TABLE LAYOUT ---------- */
 .pivot-table-container tr {
-    height: 40px;
-    min-height: 40px;
+    height: auto;
+    min-height: 45px;
 }
 
 table.proportional-layout {
@@ -830,7 +892,7 @@ table.multi-column-rows {
 }
 
 .pivot-table-container table tbody tr td {
-    border-top: none;
+    border: 1px solid rgb(243, 238, 238) !important;
     vertical-align: middle;
 }
 
@@ -891,6 +953,7 @@ table.multi-column-rows {
     th, td {
         padding: 0.4rem;
         font-size: 0.75rem;
+        border: 1px solid rgb(243, 238, 238) !important;
     }
     
     .row-dimension-header.dimension-0,
