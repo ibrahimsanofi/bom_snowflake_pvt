@@ -29,20 +29,6 @@ function initializeApp() {
 
     // STEP 2: Get DOM elements
     const elements = core.getDomElements();
-
-    // Immediate fix for persistent loading indicator
-    // window.addEventListener('DOMContentLoaded', function() {
-    //     console.log("✅ Status: DOM loaded - applying immediate loading screen fix");
-        
-    //     // Force hide loading indicator after 2 seconds
-    //     setTimeout(function() {
-    //       const appContent = document.getElementById('appContent');
-    //       if (appContent) {
-    //         console.warn("⚠️ Warning: Forcing app content to display");
-    //         appContent.style.display = 'block';
-    //       }
-    //     }, 2000);
-    // });   
     
     // STEP 3:  Set up console enhancements
     ui.initializeEnhancedConsole();

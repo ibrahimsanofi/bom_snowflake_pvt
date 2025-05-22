@@ -34,14 +34,9 @@ const pivotTable = {
         
         // Initialize searchable dropdowns
         this.initializeAllSearchableDropdowns();
-        
-        // Add the column dimension processing methods
-        // this.processColumnDimensions = processColumnDimensions;
-        // this.renderHierarchicalColumnHeaders = renderHierarchicalColumnHeaders;
-        // this.getVisibleLeafColumns = getVisibleLeafColumns;
-        
+                
         // Replace generatePivotTable with enhanced version
-        window.generatePivotTable = generatePivotTable;
+        window.generatePivotTable = this.generatePivotTable;
         
         console.log("✅ Status: Pivot table system initialized with enhanced column functionality");
     },
@@ -1595,42 +1590,6 @@ const pivotTable = {
      * @param {Object} rowDef - The row definition object
      * @returns {string} - HTML for the row cell
      */
-    // renderRowCell: function(rowDef) {
-    //     const dimName = rowDef.hierarchyField ? rowDef.hierarchyField.replace('DIM_', '').toLowerCase() : '';
-    //     const level = rowDef.level || 0;
-        
-    //     // Add cell with data-level attribute for CSS styling to handle indentation
-    //     let cellHtml = `<td class="hierarchy-cell" data-level="${level}">`;
-        
-    //     // Calculate indentation based on level
-    //     const indentPixels = level * 16; // 16px per level
-        
-    //     // Add indent if needed
-    //     if (indentPixels > 0) {
-    //         cellHtml += `<span class="indent" style="width:${indentPixels}px;display:inline-block;"></span>`;
-    //     }
-        
-    //     // Add expand/collapse control only if it has children
-    //     if (rowDef.hasChildren === true) {
-    //         const expandClass = rowDef.expanded ? 'expanded' : 'collapsed';
-            
-    //         cellHtml += `<span class="expand-collapse ${expandClass}" 
-    //             data-node-id="${rowDef._id}" 
-    //             data-hierarchy="${dimName}" 
-    //             data-zone="row"
-    //             onclick="handleExpandCollapseClick(event)"
-    //             title="Expand/collapse this item"></span>`;
-    //     } else {
-    //         cellHtml += `<span class="leaf-node"></span>`;
-    //     }
-        
-    //     // Add label with proper styling
-    //     const fontWeight = level === 0 ? 'font-weight:600;' : '';
-    //     cellHtml += `<span class="dimension-label" style="${fontWeight}">${rowDef.label || rowDef._id}</span>`;
-    //     cellHtml += '</td>';
-        
-    //     return cellHtml;
-    // },
     renderRowCell: function(rowDef) {
         const dimName = rowDef.hierarchyField ? rowDef.hierarchyField.replace('DIM_', '').toLowerCase() : '';
         const level = rowDef.level || 0;
@@ -1661,51 +1620,7 @@ const pivotTable = {
     },
 
 
-    renderCornerCell:function() {
-        return `<th class="corner-cell" rowspan="2" style="width:350px !important; min-width:350px !important; box-sizing:border-box !important; padding:8px !important; border-right:1px solid #e2e8f0 !important; border-bottom:1px solid #e2e8f0 !important; background-color:#f8fafc !important;"></th>`;
-    },
-
     // Function to apply immediate styling fix to existing pivot table
-    // applyPivotTableFix: function() {
-    //     console.log("Applying direct pivot table layout fix...");
-        
-    //     // 1. Ensure consistent cell heights
-    //     const cells = document.querySelectorAll('.pivot-table-container th, .pivot-table-container td');
-    //     cells.forEach(cell => {
-    //         cell.style.height = '32px';
-    //         cell.style.boxSizing = 'border-box';
-    //         cell.style.margin = '0';
-    //         cell.style.overflow = 'hidden';
-    //     });
-        
-    //     // 2. Fix hierarchy cell width and styling
-    //     const hierarchyCells = document.querySelectorAll('.hierarchy-cell');
-    //     hierarchyCells.forEach(cell => {
-    //         cell.style.width = "250px";
-    //         cell.style.minWidth = "250px";
-    //         cell.style.backgroundColor = "#f8fafc";
-    //         cell.style.borderRight = "1px solid #cbd5e1";
-    //     });
-        
-    //     // 3. Fix value cell alignment
-    //     const valueCells = document.querySelectorAll('.value-cell');
-    //     valueCells.forEach(cell => {
-    //         cell.style.textAlign = "right";
-    //         cell.style.paddingRight = "12px";
-    //     });
-        
-    //     // 4. Ensure header stickiness
-    //     const headerCells = document.querySelectorAll('th');
-    //     headerCells.forEach(cell => {
-    //         if (cell.classList.contains('corner-cell')) {
-    //             cell.style.zIndex = '40';
-    //         } else {
-    //             cell.style.zIndex = '30';
-    //         }
-    //     });
-        
-    //     console.log("Direct style fixes applied to pivot table");
-    // },
     applyPivotTableFix: function() {
         console.log("Applying improved pivot table styling");
         
@@ -1797,193 +1712,6 @@ const pivotTable = {
      * @param {Object} elements - DOM elements containing pivotTableHeader
      * @param {Object} pivotData - Pivot table data with columns structure
      */
-    // renderHierarchicalColumns: function(elements, pivotData) {
-    //     if (!elements || !elements.pivotTableHeader) {
-    //         console.error("❌ Alert! Missing header element");
-    //         return;
-    //     }
-        
-    //     // CRITICAL: Add null check for pivotData
-    //     if (!pivotData) {
-    //         console.error("❌ Alert! pivotData is null or undefined");
-    //         this.renderSimpleMeasureHeaders(elements, this.state.valueFields || ['COST_UNIT']);
-    //         return;
-    //     }
-        
-    //     try {
-    //         // Clear existing header content
-    //         elements.pivotTableHeader.innerHTML = '';
-            
-    //         // CRITICAL: Add null check for pivotData.columns
-    //         if (!pivotData.columns) {
-    //             console.error("❌ Alert! pivotData.columns is null or undefined");
-    //             this.renderSimpleMeasureHeaders(elements, this.state.valueFields || ['COST_UNIT']);
-    //             return;
-    //         }
-            
-    //         // Get column field dimensions
-    //         const hasColumnDimensions = pivotData.columns && 
-    //                                 pivotData.columns.length > 0 && 
-    //                                 pivotData.columns[0]._id !== 'default';
-            
-    //         // Get value/measure fields
-    //         const valueFields = this.state.valueFields || ['COST_UNIT'];
-            
-    //         if (!hasColumnDimensions) {
-    //             // Simple case - just measures, no column dimensions
-    //             this.renderSimpleMeasureHeaders(elements, valueFields);
-    //             return;
-    //         }
-            
-    //         // Calculate total number of visible leaf columns - with null check
-    //         const visibleLeafColumns = pivotData.columns ? this.getVisibleLeafColumns(pivotData.columns) : [];
-    //         const columnCount = visibleLeafColumns.length;
-            
-    //         // Create a two-row structure for header
-    //         const measureHeaderRow = document.createElement('tr');
-    //         measureHeaderRow.className = 'measure-header-row';
-            
-    //         const dimensionHeaderRow = document.createElement('tr');
-    //         dimensionHeaderRow.className = 'dimension-header-row';
-            
-    //         // Add the corner cell spanning both rows
-    //         const cornerCell = document.createElement('th');
-    //         cornerCell.className = 'corner-cell';
-    //         cornerCell.rowSpan = 2; // Span both rows
-            
-    //         // Customize corner cell if needed for multi-dimensions
-    //         if (this.state.rowFields && this.state.rowFields.length > 1) {
-    //             cornerCell.classList.add('multi-dimension-corner');
-                
-    //             // Calculate total sticky cell width based on number of dimensions
-    //             const dimensionCount = this.state.rowFields.length;
-    //             const totalWidth = Math.min(dimensionCount * 250, 750) + 'px';
-    //             cornerCell.style.width = totalWidth;
-    //             cornerCell.setAttribute('data-dimension-count', dimensionCount);
-    //         }
-            
-    //         measureHeaderRow.appendChild(cornerCell);
-            
-    //         // First, get the column field name to use as measure header
-    //         const columnDimension = this.state.columnFields && this.state.columnFields.length > 0 
-    //             ? this.state.columnFields[0] 
-    //             : null;
-                
-    //         let columnFieldName = "COST";
-            
-    //         // If we have a column dimension, get its display name
-    //         if (columnDimension) {
-    //             // Get field from available fields
-    //             const field = this.state.availableFields && this.state.availableFields.find(f => f.id === columnDimension);
-    //             if (field) {
-    //                 columnFieldName = field.label || "COST"; 
-    //             }
-    //         }
-            
-    //         // Add the measure header that spans all columns
-    //         valueFields.forEach(fieldId => {
-    //             const measureCell = document.createElement('th');
-    //             measureCell.className = 'measure-header';
-    //             measureCell.setAttribute('data-measure', fieldId);
-                
-    //             // Format display name - use the specific measure name (usually "COST")
-    //             let displayName = fieldId;
-    //             if (fieldId === 'COST_UNIT') displayName = 'COST';
-    //             else if (fieldId === 'QTY_UNIT') displayName = 'QUANTITY';
-                
-    //             // Enhanced: Set to uppercase to match screenshot
-    //             measureCell.textContent = displayName.toUpperCase();
-                
-    //             // Make it span all columns
-    //             if (columnCount > 0) {
-    //                 measureCell.colSpan = columnCount;
-    //             }
-                
-    //             measureHeaderRow.appendChild(measureCell);
-    //         });
-            
-    //         // Now process all leaf column dimension values
-    //         if (visibleLeafColumns.length === 0) {
-    //             console.warn("⚠️ Warning: No visible leaf columns found");
-                
-    //             // Add a default column header
-    //             const placeholderCell = document.createElement('th');
-    //             placeholderCell.className = 'column-header dimension-header';
-    //             placeholderCell.textContent = 'Value';
-    //             dimensionHeaderRow.appendChild(placeholderCell);
-    //         } else {
-    //             // Get the parent dimension name if available
-    //             const firstColumn = visibleLeafColumns[0];
-    //             let parentDimensionLabel = "ITEM COST TYPE"; // Default fallback
-                
-    //             if (firstColumn && firstColumn.hierarchyField) {
-    //                 const dimField = firstColumn.hierarchyField;
-    //                 // Look for a matching field in availableFields
-    //                 const availField = this.state.availableFields && 
-    //                     this.state.availableFields.find(f => f.id === dimField);
-                        
-    //                 if (availField) {
-    //                     parentDimensionLabel = availField.label || parentDimensionLabel;
-    //                 }
-    //             }
-                
-    //             // Add a header cell for the parent dimension that spans all columns
-    //             const parentDimHeader = document.createElement('th');
-    //             parentDimHeader.className = 'column-header parent-dimension-header';
-    //             parentDimHeader.colSpan = columnCount;
-    //             parentDimHeader.textContent = parentDimensionLabel.toUpperCase();
-    //             const parentHeaderRow = document.createElement('tr');
-    //             parentHeaderRow.className = 'parent-dimension-row';
-                
-    //             // Add blank corner cell for parent dimension row
-    //             const parentCornerCell = document.createElement('th');
-    //             parentCornerCell.className = 'corner-cell';
-    //             parentHeaderRow.appendChild(parentCornerCell);
-    //             parentHeaderRow.appendChild(parentDimHeader);
-                
-    //             // Add the parent dimension row first
-    //             elements.pivotTableHeader.appendChild(parentHeaderRow);
-                
-    //             // Now add individual dimension value cells
-    //             visibleLeafColumns.forEach(column => {
-    //                 // Skip if column is null or undefined
-    //                 if (!column) return;
-                    
-    //                 const dimensionCell = document.createElement('th');
-    //                 dimensionCell.className = 'column-header dimension-header';
-    //                 dimensionCell.setAttribute('data-node-id', column._id || '');
-                    
-    //                 // Get dimension name if available
-    //                 const dimName = column.hierarchyField ? 
-    //                     column.hierarchyField.replace('DIM_', '').toLowerCase() : 
-    //                     (column.hierarchyName || '');
-                    
-    //                 if (dimName) {
-    //                     dimensionCell.setAttribute('data-hierarchy', dimName);
-    //                 }
-                    
-    //                 // Add the dimension label
-    //                 dimensionCell.textContent = column.label || '';
-                    
-    //                 dimensionHeaderRow.appendChild(dimensionCell);
-    //             });
-                
-    //             // Modify the corner cell to span 3 rows instead of 2
-    //             cornerCell.rowSpan = 3;
-    //         }
-            
-    //         // Add rows to the header container - after the parent dimension row
-    //         elements.pivotTableHeader.appendChild(measureHeaderRow);
-    //         elements.pivotTableHeader.appendChild(dimensionHeaderRow);
-            
-    //         console.log(`Column headers rendered with improved structure`);
-            
-    //     } catch (error) {
-    //         console.error("❌ Alert! Error rendering column headers:", error);
-    //         // Fallback to simple headers in case of error
-    //         this.renderSimpleMeasureHeaders(elements, this.state.valueFields || ['COST_UNIT']);
-    //     }
-    // },
     renderHierarchicalColumns: function(elements, pivotData) {
         if (!elements || !elements.pivotTableHeader) {
             console.error("❌ Alert! Missing header element");
@@ -2000,6 +1728,10 @@ const pivotTable = {
             
             // Clear existing header content
             elements.pivotTableHeader.innerHTML = '';
+
+            // Get table container and apply width classes
+            const tableContainer = elements.pivotTableHeader.closest('.pivot-table-container');
+            this.applyDynamicWidthClasses(tableContainer);
             
             // IMPORTANT: Add robust null check for pivotData.columns
             if (!pivotData.columns) {
@@ -2375,34 +2107,6 @@ const pivotTable = {
     /**
      * Render simple measure headers when no column hierarchies are present
      */
-    // renderSimpleMeasureHeaders: function(elements, valueFields) {
-    //     const headerRow = document.createElement('tr');
-    //     headerRow.className = 'measure-header-row';
-        
-    //     // Add corner cell
-    //     const cornerCell = document.createElement('th');
-    //     cornerCell.className = 'corner-cell';
-    //     cornerCell.textContent = ''; // Can add a label if desired
-    //     headerRow.appendChild(cornerCell);
-        
-    //     // Add measure headers
-    //     valueFields.forEach(fieldId => {
-    //         const measureCell = document.createElement('th');
-    //         measureCell.className = 'measure-header';
-    //         measureCell.setAttribute('data-measure', fieldId);
-            
-    //         // Format display name
-    //         let displayName = fieldId;
-    //         if (fieldId === 'COST_UNIT') displayName = 'Cost Unit';
-    //         else if (fieldId === 'QTY_UNIT') displayName = 'Quantity Unit';
-            
-    //         measureCell.textContent = displayName;
-    //         headerRow.appendChild(measureCell);
-    //     });
-        
-    //     // Add to container
-    //     elements.pivotTableHeader.appendChild(headerRow);
-    // },
     renderSimpleMeasureHeaders: function(elements, valueFields, displayNames = null) {
         if (!elements || !elements.pivotTableHeader) {
             console.error("❌ Missing header element in renderSimpleMeasureHeaders");
@@ -3228,8 +2932,8 @@ const pivotTable = {
      * @param {Object} elements - DOM elements for the table
      */
     generatePivotTable: function(elements) {
-        console.log("✅ Status: Starting pivot table generation with measure header...");
-        
+        console.log("✅ Status: Starting pivot table generation...");
+
         try {
             // Get DOM elements if not provided
             if (!elements) {
@@ -3245,12 +2949,14 @@ const pivotTable = {
                 return;
             }
             
+            // Get table container
+            const tableContainer = elements.pivotTableHeader.closest('.pivot-table-container');
+            
             // Process pivot data with error handling
             try {
                 this.processPivotData();
             } catch (error) {
                 console.error("❌ Error processing pivot data:", error);
-                // Create an empty pivot data structure as fallback
                 this.state.pivotData = {
                     rows: [],
                     columns: [],
@@ -3258,6 +2964,9 @@ const pivotTable = {
                     useMultiDimension: false
                 };
             }
+            
+            // IMPORTANT: Apply dynamic width classes before rendering
+            this.applyDynamicWidthClasses(tableContainer);
             
             // Verify pivotData exists after processing
             if (!this.state.pivotData) {
@@ -3427,11 +3136,7 @@ const pivotTable = {
     },
 
 
-
     // Helper for better number formatting
-    // formatNumberWithCommas: function(number) {
-    //     return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-    // },
     formatNumberWithCommas: function(number) {
         return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     },
@@ -3569,7 +3274,6 @@ const pivotTable = {
         // Set the HTML content
         elements.pivotTableBody.innerHTML = bodyHtml;
     },
-
 
 
     // Format a numeric value for display    
@@ -4630,7 +4334,60 @@ renderTableBodyWithMeasureHeader: function(elements, useMultiDimension) {
         });
         
         console.log("✅ Enhanced expand/collapse functionality initialized");
-    }
+    },
+
+
+    /**
+     * Apply dynamic width classes based on column dimension presence
+     * @param {HTMLElement} tableContainer - The pivot table container
+     */
+    applyDynamicWidthClasses: function(tableContainer) {
+        if (!tableContainer) {
+            tableContainer = document.querySelector('.pivot-table-container');
+        }
+        
+        if (!tableContainer) {
+            console.warn("No pivot table container found");
+            return;
+        }
+        
+        // Check if we have column dimensions
+        const hasColumnDimensions = this.hasColumnDimensions();
+        
+        // Remove existing classes
+        tableContainer.classList.remove('no-column-dimensions', 'has-column-dimensions');
+        
+        // Add appropriate class
+        if (hasColumnDimensions) {
+            tableContainer.classList.add('has-column-dimensions');
+            console.log("Applied 'has-column-dimensions' class - row dimensions will use 35% width");
+        } else {
+            tableContainer.classList.add('no-column-dimensions');
+            console.log("Applied 'no-column-dimensions' class - row dimensions will use 75% width");
+        }
+    },
+
+
+    /**
+     * Check if the current pivot table has column dimensions
+     * @returns {boolean} - True if column dimensions exist
+     */
+    hasColumnDimensions: function() {
+        // Check state for column fields
+        if (this.state && this.state.columnFields && this.state.columnFields.length > 0) {
+            return true;
+        }
+        
+        // Check pivot data for meaningful columns
+        if (this.state && this.state.pivotData && this.state.pivotData.columns) {
+            const meaningfulColumns = this.state.pivotData.columns.filter(col => 
+                col._id !== 'default' && col._id !== 'ROOT'
+            );
+            return meaningfulColumns.length > 0;
+        }
+        
+        return false;
+    },
 
 };
 
