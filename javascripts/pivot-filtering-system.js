@@ -1284,31 +1284,28 @@ class EnhancedFilterSystem {
   updateSelectionCount(dimension) {
     const countElement = document.getElementById(`${dimension.id}SelectionCount`);
     if (!countElement) return;
-    
-    // Get the number of selected items
+
     let selectedCount = 0;
     let totalCount = 0;
-    
+
     if (dimension.hierarchical) {
-      // For hierarchical dimensions, count from the tree
-      const hierarchy = this.state.hierarchies[dimension.dimensionKey];
-      if (hierarchy) {
-        totalCount = this.countTotalNodes(hierarchy.root);
-        selectedCount = totalCount - this.filterSelections[dimension.id].size;
+      const treeContainer = document.getElementById(`${dimension.id}TreeContainer`);
+      if (treeContainer) {
+        const checkboxes = treeContainer.querySelectorAll('input[type="checkbox"]');
+        totalCount = checkboxes.length;
+        selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
       }
     } else {
-      // For simple dimensions, count from the checkbox list
       const checkboxList = document.getElementById(`${dimension.id}CheckboxList`);
       if (checkboxList) {
         const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
         totalCount = checkboxes.length;
-        selectedCount = totalCount - this.filterSelections[dimension.id].size;
+        selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
       }
     }
-    
+
     countElement.textContent = `${selectedCount} / ${totalCount}`;
-    
-    // Update selection text in dropdown button so it shows only "x items"
+
     const selectionText = document.querySelector(`#${dimension.id}Dropdown .selection-text`);
     if (selectionText) {
       selectionText.textContent = `${selectedCount} items`;
@@ -1425,40 +1422,20 @@ class EnhancedFilterSystem {
    * Select all items in a filter
    * @param {Object} dimension - Dimension configuration
    */
-  selectAllInFilter(dimension) {
-    if (dimension.hierarchical) {
-      // For hierarchical filters, select all in the tree
-      const treeContainer = document.getElementById(`${dimension.id}TreeContainer`);
-      if (treeContainer) {
-        const checkboxes = treeContainer.querySelectorAll('input[type="checkbox"]');
-        checkboxes.forEach(checkbox => {
-          checkbox.checked = true;
-        });
-      }
-      
-      // Clear selection set (empty means all selected)
-      this.filterSelections[dimension.id] = new Set();
-    } else {
-      // For simple filters, select all in the checkbox list
-      const checkboxList = document.getElementById(`${dimension.id}CheckboxList`);
-      if (checkboxList) {
-        const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
-        checkboxes.forEach(checkbox => {
-          checkbox.checked = true;
-        });
-      }
-      
-      // Clear selection set (empty means all selected)
-      this.filterSelections[dimension.id] = new Set();
-    }
+selectAllInFilter(dimension) {
+  Object.values(this.filterMeta).forEach(dim => {
+    this.filterSelections[dim.id].clear();
+  });
+
+  this.applyAllFilters();
+
+  this.updateSimpleFiltersAfterApply(true);
+  this.updateHierarchicalFiltersAfterApply(true);
+
+  this.updateSelectionCount(dimension);
+  this.updateSelectAllCheckbox(dimension);
+}
     
-    // Update the selection count
-    this.updateSelectionCount(dimension);
-    
-    // Update "Select All" checkbox
-    this.updateSelectAllCheckbox(dimension);
-  }
-  
 
   /**
    * Clear all selections in a filter
@@ -1552,7 +1529,7 @@ applyAllFilters() {
     this.initializeHierarchyFilters();
     
     // Start with a fresh copy of the original data
-    this.state.filteredData = [...originalData];
+    this.state.filteredData = [...this.state.factData];   
     
     // Track filter reductions for logging
     const filterReductions = {};
@@ -1585,6 +1562,10 @@ applyAllFilters() {
     
     // Rebuild filtered hierarchies based on current filter selections
     this.rebuildFilteredHierarchies();
+    // to filter the filters
+    this.updateSimpleFiltersAfterApply();
+    //to filter multi hierarchical filters 
+    this.updateHierarchicalFiltersAfterApply();
     
     // Store record counts for UI feedback
     const filteredCount = this.state.filteredData ? this.state.filteredData.length : 0;
@@ -1601,6 +1582,15 @@ applyAllFilters() {
     
     // Apply filtered data to pivot table generation
     this.refreshPivotTable();
+    if (this.state.filteredData.length === 0) {
+      Object.values(this.filterMeta).forEach(dim => {
+        this.filterSelections[dim.id].clear();
+      });
+      this.state.filteredData = [...this.state.factData];
+      this.updateSimpleFiltersAfterApply(true);
+      this.updateHierarchicalFiltersAfterApply(true);
+      this.updateAllSelectionCounts();
+}
 }
 
 
@@ -3693,6 +3683,128 @@ applyAllFilters() {
       console.warn('⚠️ Warning: Pivot table refresh function not found');
     }
   }
+
+  updateSimpleFiltersAfterApply(selectAllMode = false) {
+    Object.values(this.filterMeta).forEach(dimension => {
+      if (!dimension.hierarchical) {
+        const checkboxList = document.getElementById(`${dimension.id}CheckboxList`);
+        if (!checkboxList) return;
+
+        const allValues = this.getUniqueValuesForDimension(dimension);
+
+        const validSet = new Set();
+        this.state.filteredData.forEach(record => {
+          const value = record[dimension.factField];
+          if (value !== undefined && value !== null) validSet.add(value);
+        });
+
+        const previousSelection = new Set(this.filterSelections[dimension.id]);
+        checkboxList.innerHTML = '';
+
+        let allAreValid = true;
+
+        allValues.forEach(item => {
+          const safeId = (item.id || item.value).toString().replace(/[^a-zA-Z0-9]/g, '_');
+          const isValid = validSet.has(item.value);
+          const isChecked = isValid && !previousSelection.has(item.value);
+          const checkboxOption = document.createElement('div');
+          checkboxOption.className = 'checkbox-option';
+          checkboxOption.innerHTML = `
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; width: 100%; overflow: hidden;">
+              <input type="checkbox" id="${dimension.id}_${safeId}" value="${item.value}" ${isChecked ? 'checked' : ''}>
+              <span style="white-space: normal; overflow: hidden; text-overflow: ellipsis; font-size: 0.9rem; ${isValid ? '' : 'color:#aaa;'}">
+                ${item.label}
+              </span>
+            </label>
+          `;
+          const checkbox = checkboxOption.querySelector('input[type="checkbox"]');
+          checkbox.addEventListener('change', (e) => {
+            this.handleSimpleFilterCheckboxChange(dimension, item.value, e.target.checked);
+          });
+          checkboxList.appendChild(checkboxOption);
+
+          // Ne pas exclure si on vient de faire "Select All"
+          if (!selectAllMode) {
+            if (!isValid) {
+              this.filterSelections[dimension.id].add(item.value);
+              checkbox.checked = false;
+              allAreValid = false;
+            } else {
+              this.filterSelections[dimension.id].delete(item.value);
+            }
+          }
+        });
+
+        if (allAreValid) {
+          this.filterSelections[dimension.id].clear();
+        }
+
+        this.updateSelectionCount(dimension);
+      }
+    });
+  }
+
+  updateHierarchicalFiltersAfterApply(selectAllMode = false) {
+    Object.values(this.filterMeta).forEach(dimension => {
+      if (dimension.hierarchical) {
+        const treeContainer = document.getElementById(`${dimension.id}TreeContainer`);
+        if (!treeContainer) return;
+
+        // Récupère tous les factIds présents dans filteredData pour ce dimension
+        const validFactIds = new Set();
+        this.state.filteredData.forEach(record => {
+          const value = record[dimension.factField];
+          if (value !== undefined && value !== null) {
+            validFactIds.add(value);
+          }
+        });
+
+        // Parcourt tous les checkboxes de la hiérarchie
+        const checkboxes = treeContainer.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+          const checkboxId = checkbox.id;
+          const nodeId = checkboxId.replace(`${dimension.id}_node_`, '');
+          const node = this.state.hierarchies[dimension.dimensionKey]?.nodesMap?.[nodeId];
+          let nodeFactIds = [];
+          if (node) {
+            // Récupère tous les factIds descendants
+            if (node.isLeaf && node.factId) {
+              nodeFactIds = Array.isArray(node.factId) ? node.factId : [node.factId];
+            } else if (node.children && node.children.length > 0) {
+              nodeFactIds = Array.from(this.collectLeafDescendantFactIds(node, this.state.hierarchies[dimension.dimensionKey].nodesMap));
+            }
+          }
+
+          const hasValid = nodeFactIds.some(fid => validFactIds.has(fid));
+
+          if (selectAllMode) {
+            // En mode "Select All", tout est coché, rien n'est exclu
+            checkbox.checked = true;
+            // Ne pas modifier filterSelections
+          } else {
+            checkbox.checked = hasValid && !this.filterSelections[dimension.id].has(nodeId);
+            // Mets à jour l'état de sélection (exclusion) pour les noeuds invalides
+            if (!hasValid) {
+              this.filterSelections[dimension.id].add(nodeId);
+            } else {
+              this.filterSelections[dimension.id].delete(nodeId);
+            }
+          }
+          // Ne jamais désactiver (si tu veux garder la possibilité de recocher)
+          checkbox.disabled = false;
+        });
+        // Mets à jour le compteur
+        this.updateSelectionCount(dimension);
+      }
+    });
+  }
+
+  resetAllFilters() {
+  Object.values(this.filterMeta).forEach(dimension => {
+    this.filterSelections[dimension.id].clear();
+  });
+  this.applyAllFilters();
+}
 }
 
 

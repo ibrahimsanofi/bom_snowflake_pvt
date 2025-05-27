@@ -3315,6 +3315,7 @@ function buildCostElementMapping(costElementData, bomData) {
     
     // Second pass - identify which cost elements are used in FACT_BOM
     if (bomData && bomData.length > 0) {
+        
         bomData.forEach(row => {
             if (row.COST_ELEMENT) {
                 mapping.usedCostElements.add(row.COST_ELEMENT);
