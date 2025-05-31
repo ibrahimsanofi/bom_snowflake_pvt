@@ -57,15 +57,13 @@
 }
 
 table {
-    border-collapse: collapse;
+    width: 100%;
+    border-collapse: collapse !important;
     border-spacing: 0;
     font-size: 0.875rem;
-    color: var(--text);
-    table-layout: fixed;
-    width: 100%;
-    min-width: 100%;
-    border: 1px solid rgb(243, 238, 238);
-    font-weight: normal !important;
+    overflow-y: auto;
+    overflow-x: auto;
+    background-color: white;
 }
 
 /* CRITICAL: Keep light borders for structure */
@@ -788,8 +786,8 @@ tr:nth-child(odd) .row-dimension-cell.dimension-1 {
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
-    color: var(--border-dark);
-    font-size: 8px;
+    color:#434242;
+    font-size: 20px;
 }
 
 /* ---------- 10. LABELS & TEXT FORMATTING ---------- */

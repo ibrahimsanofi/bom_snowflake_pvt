@@ -196,13 +196,219 @@ async function fetchFactTableNames() {
  * @param {string} selectedFact - Name of the fact table to load (default: 'FACT_BOM')
  * @returns {Promise<void>}
  */
+// async function ingestData(elements, selectedFact = 'FACT_BOM') {
+//     console.log('⏳ Status: Loading data from Snowflake database server...', 'info', elements);
+    
+//     try {        
+//         // 1. Get dimensions related to the selected fact table
+//         const dimNames = await fetchDimensionNamesForFact(selectedFact);
+//         // console.log(`Loading ${dimNames.length} dimensions for ${selectedFact}`);
+        
+
+//         // 2. Build available files list (used for UI)
+//         state.availableFiles = [];
+//         dimNames.forEach(dim => {
+//             state.availableFiles.push({
+//                 id: `${dim}`,
+//                 label: dim.replace(/^DIM_/, ''),
+//                 type: 'dimension',
+//                 hierarchical: ['LE', 'COST_ELEMENT', 'GMID_DISPLAY', 'SMARTCODE', 'MC', 'YEAR', 'ITEM_COST_TYPE', 'MATERIAL_TYPE'].includes(
+//                     dim.replace(/^DIM_/, '')
+//                 )
+//             });
+//         });
+        
+//         // Add fact table to available files
+//         state.availableFiles.push({
+//             id: selectedFact,
+//             label: selectedFact.replace(/^FACT_/, ''),
+//             type: 'fact'
+//         });
+        
+
+//         // 3. Load dimension data
+//         console.log("⏳ Status: Loading dimension data from database...");
+//         state.dimensions = {};
+        
+//         // Initialize dimensions to empty objects to prevent null reference issues
+//         dimNames.forEach(dim => {
+//             const dimKey = dim.replace(/^DIM_/, '').toLowerCase();
+//             state.dimensions[dimKey] = [];
+//         });
+        
+//         // Fetch all dimension data in parallel for efficiency
+//         const dimensionPromises = dimNames.map(async dim => {
+//             try {
+//                 // Update status
+//                 ui.updateTableStatus(dim, 'loading');
+                
+//                 // Fetch dimension data
+//                 const { data, error } = await fetchDatabaseData(dim);
+                
+//                 if (error || !data) {
+//                     ui.updateTableStatus(dim, 'error');
+//                     console.error(`Error loading dimension: ${dim}`, error);
+//                     return false;
+//                 }
+                
+//                 // Store in state (lowercase dimension name without DIM_ prefix)
+//                 const dimKey = dim.replace(/^DIM_/, '').toLowerCase();
+//                 state.dimensions[dimKey] = data;
+                
+//                 // Update status
+//                 ui.updateTableStatus(dim, 'loaded', data.length);
+//                 console.log(`✅ Status: Loaded dimension ${dim}: ${data.length} rows`);
+//                 return true;
+//             } catch (err) {
+//                 console.error(`Error loading dimension ${dim}:`, err);
+//                 ui.updateTableStatus(dim, 'error');
+//                 return false;
+//             }
+//         });
+        
+//         // Wait for all dimension data to load
+//         await Promise.all(dimensionPromises);
+        
+
+//         // 4. Load fact data
+//         console.log(`⏳ Status: Loading fact data from ${selectedFact}...`);
+//         ui.updateTableStatus(selectedFact, 'loading');
+        
+//         // Definition switched from const to let to allow data filtering
+//         let { data: factData, error: factError } = await fetchDatabaseData(selectedFact);
+
+//         console.log(`✅ Status: Loaded fact data ${selectedFact}: ${factData.length} rows`);
+
+//         // This step is crucial in performance enhancement. It filters out fact rows with zero/null/empty values for the measures 
+//         // console.log(`⏳ Status: Filtering out null/empty/zero fact data from ${selectedFact}...`);
+
+//         // factData = factData.filter(row => {
+//         //     // Check if COST_UNIT has a valid value (not null/undefined/empty string and not zero)
+//         //     const xHasValue = row.COST_UNIT !== null && row.COST_UNIT !== undefined && row.COST_UNIT !== 0 && row.COST_UNIT !== '';
+            
+//         //     // Check if QTY_UNIT has a valid value (not null/undefined/empty string and not zero)
+//         //     const yHasValue = row.QTY_UNIT !== null && row.QTY_UNIT !== undefined && row.QTY_UNIT !== 0 && row.QTY_UNIT !== '';
+            
+//         //     // Keep this row if either x or y has a valid value
+//         //     return xHasValue || yHasValue;
+//         // });
+        
+//         if (factError || !factData) {
+//             ui.updateTableStatus(selectedFact, 'error');
+//             throw new Error(`Error loading fact data: ${selectedFact}`);
+//         }
+        
+//         // Store fact data
+//         state.factData = factData;
+//         ui.updateTableStatus(selectedFact, 'loaded', factData.length);
+//         console.log(`✅ Status: Loaded working fact data ${selectedFact}: ${factData.length} rows`);
+        
+
+//         // Confirm fact data is cached before moving on
+//         if(state.factData.length > 0){
+//             console.log("✅ Status: Sample BOM data:", state.factData[0]);
+//         }
+
+//         // Verify data is loaded before proceeding
+//         if (!state.factData || state.factData.length === 0) {
+//             throw new Error("Fact data was not properly loaded");
+//         }
+        
+//         // Verify dimensions are loaded
+//         const dimensionsLoaded = Object.keys(state.dimensions).some(key => 
+//             Array.isArray(state.dimensions[key]) && state.dimensions[key].length > 0
+//         );
+        
+//         if (!dimensionsLoaded) {
+//             throw new Error("No dimension data was properly loaded");
+//         }
+        
+
+//         // 5. Generate available fields
+//         state.availableFields = [];
+        
+//         // Add dimension fields
+//         state.availableFiles.forEach(file => {
+//             if (file.type === 'dimension') {
+//                 state.availableFields.push({
+//                     id: file.id,
+//                     label: file.label,
+//                     category: 'Dimension',
+//                     type: 'dimension',
+//                     hierarchical: true, //file.hierarchical,
+//                     draggableTo: ['row', 'column', 'filter']
+//                 });
+//             }
+//         });
+        
+//         // Add measure fields
+//         [
+//             { id: 'COST_UNIT', label: 'Cost Unit' },
+//             { id: 'QTY_UNIT', label: 'Quantity Unit' }
+//         ].forEach(measure => {
+//             state.availableFields.push({
+//                 id: measure.id,
+//                 label: measure.label,
+//                 category: 'Measure',
+//                 type: 'fact',
+//                 measureName: measure.id,
+//                 draggableTo: ['value']
+//             });
+//         });
+
+
+//         // 6. Process dimension data to build hierarchies
+//         try {
+//             //
+//             //await processDimensionHierarchies();
+//             //ensureHierarchicalMarkings();
+//             console.log("⏳ Status: Building Dimension hierarchies...");
+//             const hierarchies = processDimensionHierarchies(state.dimensions, state.factData);
+//             state.hierarchies = hierarchies || {};
+//             console.log("✅ Status: Dimension hierarchies built:", Object.keys(state.hierarchies));
+//         } catch (hierError){
+//             console.error("Error building hierarchies:", hierError);
+//             // Initialize empty hierarchies
+//             state.hierarchies = {};
+//         }
+        
+        
+//         // 7. Set up UI elements
+//         ui.renderAvailableFields(elements);
+//         ui.setDefaultFields();
+//         ui.renderFieldContainers(elements, state);
+        
+
+//         // 8. Initialize mappings AFTER data loading is complete
+//         console.log("⏳ Status: Initializing mappings now that data is loaded");
+//         initializeMappings();
+        
+//         // Show success message
+//         console.log('✅ Status: Data loaded successfully from Snowflake database.', 'success', elements);
+//         state.loading = false;
+
+//         return true;
+        
+//     } catch (error) {
+//         console.error('Data Loading Error:', error);
+                
+//         // Show app content even on error
+//         const appContent = document.getElementById('appContent');
+//         if (appContent) {
+//             appContent.style.display = 'block';
+//         }
+        
+//         // Show error message
+//         console.error(`❌ Data Loading Error: ${error.message}`, 'error', elements);
+//         return false;
+//     }
+// }
 async function ingestData(elements, selectedFact = 'FACT_BOM') {
     console.log('⏳ Status: Loading data from Snowflake database server...', 'info', elements);
     
     try {        
         // 1. Get dimensions related to the selected fact table
         const dimNames = await fetchDimensionNamesForFact(selectedFact);
-        // console.log(`Loading ${dimNames.length} dimensions for ${selectedFact}`);
         
 
         // 2. Build available files list (used for UI)
@@ -258,6 +464,7 @@ async function ingestData(elements, selectedFact = 'FACT_BOM') {
                 // Update status
                 ui.updateTableStatus(dim, 'loaded', data.length);
                 console.log(`✅ Status: Loaded dimension ${dim}: ${data.length} rows`);
+                                
                 return true;
             } catch (err) {
                 console.error(`Error loading dimension ${dim}:`, err);
@@ -280,18 +487,18 @@ async function ingestData(elements, selectedFact = 'FACT_BOM') {
         console.log(`✅ Status: Loaded fact data ${selectedFact}: ${factData.length} rows`);
 
         // This step is crucial in performance enhancement. It filters out fact rows with zero/null/empty values for the measures 
-        // console.log(`⏳ Status: Filtering out null/empty/zero fact data from ${selectedFact}...`);
+        console.log(`⏳ Status: Filtering out null/empty/zero fact data from ${selectedFact}...`);
 
-        // factData = factData.filter(row => {
-        //     // Check if COST_UNIT has a valid value (not null/undefined/empty string and not zero)
-        //     const xHasValue = row.COST_UNIT !== null && row.COST_UNIT !== undefined && row.COST_UNIT !== 0 && row.COST_UNIT !== '';
+        factData = factData.filter(row => {
+            // Check if COST_UNIT has a valid value (not null/undefined/empty string and not zero)
+            const xHasValue = row.COST_UNIT !== null && row.COST_UNIT !== undefined && row.COST_UNIT !== 0 && row.COST_UNIT !== '';
             
-        //     // Check if QTY_UNIT has a valid value (not null/undefined/empty string and not zero)
-        //     const yHasValue = row.QTY_UNIT !== null && row.QTY_UNIT !== undefined && row.QTY_UNIT !== 0 && row.QTY_UNIT !== '';
+            // Check if QTY_UNIT has a valid value (not null/undefined/empty string and not zero)
+            const yHasValue = row.QTY_UNIT !== null && row.QTY_UNIT !== undefined && row.QTY_UNIT !== 0 && row.QTY_UNIT !== '';
             
-        //     // Keep this row if either x or y has a valid value
-        //     return xHasValue || yHasValue;
-        // });
+            // Keep this row if either x or y has a valid value
+            return xHasValue || yHasValue;
+        });
         
         if (factError || !factData) {
             ui.updateTableStatus(selectedFact, 'error');
@@ -302,14 +509,13 @@ async function ingestData(elements, selectedFact = 'FACT_BOM') {
         state.factData = factData;
         ui.updateTableStatus(selectedFact, 'loaded', factData.length);
         console.log(`✅ Status: Loaded working fact data ${selectedFact}: ${factData.length} rows`);
-        
 
         // Confirm fact data is cached before moving on
         if(state.factData.length > 0){
             console.log("✅ Status: Sample BOM data:", state.factData[0]);
         }
 
-        // Verify data is loaded before proceeding
+        // Verify fact data is loaded before proceeding
         if (!state.factData || state.factData.length === 0) {
             throw new Error("Fact data was not properly loaded");
         }
@@ -324,7 +530,59 @@ async function ingestData(elements, selectedFact = 'FACT_BOM') {
         }
         
 
-        // 5. Generate available fields
+        // 5. Optimize dimension data by filtering to only records used in fact data
+        console.log("⏳ Status: Optimizing dimension data based on fact relationships...");
+        
+        // Extract unique dimension keys from fact data for filtering
+        const dimensionKeys = {};
+        
+        Object.keys(state.dimensions).forEach(dimKey => {
+            const factIdField = getFactIdField(dimKey);
+            
+            if (factIdField) {
+                // Extract unique values from fact data for this dimension
+                const uniqueValues = new Set();
+                state.factData.forEach(row => {
+                    if (row[factIdField] !== null && row[factIdField] !== undefined && row[factIdField] !== '') {
+                        uniqueValues.add(row[factIdField]);
+                    }
+                });
+                dimensionKeys[dimKey] = uniqueValues;
+                console.log(`✅ Status: Found ${uniqueValues.size} unique ${dimKey} keys in fact data`);
+            } else {
+                console.warn(`⚠️ Warning: No fact field mapping found for dimension ${dimKey}`);
+                dimensionKeys[dimKey] = new Set(); // Empty set means no filtering
+            }
+        });
+        
+        // Filter each dimension to only include records referenced in fact data
+        Object.keys(state.dimensions).forEach(dimKey => {
+            const originalData = state.dimensions[dimKey];
+            const originalCount = originalData.length;
+            
+            if (dimensionKeys[dimKey] && dimensionKeys[dimKey].size > 0) {
+                // Get the dimension ID field using the provided mapping function
+                const dimIdField = getDimensionIdField(dimKey);
+                
+                if (dimIdField) {
+                    const filteredData = originalData.filter(row => 
+                        dimensionKeys[dimKey].has(row[dimIdField])
+                    );
+                    
+                    state.dimensions[dimKey] = filteredData;
+                    
+                    const filterRatio = ((originalCount - filteredData.length) / originalCount * 100).toFixed(1);
+                    console.log(`✅ Status: Optimized ${dimKey}: ${originalCount} → ${filteredData.length} rows (${filterRatio}% reduction)`);
+                } else {
+                    console.warn(`⚠️ Warning: No ID field mapping found for dimension ${dimKey}, keeping all records`);
+                }
+            } else {
+                console.log(`📝 Status: No optimization applied to ${dimKey} (no matching fact keys found)`);
+            }
+        });
+
+
+        // 6. Generate available fields
         state.availableFields = [];
         
         // Add dimension fields
@@ -357,15 +615,13 @@ async function ingestData(elements, selectedFact = 'FACT_BOM') {
         });
 
 
-        // 6. Process dimension data to build hierarchies
+        // 7. Process dimension data to build hierarchies (now with optimized data)
         try {
-            //
-            //await processDimensionHierarchies();
-            //ensureHierarchicalMarkings();
-            console.log("⏳ Status: Building Dimension hierarchies...");
+            console.log("⏳ Status: Building Dimension hierarchies with optimized data...");
             const hierarchies = processDimensionHierarchies(state.dimensions, state.factData);
             state.hierarchies = hierarchies || {};
             console.log("✅ Status: Dimension hierarchies built:", Object.keys(state.hierarchies));
+            
         } catch (hierError){
             console.error("Error building hierarchies:", hierError);
             // Initialize empty hierarchies
@@ -373,18 +629,18 @@ async function ingestData(elements, selectedFact = 'FACT_BOM') {
         }
         
         
-        // 7. Set up UI elements
+        // 8. Set up UI elements
         ui.renderAvailableFields(elements);
         ui.setDefaultFields();
         ui.renderFieldContainers(elements, state);
         
 
-        // 8. Initialize mappings AFTER data loading is complete
+        // 9. Initialize mappings AFTER data loading is complete
         console.log("⏳ Status: Initializing mappings now that data is loaded");
         initializeMappings();
-        
+                
         // Show success message
-        console.log('✅ Status: Data loaded successfully from Snowflake database.', 'success', elements);
+        console.log('✅ Status: Data loaded successfully from Snowflake database with performance optimizations.', 'success', elements);
         state.loading = false;
 
         return true;
@@ -402,6 +658,23 @@ async function ingestData(elements, selectedFact = 'FACT_BOM') {
         console.error(`❌ Data Loading Error: ${error.message}`, 'error', elements);
         return false;
     }
+}
+
+
+function getDimensionIdField(dimName) {
+    // Define mapping between dimension names and id field names
+    const dimensionIdFieldMap = {
+        'le': 'LE',
+        'cost_element': 'COST_ELEMENT',
+        'gmid_display': 'COMPONENT_GMID',
+        'smartcode': 'SMARTCODE',
+        'item_cost_type': 'ITEM_COST_TYPE',
+        'material_type': 'MATERIAL_TYPE',
+        'mc': 'MC',
+        'year': 'YEAR'
+    };
+    
+    return dimensionIdFieldMap[dimName.toLowerCase()] || null;
 }
 
 
@@ -709,92 +982,6 @@ function getFactIdField(dimName) {
  * are displayed even when there's no matching fact data
  * Add this new function to js
  */
-// function preservingFilterByDimension(data, dimensionNode) {
-//     // Input validation
-//     if (!Array.isArray(data) || data.length === 0) {
-//         return { _isEmpty: true, _hierarchyNode: true };
-//     }
-    
-//     if (!dimensionNode) {
-//         return data;
-//     }
-    
-//     // Always include ROOT nodes
-//     if (dimensionNode._id === 'ROOT' || dimensionNode._id.includes('_ROOT')) {
-//         return data;
-//     }
-
-//     // Get hierarchy info from node
-//     const hierarchyField = dimensionNode.hierarchyField;
-//     if (!hierarchyField) {
-//         console.warn(`No hierarchy field specified for node ${dimensionNode._id}`);
-//         return { _isEmpty: true, _hierarchyNode: true };
-//     }
-    
-//     // Get the actual field to filter on
-//     let factField;
-    
-//     if (hierarchyField === 'DIM_GMID_DISPLAY') {
-//         factField = 'COMPONENT_GMID';
-//     } else if (hierarchyField === 'DIM_COST_ELEMENT') {
-//         factField = 'COST_ELEMENT';
-//     } else if (hierarchyField === 'DIM_LE') {
-//         factField = 'LE';
-//     } else if (hierarchyField === 'DIM_ITEM_COST_TYPE') {
-//         factField = 'ITEM_COST_TYPE';
-//     } else if (hierarchyField === 'DIM_MATERIAL_TYPE') {
-//         factField = 'COMPONENT_MATERIAL_TYPE';
-//     } else if (hierarchyField === 'DIM_YEAR') {
-//         factField = 'ZYEAR';
-//     } else if (hierarchyField === 'DIM_MC') {
-//         factField = 'MC';
-//     } else if (hierarchyField === 'DIM_SMARTCODE') {
-//         factField = 'ROOT_SMARTCODE';
-//     } else {
-//         // Default to the hierarchyField name without DIM_ prefix
-//         factField = hierarchyField.replace('DIM_', '');
-//     }
-    
-//     // Check if this is a leaf node with a specific factId to filter on
-//     if (dimensionNode.factId) {
-//         // Filter data based on factId
-//         const filteredData = data.filter(record => {
-//             // Handle array of factIds if present
-//             if (Array.isArray(dimensionNode.factId)) {
-//                 return dimensionNode.factId.includes(record[factField]);
-//             }
-//             // Otherwise do direct comparison
-//             return record[factField] === dimensionNode.factId;
-//         });
-        
-//         // Return empty indicator if no data found
-//         if (filteredData.length === 0) {
-//             return { _isEmpty: true, _hierarchyNode: true };
-//         }
-        
-//         return filteredData;
-//     }
-    
-//     // For non-leaf nodes, we need to find all descendant leaf nodes and include their factIds
-//     const leafFactIds = getAllLeafDescendantFactIds(dimensionNode);
-    
-//     // No leaf factIds found, return empty
-//     if (leafFactIds.size === 0) {
-//         return { _isEmpty: true, _hierarchyNode: true };
-//     }
-    
-//     // Filter data based on all leaf factIds
-//     const filteredData = data.filter(record => 
-//         leafFactIds.has(record[factField])
-//     );
-    
-//     // Return empty indicator if no data found
-//     if (filteredData.length === 0) {
-//         return { _isEmpty: true, _hierarchyNode: true };
-//     }
-    
-//     return filteredData;
-// }
 function preservingFilterByDimension(data, dimensionNode) {
     // Input validation - first check if data is empty or invalid
     if (!Array.isArray(data) || data.length === 0) {
@@ -1245,107 +1432,6 @@ function preservingFilterByMultipleDimensions(data, rowDef) {
  * Initialize all dimension mappings
  * Builds mappings between dimension tables and fact table
  */
-// function initializeMappings() {
-//     console.log("⏳ Status: Starting dimension mappings initialization");
-    
-//     // Initialize state.mappings object if it doesn't exist
-//     if (!state.mappings) {
-//         state.mappings = {};
-//     }
-    
-//     // 1. Initialize legal entity mapping
-//     if (state.dimensions && state.dimensions.le && state.factData) {
-//         console.log("⏳ Status: Initializing Legal Entity mapping");
-//         state.mappings.legalEntity = buildLegalEntityMapping(state.dimensions.le, state.factData);
-        
-//         console.log("✅ Status: Legal Entity Mapping initialized with", 
-//             Object.keys(state.mappings.legalEntity.leToDetails || {}).length, "entities mapped");
-//     } else {
-//         console.warn("Cannot initialize legal entity mapping: missing dimension or fact data");
-//     }
-    
-//     // 2. Initialize cost element mapping
-//     if (state.dimensions && state.dimensions.cost_element && state.factData) {
-//         console.log("⏳ Status: Initializing Cost Element mapping");
-//         state.mappings.costElement = buildCostElementMapping(state.dimensions.cost_element, state.factData);
-        
-//         console.log("✅ Status: Cost Element Mapping initialized with", 
-//             Object.keys(state.mappings.costElement.costElementToDetails || {}).length, "elements mapped");
-//     } else {
-//         console.warn("Cannot initialize cost element mapping: missing dimension or fact data");
-//     }
-    
-//     // 3. Initialize smart code mapping
-//     if (state.dimensions && state.dimensions.smartcode && state.factData) {
-//         console.log("⏳ Status: Initializing Smart Code mapping");
-//         state.mappings.smartCode = buildSmartCodeMapping(state.dimensions.smartcode, state.factData);
-        
-//         console.log("✅ Status: Smart Code Mapping initialized with", 
-//             Object.keys(state.mappings.smartCode.smartCodeToDetails || {}).length, "smart codes mapped");
-//     } else {
-//         console.warn("Cannot initialize smart code mapping: missing dimension or fact data");
-//     }
-    
-//     // 4. Initialize GMID display mapping
-//     if (state.dimensions && state.dimensions.gmid_display && state.factData) {
-//         console.log("⏳ Status: Initializing GMID Display mapping");
-//         state.mappings.gmidDisplay = buildGmidDisplayMapping(state.dimensions.gmid_display, state.factData);
-        
-//         console.log("✅ Status: GMID Display Mapping initialized with", 
-//             Object.keys(state.mappings.gmidDisplay.gmidToDisplay || {}).length, "GMIDs mapped");
-//     } else {
-//         console.warn("Cannot initialize GMID display mapping: missing dimension or fact data");
-//     }
-
-//     // 5. Initialize ITEM_COST_TYPE mapping
-//     if (state.dimensions && state.dimensions.item_cost_type && state.factData) {
-//         console.log("⏳ Status: Initializing ITEM_COST_TYPE mapping");
-//         state.mappings.itemCostType = buildItemCostTypeMapping(state.dimensions.item_cost_type, state.factData);
-        
-//         console.log("✅ Status: ITEM_COST_TYPE Mapping initialized with", 
-//             Object.keys(state.mappings.itemCostType.costTypeToDetails || {}).length, "item cost types mapped");
-//     } else {
-//         console.warn("Cannot initialize item cost type mapping: missing dimension or fact data");
-//     }
-
-//     // 6. Initialize MATERIAL_TYPE mapping
-//     if (state.dimensions && state.dimensions.material_type && state.factData) {
-//         console.log("⏳ Status: Initializing MATERIAL_TYPE mapping");
-//         state.mappings.materialType = buildMaterialTypeMapping(state.dimensions.material_type, state.factData);
-        
-//         console.log("✅ Status: MATERIAL_TYPE Mapping initialized with", 
-//             Object.keys(state.mappings.materialType.materialTypeToDetails || {}).length, "material types mapped");
-//     } else {
-//         console.warn("Cannot initialize material type mapping: missing dimension or fact data");
-//     }
-
-//     // 7. Initialize ZYEAR mapping
-//     if (state.dimensions && state.dimensions.year && state.factData) {
-//         console.log("⏳ Status: Initializing YEAR mapping");
-//         state.mappings.year = buildBusinessYearMapping(state.dimensions.year, state.factData);
-        
-//         console.log("✅ Status: ZYEAR Mapping initialized with", 
-//             Object.keys(state.mappings.year.yearToDetails || {}).length, "year entries mapped");
-//     } else {
-//         console.warn("Cannot initialize year mapping: missing dimension or fact data");
-//     }
-
-//     // 8. Initialize MC mapping
-//     if (state.dimensions && state.dimensions.mc && state.factData) {
-//         console.log("⏳ Status: Initializing MC mapping");
-//         state.mappings.managementCentre = buildManagementCentreMapping(state.dimensions.mc, state.factData);
-        
-//         console.log("✅ Status: MC Mapping initialized with", 
-//             Object.keys(state.mappings.managementCentre.mcToDetails || {}).length, "MCs mapped");
-//     } else {
-//         console.warn("Cannot initialize MC mapping: missing dimension or fact data");
-//     }
-        
-//     // 7. Add integrity checks to verify mappings are working
-//     verifyFactDimensionMappings();
-    
-//     console.log("✅ Status: All mappings initialized successfully");
-// }
 function initializeMappings() {
     console.log("⏳ Status: Starting dimension mappings initialization");
     
@@ -1456,87 +1542,6 @@ function initializeMappings() {
  * Verify that fact records can be properly joined with dimensions
  * This helps diagnose mapping issues
  */
-// function verifyFactDimensionMappings() {
-//     if (!state.factData || state.factData.length === 0) {
-//         console.warn("No fact data available for mapping verification");
-//         return;
-//     }
-    
-//     const sampleSize = Math.min(10, state.factData.length);
-//     const sampleRecords = state.factData.slice(0, sampleSize);
-    
-//     // Check legal entity mapping
-//     if (state.mappings.legalEntity) {
-//         const leMatches = sampleRecords.filter(record => 
-//             record.LE && state.mappings.legalEntity.leToDetails[record.LE]
-//         ).length;
-        
-//         console.log(`✅ Status: Legal Entity mapping: ${leMatches}/${sampleSize} records have matching LE codes`);
-//     }
-    
-//     // Check cost element mapping
-//     if (state.mappings.costElement) {
-//         const ceMatches = sampleRecords.filter(record => 
-//             record.COST_ELEMENT && state.mappings.costElement.costElementToDetails[record.COST_ELEMENT]
-//         ).length;
-        
-//         console.log(`✅ Status: Cost Element mapping: ${ceMatches}/${sampleSize} records have matching COST_ELEMENT`);
-//     }
-    
-//     // Check smart code mapping
-//     if (state.mappings.smartCode) {
-//         const scMatches = sampleRecords.filter(record => 
-//             record.ROOT_SMARTCODE && state.mappings.smartCode.smartCodeToDetails[record.ROOT_SMARTCODE]
-//         ).length;
-        
-//         console.log(`✅ Status: Smart Code mapping: ${scMatches}/${sampleSize} records have matching ROOT_SMARTCODE`);
-//     }
-    
-//     // Check GMID mapping
-//     if (state.mappings.gmidDisplay) {
-//         const gmidMatches = sampleRecords.filter(record => 
-//             record.COMPONENT_GMID && state.mappings.gmidDisplay.gmidToDisplay[record.COMPONENT_GMID]
-//         ).length;
-        
-//         console.log(`✅ Status: GMID mapping: ${gmidMatches}/${sampleSize} records have matching COMPONENT_GMID`);
-//     }
-    
-//     // Check item cost type mapping
-//     if (state.mappings.itemCostType) {
-//         const ictMatches = sampleRecords.filter(record => 
-//             record.ITEM_COST_TYPE && state.mappings.itemCostType.costTypeToDetails[record.ITEM_COST_TYPE]
-//         ).length;
-        
-//         console.log(`✅ Status: Item Cost Type mapping: ${ictMatches}/${sampleSize} records have matching ITEM_COST_TYPE`);
-//     }
-    
-//     // Check material type mapping
-//     if (state.mappings.materialType) {
-//         const mtMatches = sampleRecords.filter(record => 
-//             record.COMPONENT_MATERIAL_TYPE && state.mappings.materialType.materialTypeToDetails[record.COMPONENT_MATERIAL_TYPE]
-//         ).length;
-        
-//         console.log(`✅ Status: Material Type mapping: ${mtMatches}/${sampleSize} records have matching COMPONENT_MATERIAL_TYPE`);
-//     }
-
-//     // Check mc mapping
-//     if (state.mappings.managementCentre) {
-//         const mcMatches = sampleRecords.filter(record => 
-//             record.MC && state.mappings.managementCentre.mcToDetails[record.MC]
-//         ).length;
-        
-//         console.log(`✅ Status: MC mapping: ${mcMatches}/${sampleSize} records have matching MC`);
-//     }
-
-//     // Check year mapping
-//     if (state.mappings.year) {
-//         const yrMatches = sampleRecords.filter(record => 
-//             record.YEAR && state.mappings.year.yearToDetails[record.YEAR]
-//         ).length;
-        
-//         console.log(`✅ Status: MC mapping: ${yrMatches}/${sampleSize} records have matching YEAR`);
-//     }
-// }
 function verifyFactDimensionMappings() {
     if (!state.factData || state.factData.length === 0) {
         console.warn("No fact data available for mapping verification");

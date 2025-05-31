@@ -689,7 +689,8 @@ html, body {
 .pivot-table-container {
     border: 1px solid var(--border-light);
     border-radius: var(--radius);
-    overflow: auto;
+    overflow-y: auto;
+    overflow-x: auto;
     max-height: 70vh;
     background-color: white;
     box-shadow: var(--shadow-sm);
@@ -697,9 +698,12 @@ html, body {
 
 .table-modern {
     width: 100%;
-    border-collapse: separate;
+    border-collapse: collapse !important;
     border-spacing: 0;
     font-size: 0.875rem;
+    overflow-y: auto;
+    overflow-x: auto;
+    background-color: white;
 }
 
 .table-modern th, 
@@ -773,6 +777,22 @@ html, body {
     height: 18px;
     margin-right: var(--space-2);
     flex-shrink: 0;
+    
+    /* White square with grey border */
+    background-color: white;
+    border: 1px solid #9ca3af; /* Grey border */
+    border-radius: 2px; /* Slight rounding for the square */
+    
+    /* Center the purple circle */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    /* Add a subtle shadow for depth */
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    
+    /* Smooth transitions for hover effects */
+    transition: all 0.2s ease;
 }
 
 .dimension-label {
@@ -1718,12 +1738,12 @@ th.value-header {
     font-size: 14px;
 }
 
-.leaf-node {
+/* .leaf-node {
     width: 18px;
     height: 18px;
     margin-right: 8px;
     flex-shrink: 0;
-}
+} */
 
 /* Specific styles for filter hierarchies */
 .filter-tree-container {
@@ -1928,12 +1948,12 @@ th.value-header {
     font-size: 14px;
 }
 
-.leaf-node {
+/* .leaf-node {
     width: 18px;
     height: 18px;
     margin-right: 8px;
     flex-shrink: 0;
-}
+} */
 
 /* Filter tree specific styles */
 .filter-tree-item {
