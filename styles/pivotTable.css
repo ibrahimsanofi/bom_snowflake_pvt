@@ -1,34 +1,29 @@
 /* ===========================================
-   Enhanced Pivot Table CSS - COMPLETELY BORDERLESS HEADERS
+   Enhanced Pivot Table CSS - Clean Version
    Features:
-   - 35% width for row dimensions when column dimensions exist
-   - 75% width for row dimensions when no column dimensions
-   - Proper hierarchy indentation with hierarchical expand/collapse controls
-   - NO BORDER GAPS in headers
-   - Centralized uppercase headers
+   - Dynamic hierarchical indentation
+   - Auto-fit column headers
+   - Scrollable table with sticky headers
+   - Responsive design
    =========================================== */
 
-/* ---------- 1. VARIABLES ---------- */
+/* ---------- 1. CSS VARIABLES ---------- */
 :root {
-    /* Color Variables */
+    /* Primary Colors */
     --primary: #2563eb;
     --primary-light: #e6f0ff;
     --primary-dark: #1e40af;
-    --accent: #f59e0b;
-    --success: #10b981;
-    --warning: #f59e0b;
-    --danger: #ef4444;
     
     /* Neutral Colors */
     --bg-light: #f8fafc;
     --bg-card: #ffffff;
     --border-light: #e5e7eb;
-    --border-dark: #cbd5e1;
+    --border-medium: #cbd5e1;
     --text: #334155;
     --text-light: #64748b;
     --text-dark: #1e293b;
     
-    /* Dimension Cell Colors - Cool alternating scheme */
+    /* Dimension Colors */
     --dimension-bg-primary: #ffffff;
     --dimension-bg-secondary: #f1f5f9;
     --dimension-border: #e2e8f0;
@@ -36,748 +31,402 @@
     --dimension-hover: #e2e8f0;
     
     /* Typography */
-    --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-    --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     
-    /* Elevation */
+    /* Shadows */
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
 }
 
-/* ---------- 2. BASIC STRUCTURE ---------- */
+/* ---------- 2. PIVOT TABLE CONTAINER ---------- */
 .pivot-table-container {
     width: 100%;
-    overflow-x: auto;
+    height: auto !important;
     border: 1px solid var(--border-light);
     border-radius: 0.375rem;
     background-color: var(--bg-card);
     box-shadow: var(--shadow-sm);
     margin-bottom: 1rem;
-    max-height: 70vh;
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse !important;
-    border-spacing: 0;
-    font-size: 0.875rem;
-    overflow-y: auto;
-    overflow-x: auto;
-    background-color: white;
-}
-
-/* CRITICAL: Keep light borders for structure */
-th, td {
-    border: 1px solid rgb(243, 238, 238) !important;
-    padding: 0.5rem;
-    vertical-align: middle;
-    margin: 0;
-    box-sizing: border-box;
-    overflow: hidden;
-}
-
-/* ---------- 3. DYNAMIC WIDTH CLASSES ---------- */
-/* Default: No column dimensions - row dimensions get 75% */
-.pivot-table-container.no-column-dimensions .row-dimension-header,
-.pivot-table-container.no-column-dimensions .row-dimension-cell {
-    width: 75% !important;
-    min-width: 300px;
-}
-
-.pivot-table-container.no-column-dimensions .measures-header,
-.pivot-table-container.no-column-dimensions .value-cell {
-    width: 25% !important;
-}
-
-/* When column dimensions exist - row dimensions get 35% */
-.pivot-table-container.has-column-dimensions .row-dimension-header,
-.pivot-table-container.has-column-dimensions .row-dimension-cell {
-    width: 35% !important;
-    min-width: 300px;
-}
-
-.pivot-table-container.has-column-dimensions .measures-header {
-    width: 65% !important;
-}
-
-/* ---------- 4. HEADER STRUCTURE ---------- */
-.dimension-measures-row th {
-    background-color: #f1f5f9;
-    font-weight: 700;
-    text-align: center;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border: 1px solid rgb(243, 238, 238) !important;
-    padding: 12px;
-    margin: 0 !important;
-}
-
-.measure-type-row th {
-    border: 1px solid rgb(243, 238, 238) !important;
-    margin: 0 !important;
-    padding: 8px 10px;
-}
-
-.column-values-row th {
-    border: 1px solid rgb(243, 238, 238) !important;
-    margin: 0 !important;
-    padding: 6px 8px;
-}
-
-/* Row dimension headers */
-.row-dimension-header {
-    background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%);
-    border: 1px solid rgb(243, 238, 238) !important;
-    font-weight: 700;
-    color: var(--dimension-text);
-    text-align: center;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    position: sticky;
-    left: 0;
-    top: 0;
-    z-index: 40;
-    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
-}
-
-/* Multiple dimensions */
-.row-dimension-header.dimension-0 {
-    background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%);
-    border: 1px solid rgb(243, 238, 238) !important;
-    position: sticky;
-    left: 0;
-    z-index: 40;
-    text-align: center;
-    text-transform: uppercase;
-    font-weight: 700;
-    color: var(--dimension-text);
-}
-
-.row-dimension-header.dimension-1 {
-    background: linear-gradient(135deg, var(--dimension-bg-secondary) 0%, var(--dimension-bg-primary) 100%);
-    border: 1px solid rgb(243, 238, 238) !important;
-    position: sticky;
-    z-index: 40;
-    text-align: center;
-    text-transform: uppercase;
-    font-weight: 700;
-    color: var(--dimension-text);
-}
-
-/* Multi-dimension positioning with 35% */
-table.multi-column-rows .row-dimension-header.dimension-0 {
-    width: calc(35% / 2);
-    min-width: 150px;
-    left: 0;
-}
-
-table.multi-column-rows .row-dimension-header.dimension-1 {
-    width: calc(35% / 2);
-    min-width: 150px;
-    left: calc(35% / 2);
-}
-
-/* MEASURES header */
-.measures-header,
-.parent-dimension-header {
-    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-    font-weight: 700;
-    text-align: center !important;
-    text-transform: uppercase !important;
-    letter-spacing: 1px !important;
-    border: 1px solid rgb(243, 238, 238) !important;
-    font-size: 0.9rem;
-    color: var(--dimension-text) !important;
-    padding: 12px;
-    box-shadow: inset 0 -2px 0 var(--primary);
-}
-
-/* Measure type header */
-.measure-type-header {
-    background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%);
-    text-align: center !important;
-    text-transform: uppercase !important;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    border: 1px solid rgb(243, 238, 238) !important;
-    padding: 8px 10px;
-    color: var(--primary) !important;
-}
-
-/* Corner cell styling */
-.corner-cell,
-.corner-cell-multiple {
-    background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%);
-    border: 1px solid rgb(243, 238, 238) !important;
-    font-weight: 700;
-    color: var(--dimension-text);
-    text-align: center;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    position: sticky;
-    left: 0;
-    top: 0;
-    z-index: 50;
-    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
-    width: 35% !important;
-    min-width: 300px;
-    padding: 8px 12px;
-}
-
-/* Corner cell when column dimensions exist */
-.pivot-table-container.has-column-dimensions .corner-cell,
-.pivot-table-container.has-column-dimensions .corner-cell-multiple {
-    width: 35% !important;
-    min-width: 300px;
-}
-
-/* Corner cell when no column dimensions */
-.pivot-table-container.no-column-dimensions .corner-cell,
-.pivot-table-container.no-column-dimensions .corner-cell-multiple {
-    width: 75% !important;
-    min-width: 300px;
-}
-
-.corner-cell-0,
-.corner-cell-1 {
-    background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%);
-    border: 1px solid rgb(243, 238, 238) !important;
-    font-weight: 700;
-    color: var(--dimension-text);
-    text-align: center;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    position: sticky;
-    z-index: 50;
-    padding: 8px 12px;
-}
-
-/* Multi-dimension corner cells */
-table.multi-column-rows .corner-cell-0 {
-    width: calc(35% / 2);
-    min-width: 150px;
-    left: 0;
-}
-
-table.multi-column-rows .corner-cell-1 {
-    width: calc(35% / 2);
-    min-width: 150px;
-    left: calc(35% / 2);
-}
-
-/* Column value headers */
-.column-value-header {
-    text-align: center !important;
-    font-weight: 600 !important;
-    background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%) !important;
-    border: 1px solid rgb(243, 238, 238) !important;
-    padding: 6px 8px;
-    font-size: 0.85rem;
-    width: 100px;
-    min-width: 80px;
-}
-
-/* All other header classes */
-.dimension-header,
-.row-header,
-.value-header,
-.column-header {
-    border: 1px solid rgb(243, 238, 238) !important;
-    background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%);
-    text-align: center !important;
-    font-weight: 600 !important;
-    padding: 6px 8px;
-    font-size: 0.85rem;
-    color: var(--dimension-text);
-}
-
-/* Header row classes */
-.header-row,
-.measure-header-row,
-.column-header-row {
-    border: 1px solid rgb(243, 238, 238) !important;
-}
-
-.measure-header-row th {
-    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-    font-weight: 700;
-    text-align: center;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border: 1px solid rgb(243, 238, 238) !important;
-    padding: 12px;
-    color: var(--dimension-text);
-}
-
-.column-header-row th {
-    background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%);
-    text-align: center !important;
-    font-weight: 600 !important;
-    border: 1px solid rgb(243, 238, 238) !important;
-    padding: 6px 8px;
-    font-size: 0.85rem;
-    color: var(--dimension-text);
-}
-
-.header-level-0,
-.header-level-1,
-.header-level-2 {
-    border: 1px solid rgb(243, 238, 238) !important;
-}
-
-/* Header structure */
-thead th {
-    border: 1px solid rgb(243, 238, 238) !important;
-}
-
-thead tr:first-child th:first-child,
-thead tr:nth-child(2) th:first-child,
-thead tr:nth-child(3) th:first-child {
-    background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%) !important;
-    border: 1px solid rgb(243, 238, 238) !important;
-    position: sticky;
-    left: 0;
-    z-index: 50;
-}
-
-thead tr:first-child th[rowspan] {
-    background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%) !important;
-    border: 1px solid rgb(243, 238, 238) !important;
-    position: sticky;
-    left: 0;
-    z-index: 50;
-    width: 35% !important;
-    min-width: 300px;
-    text-align: center;
-    text-transform: uppercase;
-    font-weight: 700;
-    color: var(--dimension-text);
-    padding: 8px 12px;
-}
-
-/* Empty cells */
-th:empty,
-td:empty {
-    background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%) !important;
-    border: 1px solid rgb(243, 238, 238) !important;
-    min-height: 40px;
+    overflow: auto; /* Both horizontal and vertical scrolling */
     position: relative;
 }
 
-/* ---------- 5. STICKY HEADER POSITIONING - NO GAPS ---------- */
-tr:nth-child(1) th {
-    top: 0px;
-    z-index: 31;
-    position: sticky;
+/* ---------- 3. TABLE STRUCTURE ---------- */
+table {
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.875rem;
+    font-family: var(--font-sans);
+    background-color: white;
+    width: 100%;
+    table-layout: auto; /* Changed from fixed to auto for flexible widths */
+    min-width: 800px; /* Ensure minimum width for horizontal scrolling */
 }
 
-tr:nth-child(2) th {
-    top: 0px;
-    z-index: 30;
-    position: sticky;
-}
-
-tr:nth-child(3) th {
-    top: 0px;
-    z-index: 29;
-    position: sticky;
-}
-
-/* ---------- 6. BODY STRUCTURE ---------- */
-/* Row dimension cells */
-.row-dimension-cell {
-    background: var(--dimension-bg-primary) !important;
-    border: 1px solid rgb(243, 238, 238) !important;
-    border-right: 2px solid var(--border-light) !important;
+th, td {
+    border: 1px solid var(--border-light);
+    padding: 0.5rem 0.75rem;
+    vertical-align: middle;
     box-sizing: border-box;
-    z-index: 20;
-    position: sticky;
-    left: 0;
-    padding: 10px 12px !important;
-    transition: background-color 0.2s ease;
-    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.08);
-    vertical-align: top !important;
-    word-wrap: break-word;
-}
-
-/* Alternating row colors for dimension cells */
-tr:nth-child(even) .row-dimension-cell {
-    background: var(--dimension-bg-secondary) !important;
-}
-
-tr:nth-child(odd) .row-dimension-cell {
-    background: var(--dimension-bg-primary) !important;
-}
-
-/* Hover effect for dimension cells */
-.row-dimension-cell:hover {
-    background: var(--dimension-hover) !important;
-}
-
-/* Multiple dimensions */
-.row-dimension-cell.dimension-0 {
-    background: var(--dimension-bg-primary) !important;
-    border: 1px solid rgb(243, 238, 238) !important;
-    position: sticky;
-    left: 0;
-    z-index: 20;
-}
-
-.row-dimension-cell.dimension-1 {
-    background: var(--dimension-bg-secondary) !important;
-    border: 1px solid rgb(243, 238, 238) !important;
-    border-right: 2px solid var(--border-light) !important;
-    position: sticky;
-    z-index: 20;
-}
-
-/* Multi-dimension cell positioning */
-table.multi-column-rows .row-dimension-cell.dimension-0 {
-    width: calc(35% / 2);
-    min-width: 150px;
-    left: 0;
-}
-
-table.multi-column-rows .row-dimension-cell.dimension-1 {
-    width: calc(35% / 2);
-    min-width: 150px;
-    left: calc(35% / 2);
-}
-
-/* Alternating colors for multi-dimension cells */
-tr:nth-child(even) .row-dimension-cell.dimension-0 {
-    background: var(--dimension-bg-secondary) !important;
-}
-
-tr:nth-child(even) .row-dimension-cell.dimension-1 {
-    background: var(--dimension-bg-primary) !important;
-}
-
-tr:nth-child(odd) .row-dimension-cell.dimension-0 {
-    background: var(--dimension-bg-primary) !important;
-}
-
-tr:nth-child(odd) .row-dimension-cell.dimension-1 {
-    background: var(--dimension-bg-secondary) !important;
-}
-
-/* Hierarchy cell styling */
-.hierarchy-cell {
-    background: var(--dimension-bg-primary) !important;
-    border: 1px solid rgb(243, 238, 238) !important;
-    border-right: 2px solid var(--border-light) !important;
-    position: sticky;
-    left: 0;
-    z-index: 20;
-    padding: 10px 12px !important;
-    vertical-align: top !important;
-    word-wrap: break-word;
-}
-
-.hierarchy-cell.multi-dimension-cell {
-    background: var(--dimension-bg-primary) !important;
-    border: 1px solid rgb(243, 238, 238) !important;
-    border-right: 2px solid var(--border-light) !important;
-}
-
-/* ---------- 7. PROPER HIERARCHY INDENTATION WITH CONTROLS ---------- */
-/* Base styles for all expand/collapse controls */
-.expand-collapse,
-.leaf-node {
-    display: inline-flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-    width: 18px !important;
-    height: 18px !important;
-    margin-right: 8px !important;
-    vertical-align: middle !important;
-    flex-shrink: 0 !important;
-}
-
-/* Base dimension label styles */
-.dimension-label {
-    font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+/* ---------- 4. ADAPTIVE COLUMN WIDTHS ---------- */
+/* DEFAULT: When no specific class is applied, use balanced approach */
+table colgroup col:first-child,
+table th:first-child,
+table td:first-child {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+}
+
+/* ---------- 4. STICKY HEADERS ---------- */
+thead th {
+    position: sticky;
+    top: 0;
+    background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%);
+    font-weight: 700;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Corner cell - always sticky */
+.corner-cell {
+    position: sticky;
+    left: 0;
+    top: 0;
+    z-index: 50;
+    background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%);
+    font-weight: 700;
+    color: var(--dimension-text);
+    text-align: center !important;
+    /* Width will be inherited from first column rules above */
+}
+
+/* Measures header */
+.measures-header,
+.parent-dimension-header,
+.measure-header {
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    font-weight: 700;
+    text-align: center !important;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--dimension-text);
+    padding: 12px 8px;
+    min-width: fit-content;
+    width: auto;
+}
+
+/* Column headers - auto-fit width */
+.column-header,
+.dimension-header {
+    background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%);
+    text-align: center;
+    font-weight: 600;
+    color: var(--dimension-text);
+    min-width: fit-content;
+    width: auto;
+    padding: 6px 8px;
+}
+
+/* ---------- 5. ROW DIMENSION CELLS ---------- */
+.hierarchy-cell,
+.row-dimension-cell {
+    position: sticky;
+    left: 0;
+    z-index: 20;
+    background: white !important;
+    border-right: 2px solid var(--border-medium);
+    vertical-align: top;
+    word-wrap: break-word;
+    /* Width will be inherited from first column rules above */
+    padding: 8px 12px;
+    box-sizing: border-box !important;
+}
+
+/* Ensure hierarchy content fills the allocated space */
+.hierarchy-cell,
+.row-dimension-cell,
+.multi-dimension-cell {
+    box-sizing: border-box !important;
+}
+
+/* Remove alternating row colors - keep white background */
+tr:nth-child(even) .hierarchy-cell,
+tr:nth-child(even) .row-dimension-cell,
+tr:nth-child(odd) .hierarchy-cell,
+tr:nth-child(odd) .row-dimension-cell {
+    background: white !important;
+}
+
+/* Hover effects */
+.hierarchy-cell:hover,
+.row-dimension-cell:hover {
+    background-color: rgba(37, 99, 235, 0.05) !important;
+}
+
+
+/* ---------- 6. DYNAMIC HIERARCHICAL INDENTATION ---------- */
+/* Base styles for expand/collapse controls and labels */
+.expand-collapse,
+.leaf-node {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+
+.dimension-label {
+    font-weight: 500;
     color: var(--dimension-text);
     display: inline-block;
     vertical-align: middle;
-    max-width: calc(100% - 50px);
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
     line-height: 1.4;
     transition: color 0.2s ease;
+    max-width: calc(100% - 30px); /* Account for expand/collapse button */
 }
 
-/* Level 0: Root level (WORLDWIDE) - no indentation */
-[data-level="0"] .expand-collapse,
-[data-level="0"] .leaf-node {
-    margin-left: 4px !important;
+/* Dynamic indentation based on data-level attribute */
+[data-level="0"] {
+    --indent: 4px;
+    --font-weight: 700;
+    --font-size: 0.9rem;
+    --text-color: var(--dimension-text);
 }
 
-[data-level="0"] .dimension-label {
-    padding-left: 4px !important;
-    color: var(--dimension-text) !important;
-    font-weight: 700 !important;
-    font-size: 0.9rem !important;
+[data-level="1"] {
+    --indent: 24px;
+    --font-weight: 600;
+    --font-size: 0.85rem;
+    --text-color: var(--primary);
 }
 
-/* Level 1: First child level (GREATER CHINA, INSURANCE, etc.) - indented */
-[data-level="1"] .expand-collapse,
-[data-level="1"] .leaf-node {
-    margin-left: 24px !important;
+[data-level="2"] {
+    --indent: 44px;
+    --font-weight: 500;
+    --font-size: 0.8rem;
+    --text-color: var(--text);
 }
 
-[data-level="1"] .dimension-label {
-    padding-left: 0px !important;
-    color: var(--primary) !important;
-    font-weight: 600 !important;
-    font-size: 0.85rem !important;
+[data-level="3"] {
+    --indent: 64px;
+    --font-weight: 400;
+    --font-size: 0.8rem;
+    --text-color: var(--text-light);
 }
 
-/* Level 2: Second child level (LE CHINA, LE HONG KONG, etc.) - more indented */
-[data-level="2"] .expand-collapse,
-[data-level="2"] .leaf-node {
-    margin-left: 44px !important;
+[data-level="4"] {
+    --indent: 84px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
 }
 
-[data-level="2"] .dimension-label {
-    padding-left: 0px !important;
-    color: var(--text) !important;
-    font-weight: 500 !important;
-    font-size: 0.8rem !important;
+[data-level="5"] {
+    --indent: 104px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
 }
 
-/* Level 3: Third child level - even more indented */
-[data-level="3"] .expand-collapse,
-[data-level="3"] .leaf-node {
-    margin-left: 64px !important;
+[data-level="6"] {
+    --indent: 124px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
 }
 
-[data-level="3"] .dimension-label {
-    padding-left: 0px !important;
-    color: var(--text-light) !important;
-    font-weight: 400 !important;
-    font-size: 0.8rem !important;
+[data-level="7"] {
+    --indent: 144px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
 }
 
-/* Level 4+: Deep nesting - maximum indentation */
-[data-level="4"] .expand-collapse,
-[data-level="4"] .leaf-node,
-[data-level="5"] .expand-collapse,
-[data-level="5"] .leaf-node,
-[data-level="6"] .expand-collapse,
-[data-level="6"] .leaf-node {
-    margin-left: 84px !important;
+[data-level="8"] {
+    --indent: 164px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
 }
 
-[data-level="4"] .dimension-label,
-[data-level="5"] .dimension-label,
-[data-level="6"] .dimension-label {
-    padding-left: 0px !important;
-    color: var(--text-light) !important;
-    font-weight: 400 !important;
-    font-size: 0.75rem !important;
+[data-level="9"] {
+    --indent: 184px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
 }
 
-/* Alternative approach: If data-level isn't working, use CSS classes */
-.hierarchy-level-0 .expand-collapse,
-.hierarchy-level-0 .leaf-node {
-    margin-left: 4px !important;
+[data-level="10"] {
+    --indent: 204px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
 }
 
-.hierarchy-level-0 .dimension-label {
-    padding-left: 4px !important;
-    color: var(--dimension-text) !important;
-    font-weight: 700 !important;
-    font-size: 0.9rem !important;
+[data-level="11"] {
+    --indent: 224px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
 }
 
-.hierarchy-level-1 .expand-collapse,
-.hierarchy-level-1 .leaf-node {
-    margin-left: 24px !important;
+[data-level="12"] {
+    --indent: 264px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
 }
 
-.hierarchy-level-1 .dimension-label {
-    padding-left: 0px !important;
-    color: var(--primary) !important;
-    font-weight: 600 !important;
-    font-size: 0.85rem !important;
+[data-level="13"] {
+    --indent: 284px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
 }
 
-.hierarchy-level-2 .expand-collapse,
-.hierarchy-level-2 .leaf-node {
-    margin-left: 44px !important;
+[data-level="14"] {
+    --indent: 304px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
 }
 
-.hierarchy-level-2 .dimension-label {
-    padding-left: 0px !important;
-    color: var(--text) !important;
-    font-weight: 500 !important;
-    font-size: 0.8rem !important;
+[data-level="15"] {
+    --indent: 324px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
 }
 
-.hierarchy-level-3 .expand-collapse,
-.hierarchy-level-3 .leaf-node {
-    margin-left: 64px !important;
+[data-level="16"] {
+    --indent: 344px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
 }
 
-.hierarchy-level-3 .dimension-label {
-    padding-left: 0px !important;
-    color: var(--text-light) !important;
-    font-weight: 400 !important;
-    font-size: 0.8rem !important;
+[data-level="17"] {
+    --indent: 364px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
 }
 
-/* Fallback: Manual indentation classes */
-.indent-0 .expand-collapse,
-.indent-0 .leaf-node {
-    margin-left: 4px !important;
+[data-level="19"] {
+    --indent: 384px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
 }
 
-.indent-0 .dimension-label {
-    padding-left: 4px !important;
-    font-weight: 700 !important;
-    color: var(--dimension-text) !important;
+[data-level="20"] {
+    --indent: 404px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
 }
 
-.indent-1 .expand-collapse,
-.indent-1 .leaf-node {
-    margin-left: 24px !important;
+[data-level="21"] {
+    --indent: 424px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
 }
 
-.indent-1 .dimension-label {
-    padding-left: 0px !important;
-    font-weight: 600 !important;
-    color: var(--primary) !important;
+[data-level="22"] {
+    --indent: 444px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
 }
 
-.indent-2 .expand-collapse,
-.indent-2 .leaf-node {
-    margin-left: 44px !important;
+[data-level="23"] {
+    --indent: 464px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
 }
 
-.indent-2 .dimension-label {
-    padding-left: 0px !important;
-    font-weight: 500 !important;
-    color: var(--text) !important;
+[data-level="24"] {
+    --indent: 484px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
 }
 
-.indent-3 .expand-collapse,
-.indent-3 .leaf-node {
-    margin-left: 64px !important;
+[data-level="25"] {
+    --indent: 504px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
 }
 
-.indent-3 .dimension-label {
-    padding-left: 0px !important;
-    font-weight: 400 !important;
-    color: var(--text-light) !important;
+/* Apply dynamic indentation */
+[data-level] .expand-collapse,
+[data-level] .leaf-node {
+    margin-left: var(--indent);
 }
 
-/* ---------- 8. VALUE CELLS ---------- */
-.value-cell {
-    text-align: right !important;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
-    background-color: white !important;
-    border: 1px solid rgb(243, 238, 238) !important;
-    padding: 8px 12px 8px 8px !important;
-    font-variant-numeric: tabular-nums;
-    width: 100px !important;
-    min-width: 80px !important;
-    max-width: 120px !important;
-    font-weight: 500 !important;
-    white-space: nowrap;
-    transition: background-color 0.2s ease;
+[data-level] .dimension-label {
+    font-weight: var(--font-weight);
+    font-size: var(--font-size);
+    color: var(--text-color);
 }
 
-/* Zero values */
-.value-cell.zero-value {
-    color: #94a3b8 !important;
-    opacity: 0.6;
-    font-style: italic;
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+/* Fallback for levels beyond 9 */
+[data-level] {
+    --max-indent: calc(20px * var(--level, 0) + 4px);
 }
 
-/* Non-zero values */
-.value-cell.non-zero-value {
-    color: var(--dimension-text) !important;
-    font-weight: 600 !important;
-    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
-}
-
-/* Negative values */
-.value-cell[data-raw-value^="-"] {
-    color: var(--danger) !important;
-    font-weight: 700 !important;
-    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%) !important;
-}
-
-/* Large values */
-.value-cell.large-value {
-    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
-    color: #92400e !important;
-    font-weight: 700 !important;
-}
-
-/* Medium values */
-.value-cell.medium-value {
-    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%) !important;
-    color: #065f46 !important;
-    font-weight: 600 !important;
-}
-
-/* ---------- 9. HIERARCHICAL EXPAND/COLLAPSE CONTROLS ---------- */
+/* ---------- 7. EXPAND/COLLAPSE CONTROLS ---------- */
 .expand-collapse {
-    display: inline-flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-    width: 18px !important;
-    height: 18px !important;
-    margin-right: 8px !important;
-    border: 1px solid var(--border-dark) !important;
-    border-radius: 4px !important;
-    background: linear-gradient(135deg, white 0%, #f8fafc 100%) !important;
-    cursor: pointer !important;
-    vertical-align: middle !important;
-    font-size: 12px !important;
-    font-weight: bold !important;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
-    flex-shrink: 0 !important;
-    /* Remove default margin-left - this will be set by level-specific rules above */
-    margin-left: 0px !important;
+    border: 1px solid var(--border-medium);
+    border-radius: 4px;
+    background: linear-gradient(135deg, white 0%, #f8fafc 100%);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .expand-collapse.collapsed:before {
     content: "+";
-    color: var(--primary);
+    color: #16a34a;
 }
 
 .expand-collapse.expanded:before {
     content: "−";
-    color: var(--danger);
+    color: #dc2626;
 }
 
 .expand-collapse:hover {
-    background: linear-gradient(135deg, var(--primary-light) 0%, #dbeafe 100%) !important;
-    border-color: var(--primary) !important;
-    transform: scale(1.1) !important;
-    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3) !important;
+    background: linear-gradient(135deg, var(--primary-light) 0%, #dbeafe 100%);
+    border-color: var(--primary);
+    transform: scale(1.1);
+    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
 }
 
 .expand-collapse:active {
-    transform: scale(0.95) !important;
+    transform: scale(0.95);
 }
 
 .leaf-node {
-    width: 18px !important;
-    height: 18px !important;
-    display: inline-block !important;
-    margin-right: 8px !important;
-    vertical-align: middle !important;
     position: relative;
-    flex-shrink: 0 !important;
-    /* Remove default margin-left - this will be set by level-specific rules above */
-    margin-left: 0px !important;
 }
 
 .leaf-node::after {
@@ -786,194 +435,208 @@ tr:nth-child(odd) .row-dimension-cell.dimension-1 {
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
-    color:#434242;
-    font-size: 20px;
+    color: #ff5722;
+    font-size: 16px;
 }
 
-/* ---------- 10. LABELS & TEXT FORMATTING ---------- */
-/* Base dimension label - removed conflicting padding */
-.dimension-label {
+/* ---------- 8. VALUE CELLS ---------- */
+.value-cell {
+    text-align: right !important;
+    font-family: var(--font-sans);
+    background-color: white !important;
+    padding: 8px 12px;
+    font-variant-numeric: tabular-nums;
     font-weight: 500;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    transition: background-color 0.2s ease;
+    min-width: fit-content;
+    width: auto;
+}
+
+/* Zero values - keep white background */
+.value-cell.zero-value {
+    color: #94a3b8;
+    opacity: 0.6;
+    font-style: italic;
+    background-color: white !important;
+}
+
+/* Non-zero values - keep white background */
+.value-cell.non-zero-value {
     color: var(--dimension-text);
-    display: inline-block;
-    vertical-align: middle;
-    max-width: calc(100% - 50px);
-    line-height: 1.4;
-    transition: color 0.2s ease;
-    /* Remove default padding - let hierarchy rules handle this */
-    padding-left: 0px !important;
+    font-weight: 600;
+    background-color: white !important;
 }
 
-/* Hover effect for labels */
-.row-dimension-cell:hover .dimension-label {
-    color: var(--primary) !important;
+/* Negative values - subtle red text only */
+.value-cell[data-raw-value^="-"] {
+    color: #dc2626 !important;
+    font-weight: 700 !important;
+    background-color: white !important;
 }
 
-/* ---------- 11. ROW STYLING ---------- */
+/* Large values - subtle styling without background */
+.value-cell.large-value {
+    background-color: white !important;
+    color: #92400e !important;
+    font-weight: 700 !important;
+}
+
+/* Medium values - subtle styling without background */
+.value-cell.medium-value {
+    background-color: white !important;
+    color: #065f46 !important;
+    font-weight: 600 !important;
+}
+
+/* ---------- 9. ROW STYLING ---------- */
 tr {
     transition: background-color 0.2s ease;
-    border: 1px solid rgb(243, 238, 238) !important;
+    background-color: white;
 }
 
 tr:hover {
-    background-color: rgba(37, 99, 235, 0.02) !important;
+    background-color: rgba(37, 99, 235, 0.02);
 }
 
+tr:hover .hierarchy-cell,
 tr:hover .row-dimension-cell {
-    background: linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%) !important;
+    background-color: rgba(37, 99, 235, 0.05) !important;
+}
+
+tr:hover .dimension-label {
+    color: var(--primary) !important;
 }
 
 tr[data-level="0"] {
     font-weight: 600;
 }
 
-tr[data-level="0"]:hover {
-    background-color: rgba(37, 99, 235, 0.05) !important;
+/* ---------- 10. MULTI-DIMENSION SUPPORT ---------- */
+.multi-dimension-cell {
+    background: white !important;
+    border-right: 1px solid var(--border-light);
+    padding: 0;
+    /* Width will be inherited from first column rules above */
 }
 
-/* ---------- 12. DYNAMIC WIDTH MANAGEMENT ---------- */
-.pivot-table-container.no-column-dimensions {
-    --row-dimension-width: 75%;
-    --value-cell-width: 25%;
+.dimension-row {
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--border-light);
+    background: white;
+    width: 100%;
 }
 
-.pivot-table-container.has-column-dimensions {
-    --row-dimension-width: 35%;
-    --value-cell-width: 65%;
+.dimension-row:last-child {
+    border-bottom: none;
 }
 
-/* Apply dynamic widths */
-.pivot-table-container.no-column-dimensions .row-dimension-header,
-.pivot-table-container.no-column-dimensions .row-dimension-cell {
-    width: var(--row-dimension-width) !important;
+.dimension-type {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
 }
 
-.pivot-table-container.has-column-dimensions .row-dimension-header,
-.pivot-table-container.has-column-dimensions .row-dimension-cell {
-    width: var(--row-dimension-width) !important;
+.dimension-value {
+    display: flex;
+    align-items: center;
+    width: 100%;
 }
 
-/* ---------- 13. MULTIPLE MEASURES SUPPORT ---------- */
-td[data-measure]:nth-child(even),
-th[data-measure]:nth-child(even) {
-    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+.dimension-indent {
+    display: inline-block;
+    flex-shrink: 0;
 }
 
-td[data-measure]:nth-child(odd),
-th[data-measure]:nth-child(odd) {
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
-}
-
-/* ---------- 14. TABLE LAYOUT ---------- */
-.pivot-table-container tr {
-    height: auto;
-    min-height: 45px;
-}
-
-table.proportional-layout {
-    table-layout: fixed;
-}
-
-table.multi-column-rows {
-    table-layout: fixed;
-}
-
-.all-zeros-row {
-    display: none;
-}
-
-.all-zeros-column {
-    display: none;
-}
-
-.pivot-table-container table tbody tr td {
-    border: 1px solid rgb(243, 238, 238) !important;
-    vertical-align: middle;
-}
-
-/* ---------- 15. RESPONSIVE ADJUSTMENTS ---------- */
-@media (min-width: 1400px) {
-    .value-cell,
-    .column-value-header {
-        width: 120px !important;
-        min-width: 100px !important;
-    }
-    
-    .pivot-table-container.has-column-dimensions .row-dimension-header,
-    .pivot-table-container.has-column-dimensions .row-dimension-cell {
-        width: 30% !important;
-        min-width: 300px;
-    }
-}
-
+/* ---------- 11. RESPONSIVE DESIGN ---------- */
 @media (max-width: 1200px) {
-    .row-dimension-header.dimension-0,
-    .row-dimension-header.dimension-1,
-    .row-dimension-cell.dimension-0,
-    .row-dimension-cell.dimension-1 {
-        min-width: 120px;
+    .pivot-table-container {
+        height: 60vh;
     }
     
-    .value-cell,
-    .column-value-header {
-        width: 90px !important;
-        min-width: 70px !important;
-    }
-}
-
-@media (max-width: 992px) {
-    .pivot-table-container.no-column-dimensions .row-dimension-header,
-    .pivot-table-container.no-column-dimensions .row-dimension-cell {
-        width: 70% !important;
-        min-width: 200px;
+    th, td {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.8rem;
     }
     
-    .pivot-table-container.no-column-dimensions .measures-header,
-    .pivot-table-container.no-column-dimensions .value-cell {
-        width: 30% !important;
+    .corner-cell {
+        min-width: 150px;
+        max-width: 300px;
     }
     
-    .value-cell,
-    .column-value-header {
-        width: 80px !important;
-        min-width: 60px !important;
-    }
-    
-    .dimension-label {
-        max-width: 180px;
+    .hierarchy-cell,
+    .row-dimension-cell {
+        min-width: 150px;
+        max-width: 300px;
     }
 }
 
 @media (max-width: 768px) {
+    .pivot-table-container {
+        height: 50vh;
+    }
+    
     th, td {
-        padding: 0.4rem;
+        padding: 0.3rem 0.5rem;
         font-size: 0.75rem;
-        border: 1px solid rgb(243, 238, 238) !important;
     }
     
-    .row-dimension-header.dimension-0,
-    .row-dimension-header.dimension-1,
-    .row-dimension-cell.dimension-0,
-    .row-dimension-cell.dimension-1 {
-        min-width: 100px;
-    }
-    
-    .value-cell,
-    .column-value-header {
-        width: 70px !important;
-        min-width: 60px !important;
-    }
-    
-    .dimension-label {
-        max-width: 140px;
+    .corner-cell,
+    .hierarchy-cell,
+    .row-dimension-cell {
+        width: 150px;
+        min-width: 150px;
     }
     
     .expand-collapse {
-        width: 16px !important;
-        height: 16px !important;
-        margin-right: 6px !important;
+        width: 16px;
+        height: 16px;
+        margin-right: 6px;
     }
+    
+    .dimension-label {
+        font-size: 0.7rem;
+    }
+}
+
+/* ---------- 12. UTILITY CLASSES ---------- */
+.hidden {
+    display: none;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.font-bold {
+    font-weight: 700;
+}
+
+/* Animation for expand/collapse */
+.expand-collapse {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.expand-collapse.expanding:before {
+    animation: rotateFromPlusToMinus 0.3s forwards;
+}
+
+.expand-collapse.collapsing:before {
+    animation: rotateFromMinusToPlus 0.3s forwards;
+}
+
+@keyframes rotateFromPlusToMinus {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(180deg); }
+}
+
+@keyframes rotateFromMinusToPlus {
+    0% { transform: rotate(180deg); }
+    100% { transform: rotate(0deg); }
 }

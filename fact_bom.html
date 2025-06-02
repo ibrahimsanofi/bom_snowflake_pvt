@@ -743,6 +743,32 @@
     </script>
 
     <script>
+        // Direct button attachment using onclick property
+        document.addEventListener('DOMContentLoaded', function() {
+            var resetBtn = document.getElementById('resetBtn');
+            if (resetBtn) {
+                resetBtn.onclick = function() {
+                    // Clear the containers
+                    document.getElementById('rowFields').innerHTML = '';
+                    document.getElementById('columnFields').innerHTML = '';
+                    document.getElementById('valueFields').innerHTML = '';
+                    
+                    // Re-render
+                    renderAvailableFields({
+                        rowFields: document.getElementById('rowFields'),
+                        columnFields: document.getElementById('columnFields'),
+                        valueFields: document.getElementById('valueFields'),
+                        availableFields: document.getElementById('availableFields')
+                    });
+                    
+                    // Regenerate pivot table
+                    window.generatePivotTable();
+                };
+            }
+        });
+    </script>
+
+    <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Setup for Database Connection collapsible
             const collapseConnectionInfoBtn = document.getElementById('collapseConnectionInfo');
