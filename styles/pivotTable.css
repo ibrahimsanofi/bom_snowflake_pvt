@@ -40,12 +40,14 @@
 
 /* ---------- 2. PIVOT TABLE CONTAINER ---------- */
 .pivot-table-container {
+    overflow-x: auto !important;
+    overflow-y: auto !important; 
     width: 100%;
     height: auto !important;
     border: 1px solid var(--border-light);
     border-radius: 0.375rem;
     background-color: var(--bg-card);
-    box-shadow: var(--shadow-sm);
+    box-shadow: none !important;
     margin-bottom: 1rem;
     overflow: auto; /* Both horizontal and vertical scrolling */
     position: relative;
@@ -53,24 +55,43 @@
 
 /* ---------- 3. TABLE STRUCTURE ---------- */
 table {
-    border-collapse: separate;
-    border-spacing: 0;
+    border-collapse: collapse !important;
+    border-spacing: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
     font-size: 0.875rem;
     font-family: var(--font-sans);
     background-color: white;
-    width: 100%;
-    table-layout: auto; /* Changed from fixed to auto for flexible widths */
-    min-width: 800px; /* Ensure minimum width for horizontal scrolling */
+    width: auto !important;
+    table-layout: auto !important; /* Changed from fixed to auto for flexible widths */
+    
+}
+
+/* Clean table layout */
+.pivot-table-container table {
+    border: none !important;
+    box-shadow: none !important;
 }
 
 th, td {
     border: 1px solid var(--border-light);
+    border-collapse: collapse;
+    margin: 0;
     padding: 0.5rem 0.75rem;
     vertical-align: middle;
     box-sizing: border-box;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+/* Override any conflicting root level styles */
+.column-header[data-level="0"] .expand-collapse,
+[data-level="0"] .expand-collapse {
+    border: 1px solid #64748b !important;
+    background: linear-gradient(135deg, white 0%, #f8fafc 100%) !important;
+    color: #374151 !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
 }
 
 /* ---------- 4. ADAPTIVE COLUMN WIDTHS ---------- */
@@ -94,6 +115,37 @@ thead th {
     letter-spacing: 0.5px;
     z-index: 10;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-light) !important;
+    margin: 0 !important;
+    padding: 8px 12px !important;
+    border-spacing: 0 !important;
+}
+
+/* Ensure all borders are consistent and minimal */
+thead th,
+tbody td {
+    border: 1px solid var(--border-light) !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+/* Remove any special root level styling that creates thick borders */
+[data-level="0"] {
+    border-width: 1px !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+/* Clean up expand/collapse controls */
+.expand-collapse {
+    border: 1px solid #64748b !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Remove hover effects that might interfere */
+.hierarchy-cell:hover {
+    background-color: rgba(37, 99, 235, 0.02) !important;
+    border: 1px solid var(--border-light) !important;
 }
 
 /* Corner cell - always sticky */
@@ -124,10 +176,23 @@ thead th {
     width: auto;
 }
 
+/* Ensure measure headers have consistent styling */
+.measures-header,
+.value-header {
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+    border: 1px solid var(--border-light) !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+    color: var(--dimension-text) !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin:0 !important;
+    border-spacing: 0 !important;
+}
+
 /* Column headers - auto-fit width */
 .column-header,
 .dimension-header {
-    background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%);
     text-align: center;
     font-weight: 600;
     color: var(--dimension-text);
@@ -143,7 +208,7 @@ thead th {
     left: 0;
     z-index: 20;
     background: white !important;
-    border-right: 2px solid var(--border-medium);
+    border-right: 1px solid var(--border-light) !important;
     vertical-align: top;
     word-wrap: break-word;
     /* Width will be inherited from first column rules above */
@@ -639,4 +704,918 @@ tr[data-level="0"] {
 @keyframes rotateFromMinusToPlus {
     0% { transform: rotate(180deg); }
     100% { transform: rotate(0deg); }
+}
+
+/* Root node styling with distinct border */
+.hierarchy-cell[data-level="0"],
+.dimension-header[data-level="0"] {
+    border: 3px solid #2563eb !important;
+    border-radius: 4px;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important;
+    font-weight: 700;
+    color: #1e40af;
+}
+
+/* Root node in multi-dimension setup */
+.multi-dimension-cell .dimension-row[data-level="0"] {
+    border: 2px solid #2563eb;
+    border-radius: 4px;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    margin: 2px;
+    padding: 6px 8px !important;
+}
+
+/* Ensure expand/collapse controls are visible for all parent nodes */
+.expand-collapse {
+    display: inline-flex !important;
+    justify-content: center;
+    align-items: center;
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+    vertical-align: middle;
+    flex-shrink: 0;
+    border: 2px solid #64748b;
+    border-radius: 4px;
+    background: linear-gradient(135deg, white 0%, #f8fafc 100%);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Enhanced expand/collapse button states */
+.expand-collapse.collapsed {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-color: #d97706;
+    color: #92400e;
+}
+
+.expand-collapse.expanded {
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+    border-color: #16a34a;
+    color: #15803d;
+}
+
+.expand-collapse.collapsed:before {
+    content: "+";
+    font-size: 16px;
+    line-height: 1;
+}
+
+.expand-collapse.expanded:before {
+    content: "−";
+    font-size: 18px;
+    line-height: 1;
+}
+
+.expand-collapse:hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Root node expand/collapse controls - special styling */
+[data-level="0"] .expand-collapse {
+    border-color: #2563eb;
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    color: #1e40af;
+    font-weight: 900;
+    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
+}
+
+[data-level="0"] .expand-collapse:hover {
+    background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%);
+    transform: scale(1.15);
+}
+
+/* Root node styling for column headers */
+.column-header[data-level="0"],
+.dimension-header[data-level="0"] {
+    border: 3px solid #dc2626 !important; /* Red border for column headers */
+    border-radius: 4px;
+    background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%) !important;
+    font-weight: 700;
+    color: #991b1b;
+    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
+}
+
+/* Column header expand/collapse controls */
+.column-header .expand-collapse {
+    display: inline-flex !important;
+    justify-content: center;
+    align-items: center;
+    width: 16px;
+    height: 16px;
+    margin-right: 6px;
+    vertical-align: middle;
+    border: 2px solid #64748b;
+    border-radius: 3px;
+    background: linear-gradient(135deg, white 0%, #f8fafc 100%);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Column header expand/collapse states */
+.column-header .expand-collapse.collapsed {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-color: #d97706;
+    color: #92400e;
+}
+
+.column-header .expand-collapse:before {
+    font-size: 12px !important;
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+}
+
+.column-header .expand-collapse.expanded {
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+    border-color: #16a34a;
+    color: #15803d;
+}
+
+.column-header .expand-collapse.collapsed:before {
+    content: "+";
+    font-size: 14px;
+    line-height: 1;
+}
+
+.column-header .expand-collapse.expanded:before {
+    content: "−";
+    font-size: 16px;
+    line-height: 1;
+}
+
+.column-header .expand-collapse:hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* Root level column expand/collapse controls - special red styling */
+.column-header[data-level="0"] .expand-collapse {
+    border-color: #dc2626;
+    background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
+    color: #991b1b;
+    font-weight: 900;
+    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
+}
+
+.column-header[data-level="0"] .expand-collapse:hover {
+    background: linear-gradient(135deg, #fca5a5 0%, #f87171 100%);
+    transform: scale(1.15);
+}
+
+/* Ensure column headers have proper layout */
+.dimension-header-row th {
+    position: relative;
+    text-align: center;
+    vertical-align: middle;
+    padding: 8px 12px;
+    min-height: 40px;
+}
+
+/* Enhanced Column Header Expand/Collapse Controls */
+.column-header .expand-collapse {
+    display: inline-flex !important;
+    justify-content: center;
+    align-items: center;
+    width: 16px !important;
+    height: 16px !important;
+    margin-right: 6px;
+    vertical-align: middle;
+    border: 2px solid #64748b;
+    border-radius: 3px;
+    background: linear-gradient(135deg, white 0%, #f8fafc 100%);
+    cursor: pointer;
+    font-size: 12px !important;
+    font-weight: bold;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Column header expand/collapse states */
+.column-header .expand-collapse.collapsed {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-color: #d97706;
+    color: #92400e;
+}
+
+.column-header .expand-collapse.expanded {
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+    border-color: #16a34a;
+    color: #15803d;
+}
+
+.column-header .expand-collapse.collapsed:before {
+    content: "+";
+    font-size: 14px !important;
+    line-height: 1;
+}
+
+.column-header .expand-collapse.expanded:before {
+    content: "−";
+    font-size: 16px !important;
+    line-height: 1;
+}
+
+.column-header .expand-collapse:hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* Special styling for root level column headers */
+.column-header[data-level="0"] {
+    border: 1px solid var(--border-light) !important; /* Use normal border */
+    border-radius: 0 !important; /* Remove border radius */
+    background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%) !important; /* Use normal header background */
+    font-weight: 600 !important; /* Use normal header weight */
+    color: var(--dimension-text) !important; /* Use normal text color */
+    box-shadow: none !important; /* Remove shadow */
+}
+
+.column-header[data-level="0"] .expand-collapse {
+    border-color: #dc2626 !important;
+    background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%) !important;
+    color: #991b1b !important;
+    font-weight: 900 !important;
+    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
+}
+
+.column-header[data-level="0"] .expand-collapse:hover {
+    background: linear-gradient(135deg, #fca5a5 0%, #f87171 100%) !important;
+    transform: scale(1.15);
+}
+
+/* Ensure column headers have proper layout for controls */
+.column-header {
+    position: relative;
+    text-align: center;
+    vertical-align: middle;
+    padding: 8px 12px;
+    min-height: 40px;
+    white-space: nowrap;
+}
+
+/* Column header with children should have different styling */
+.column-header.has-children {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border: 2px solid #3b82f6;
+    font-weight: 600;
+    color: #1e40af;
+}
+
+.column-header.leaf-node {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border: 1px solid #22c55e;
+    color: #15803d;
+}
+
+/* Ensure proper spacing for column label when expand/collapse is present */
+.column-header .column-label {
+    display: inline-block;
+    vertical-align: middle;
+    max-width: calc(100% - 25px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+
+/* Base styling for all measure headers - applies to any measure field */
+th[class*="value-header"],
+th[class*="measure-header"],
+th[class*="merged-measure"] {
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+    color: var(--dimension-text) !important;
+    padding: 12px 8px !important;
+    border: 2px solid var(--border-medium) !important;
+    min-width: fit-content;
+    width: auto;
+}
+
+/* Dynamic column header styling based on data attributes */
+.column-header {
+    background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%);
+    text-align: center;
+    font-weight: 600;
+    color: var(--dimension-text);
+    min-width: fit-content;
+    width: auto;
+    padding: 8px 12px;
+    border: 2px solid var(--border-medium);
+    position: relative;
+    vertical-align: middle;
+    transition: all 0.2s ease;
+}
+
+/* Root level styling for any dimension - detected by data-level="0" */
+/* .column-header[data-level="0"] {
+    border: 3px solid #dc2626 !important;
+    border-radius: 4px;
+    background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%) !important;
+    font-weight: 700 !important;
+    color: #991b1b !important;
+    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
+} */
+
+/* Parent nodes with children - detected by presence of expand/collapse control */
+.column-header:has(.expand-collapse) {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border: 2px solid #3b82f6;
+    font-weight: 700;
+    color: #1e40af;
+}
+
+/* Leaf nodes - detected by absence of expand/collapse control */
+.column-header:not(:has(.expand-collapse)) {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border: 2px solid #22c55e;
+    color: #15803d;
+    font-weight: 600;
+}
+
+/* Fallback for browsers that don't support :has() selector */
+.column-header.has-children {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border: 2px solid #3b82f6;
+    font-weight: 700;
+    color: #1e40af;
+}
+
+.column-header.leaf-node {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border: 2px solid #22c55e;
+    color: #15803d;
+    font-weight: 600;
+}
+
+/* Dynamic expand/collapse controls - works for any dimension */
+.expand-collapse {
+    display: inline-flex !important;
+    justify-content: center;
+    align-items: center;
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+    vertical-align: middle;
+    flex-shrink: 0;
+    border: 2px solid #64748b;
+    border-radius: 4px;
+    background: linear-gradient(135deg, white 0%, #f8fafc 100%);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Collapsed state */
+.expand-collapse.collapsed {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-color: #d97706;
+    color: #92400e;
+}
+
+.expand-collapse.collapsed:before {
+    content: "+";
+    font-size: 16px;
+    line-height: 1;
+}
+
+/* Expanded state */
+.expand-collapse.expanded {
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+    border-color: #16a34a;
+    color: #15803d;
+}
+
+.expand-collapse.expanded:before {
+    content: "−";
+    font-size: 18px;
+    line-height: 1;
+}
+
+/* Hover effects */
+.expand-collapse:hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Root level expand/collapse controls - special styling for any root dimension */
+[data-level="0"] .expand-collapse {
+    border-color: #2563eb !important;
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+    color: #1e40af !important;
+    font-weight: 900 !important;
+    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
+}
+
+[data-level="0"] .expand-collapse:hover {
+    background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%) !important;
+    transform: scale(1.15);
+}
+
+/* Dynamic row hierarchy styling */
+.hierarchy-cell {
+    position: sticky;
+    left: 0;
+    margin:0;
+    z-index: 20;
+    background: white !important;
+    border-right: 1px solid var(--border-light) !important;
+    vertical-align: top;
+    word-wrap: break-word;
+    padding: 8px 12px;
+    box-sizing: border-box !important;
+    transition: background-color 0.2s ease;
+}
+
+/* Root level row styling - detected by data-level="0" */
+.hierarchy-cell[data-level="0"] {
+    border: 1px solid var(--border-light) !important; /* Use normal border */
+    border-radius: 0 !important; /* Remove border radius */
+    background: white !important; /* Use normal background */
+    font-weight: 700; /* Keep bold text */
+    color: var(--dimension-text); /* Use normal text color */
+    box-shadow: none !important; /* Remove shadow */
+}
+
+/* Hover effects for any row */
+.hierarchy-cell:hover {
+    background-color: rgba(37, 99, 235, 0.05) !important;
+}
+
+tr:hover .hierarchy-cell {
+    background-color: rgba(37, 99, 235, 0.05) !important;
+}
+
+tr:hover .dimension-label {
+    color: var(--primary) !important;
+}
+
+/* Dynamic label styling based on hierarchy level */
+.dimension-label {
+    font-weight: 500;
+    color: var(--dimension-text);
+    display: inline-block;
+    vertical-align: middle;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    line-height: 1.4;
+    transition: color 0.2s ease;
+    max-width: calc(100% - 30px);
+}
+
+/* Auto-detect and style column labels */
+.column-label {
+    display: inline-block;
+    vertical-align: middle;
+    max-width: calc(100% - 30px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Responsive adjustments for any dimension count */
+@media (max-width: 1200px) {
+    .expand-collapse {
+        width: 16px;
+        height: 16px;
+        margin-right: 6px;
+        font-size: 12px;
+    }
+    
+    .dimension-label,
+    .column-label {
+        font-size: 0.85rem;
+        max-width: calc(100% - 25px);
+    }
+}
+
+@media (max-width: 768px) {
+    .expand-collapse {
+        width: 14px;
+        height: 14px;
+        margin-right: 4px;
+        font-size: 10px;
+    }
+    
+    .dimension-label,
+    .column-label {
+        font-size: 0.75rem;
+        max-width: calc(100% - 20px);
+    }
+}
+
+
+/* Universal measure header styling - works with any measure field */
+th[class*="value-header"],
+th[class*="measure-header"],
+th[class*="merged-measure"],
+.measures-header {
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+    color: var(--dimension-text) !important;
+    padding: 12px 8px !important;
+    border: 2px solid var(--border-medium) !important;
+    min-width: fit-content;
+    width: auto;
+}
+
+/* Enhanced column header base styling */
+.column-header {
+    background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%);
+    text-align: center;
+    font-weight: 600;
+    color: var(--dimension-text);
+    min-width: fit-content;
+    width: auto;
+    padding: 8px 12px;
+    border: 2px solid var(--border-medium);
+    position: relative;
+    vertical-align: middle;
+    transition: all 0.2s ease;
+}
+
+/* Ensure proper horizontal arrangement of column headers */
+thead tr:last-child th {
+    display: table-cell !important;
+    float: none !important;
+    width: auto !important;
+    min-width: 80px;
+    max-width: none;
+}
+
+/* Prevent column header truncation */
+.column-header,
+thead th {
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    min-width: max-content !important;
+    width: auto !important;
+    padding: 8px 12px !important;
+}
+
+/* Ensure column labels don't get cut off */
+.column-label {
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    max-width: none !important;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+/* Fix for green column headers - ensure they stay horizontal */
+thead tr:last-child th:not(.row-header):not([class*="value-header"]):not([class*="measure"]) {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%) !important;
+    border: 1px solid #22c55e !important; /* Thinner border */
+    color: #15803d !important;
+    font-weight: 600 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: table-cell !important;
+    vertical-align: middle;
+    text-align: center;
+    white-space: nowrap;
+    min-width: 80px;
+    padding: 8px 12px;
+}
+
+/* Remove any spaicng between header rows */
+thead tr {
+    margin:0 !important;
+    padding: 0 !important;
+    border-spacing: 0 !important;
+}
+
+/* Fix row header to match the clean style */
+.row-header {
+    background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%) !important;
+    border: 1px solid var(--border-light) !important;
+    font-weight: 700;
+    text-align: center !important;
+    color: var(--dimension-text);
+    box-shadow: none !important;
+    border-radius: 0 !important;
+}
+
+/* Remove any special styling from root level columns that interferes */
+.column-header[data-level="0"]:not(.row-header) {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%) !important;
+    border: 1px solid #22c55e !important;
+    color: #15803d !important;
+    font-weight: 600 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+}
+
+
+/* Root level styling - works for any dimension at level 0 */
+.column-header[data-level="0"],
+.column-header.root-level {
+    border: 1px solid var(--border-light) !important; /* Use normal border */
+    border-radius: 0 !important; /* Remove border radius */
+    background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%) !important; /* Use normal header background */
+    font-weight: 600 !important; /* Use normal header weight */
+    color: var(--dimension-text) !important; /* Use normal text color */
+    box-shadow: none !important; /* Remove shadow */
+}
+
+/* Parent nodes - detected by having expand/collapse controls */
+.column-header.has-children,
+.column-header:has(.expand-collapse) {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border: 2px solid #3b82f6;
+    font-weight: 700;
+    color: #1e40af;
+}
+
+/* Leaf nodes - detected by absence of expand/collapse controls */
+.column-header.leaf-node,
+.column-header:not(:has(.expand-collapse)) {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border: 2px solid #22c55e;
+    color: #15803d;
+    font-weight: 600;
+}
+
+/* Enhanced expand/collapse controls - universal styling */
+.expand-collapse {
+    display: inline-flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 18px !important;
+    height: 18px !important;
+    margin-right: 8px;
+    vertical-align: middle;
+    flex-shrink: 0;
+    border: 1px solid #64748b;
+    border-radius: 4px;
+    background: linear-gradient(135deg, white 0%, #f8fafc 100%);
+    cursor: pointer;
+    font-size: 14px !important;
+    font-weight: bold;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    text-align: center !important;
+    line-height: 1 !important;
+    position: relative;
+}
+
+/* Perfect centering for the + and - symbols */
+.expand-collapse:before {
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    display: block !important;
+    line-height: 1 !important;
+    font-size: 14px !important;
+    font-weight: bold !important;
+}
+
+/* Collapsed state */
+.expand-collapse.collapsed {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-color: #d97706;
+    color: #92400e;
+}
+
+.expand-collapse.collapsed:before {
+    content: "+";
+    font-size: 16px;
+    line-height: 1;
+}
+
+/* Expanded state */
+.expand-collapse.expanded {
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+    border-color: #16a34a;
+    color: #15803d;
+}
+
+.expand-collapse.expanded:before {
+    content: "−";
+    font-size: 18px;
+    line-height: 1;
+}
+
+/* Hover effects */
+.expand-collapse:hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Ensure consistent sizing for all expand/collapse controls */
+.hierarchy-cell .expand-collapse,
+.column-header .expand-collapse,
+thead .expand-collapse {
+    width: 18px !important;
+    height: 18px !important;
+    display: inline-flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    text-align: center !important;
+}
+
+/* Root level expand/collapse controls - special styling for any dimension */
+[data-level="0"] .expand-collapse {
+    border-color: #2563eb !important;
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+    color: #1e40af !important;
+    font-weight: 900 !important;
+    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
+    width: 18px !important;
+    height: 18px !important;
+}
+
+[data-level="0"] .expand-collapse:before {
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+}
+
+[data-level="0"] .expand-collapse:hover {
+    background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%) !important;
+    transform: scale(1.15);
+}
+
+/* Enhanced row hierarchy styling */
+.hierarchy-cell {
+    position: sticky;
+    left: 0;
+    z-index: 20;
+    background: white !important;
+    border-right: 1px solid var(--border-light) !important;
+    margin:0 !important;
+    border-spacing: 0 !important;
+    vertical-align: top;
+    word-wrap: break-word;
+    padding: 8px 12px !important;
+    box-sizing: border-box !important;
+    transition: background-color 0.2s ease;
+}
+
+/* Enhanced hover effects */
+.hierarchy-cell:hover {
+    background-color: rgba(37, 99, 235, 0.05) !important;
+}
+
+tr:hover .hierarchy-cell {
+    background-color: rgba(37, 99, 235, 0.05) !important;
+}
+
+tr:hover .dimension-label {
+    color: var(--primary) !important;
+}
+
+/* Universal label styling */
+.dimension-label,
+.column-label {
+    display: inline-block;
+    vertical-align: middle;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    line-height: 1.4;
+    transition: color 0.2s ease;
+    max-width: calc(100% - 30px);
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+    .expand-collapse {
+        width: 16px;
+        height: 16px;
+        margin-right: 6px;
+        font-size: 12px;
+    }
+    
+    .dimension-label,
+    .column-label {
+        font-size: 0.85rem;
+        max-width: calc(100% - 25px);
+    }
+}
+
+@media (max-width: 768px) {
+    .expand-collapse {
+        width: 14px;
+        height: 14px;
+        margin-right: 4px;
+        font-size: 10px;
+    }
+    
+    .dimension-label,
+    .column-label {
+        font-size: 0.75rem;
+        max-width: calc(100% - 20px);
+    }
+}
+
+/* Hide red dot for leaf nodes in headers */
+thead .leaf-node::after {
+    display: none !important;
+    content: none !important;
+}
+
+/* Alternative: completely hide leaf-node spans in headers */
+/* thead .leaf-node {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    margin: 0 !important;
+} */
+
+/* Ensure proper spacing when leaf-node is hidden */
+/* thead th .column-label {
+    margin-left: 0 !important;
+} */
+
+/* Ensure consistent borders with no gaps */
+thead th:not(:last-child) {
+    border-right: 1px solid var(--border-light) !important;
+}
+
+tbody td:not(:last-child) {
+    border-right: 1px solid var(--border-light) !important;
+}
+
+/* Remove any transform or positioning that creates gaps */
+.expand-collapse {
+    transform: none !important;
+    position: relative !important;
+    margin-right: 8px !important;
+}
+
+/* Ensure headers align properly */
+thead th {
+    vertical-align: middle !important;
+    line-height: 1.2 !important;
+}
+
+/* Additional fix for column width consistency */
+.column-header[data-material-type] {
+    min-width: max-content !important;
+    width: auto !important;
+    padding: 8px 12px !important;
+    border: 1px solid var(--border-light) !important;
+    border-bottom: 1px solid var(--border-light) !important;
+}
+
+/* Fix for column root node width */
+th[data-level="0"][data-material-type],
+.column-header[data-level="0"] {
+    min-width: max-content !important;
+    width: auto !important;
+    white-space: nowrap !important;
+    padding: 8px 16px !important; /* Slightly more padding for root nodes */
+}
+
+/* Ensure table accommodates content width */
+/* .pivot-table-container table {
+    min-width: max-content !important;
+    width: auto !important;
+} */
+
+/* Remove any max-width constraints */
+th, td {
+    max-width: none !important;
+}
+
+/* Fix sticky header backgrounds to prevent visual gaps */
+thead th {
+    background-clip: padding-box !important;
+    background-origin: padding-box !important;
+}
+
+.hierarchy-cell {
+    background-clip: padding-box !important;
+    background-origin: padding-box !important;
+}
+
+/* Remove any special bottom border from the header container */
+.pivot-table-container thead,
+.pivot-table-container table thead {
+    border-bottom: none !important;
+}
+
+/* Remove any conflicting text-align or line-height */
+.expand-collapse * {
+    line-height: 1 !important;
+    text-align: center !important;
 }

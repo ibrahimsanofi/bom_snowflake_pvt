@@ -1,7 +1,6 @@
 // Export logic for BOM Pivot Table (Excel/CSV)
 
 import stateModule from './state.js';
-import multiDimensionPivotHandler from './pivotTableMultiDimensionsHandler.js';
 
 const state = stateModule.state;
 

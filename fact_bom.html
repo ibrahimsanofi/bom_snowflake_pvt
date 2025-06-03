@@ -21,6 +21,7 @@
     
     <!-- SheetJS for Excel export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
     <!-- Export logic -->
     <script type="module" src="./javascripts/pivotTableExport.js"></script>
 
@@ -29,8 +30,7 @@
 
     <!-- RAM Manager -->
     <script src="./javascripts/ram-manager.js"></script>
-    
-    
+
     <style id="pivot-value-styles">
         .value-cell {
             text-align: right;
@@ -742,30 +742,9 @@
         }
     </script>
 
-    <script>
-        // Direct button attachment using onclick property
-        document.addEventListener('DOMContentLoaded', function() {
-            var resetBtn = document.getElementById('resetBtn');
-            if (resetBtn) {
-                resetBtn.onclick = function() {
-                    // Clear the containers
-                    document.getElementById('rowFields').innerHTML = '';
-                    document.getElementById('columnFields').innerHTML = '';
-                    document.getElementById('valueFields').innerHTML = '';
-                    
-                    // Re-render
-                    renderAvailableFields({
-                        rowFields: document.getElementById('rowFields'),
-                        columnFields: document.getElementById('columnFields'),
-                        valueFields: document.getElementById('valueFields'),
-                        availableFields: document.getElementById('availableFields')
-                    });
-                    
-                    // Regenerate pivot table
-                    window.generatePivotTable();
-                };
-            }
-        });
+    <script type="module">
+        import ui from './javascripts/ui.js';
+        ui.setupResetUI();
     </script>
 
     <script>
@@ -824,14 +803,6 @@
                     }
                 }
             }
-            
-            // Set initial states if needed e.g. if some panels are desired to start collapsed:
-            // filterContent.style.display = 'none';
-            // const filterIcon = toggleFilterContentBtn.querySelector('i');
-            // if (filterIcon) {
-            //     filterIcon.classList.remove('fa-chevron-up');
-            //     filterIcon.classList.add('fa-chevron-down');
-            // }
 
             const collapseAllBtn = document.getElementById('collapseAllBtn');
             const expandAllBtn = document.getElementById('expandAllBtn');
