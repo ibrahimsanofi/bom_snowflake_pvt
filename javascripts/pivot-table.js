@@ -286,14 +286,15 @@ const pivotTable = {
     /**
      * Format a value for display
      */
-    formatValue: function (value) {
-        const numericValue = typeof value === 'number' ? value : parseFloat(String(value)) || 0;
-        if (numericValue === 0) return '0.00';
-        if (Math.abs(numericValue) >= 1000000) return (numericValue / 1000000).toFixed(2) + 'm';
-        if (Math.abs(numericValue) >= 1000) return (numericValue / 1000).toFixed(2) + 'k';
-        return numericValue.toFixed(2);
-    },
-
+        formatValue: function (value) {
+            const decimals = this.state?.decimalPlaces;
+            const numericValue = typeof value === 'number' ? value : parseFloat(String(value)) || 0;
+            if (numericValue === 0) return (0).toFixed(decimals);
+            if (Math.abs(numericValue) >= 1000000000) return (numericValue / 1000000000).toFixed(decimals) + 'b';
+            if (Math.abs(numericValue) >= 1000000) return (numericValue / 1000000).toFixed(decimals) + 'm';
+            if (Math.abs(numericValue) >= 1000) return (numericValue / 1000).toFixed(decimals) + 'k';
+            return numericValue.toFixed(decimals);
+        },
 
     // Update the main render function
     renderPivotTable: function (elements, useMultiDimension = false) {
@@ -2443,9 +2444,7 @@ debugLEFiltering: function(records, nodeLabel) {
         return visibleRows;
     },
 
-
     renderValueCell: function (value) {
-        // Force number conversion with proper null/undefined handling
         let numericValue;
 
         if (value === undefined || value === null) {
@@ -2453,12 +2452,10 @@ debugLEFiltering: function(records, nodeLabel) {
         } else if (typeof value === 'number') {
             numericValue = value;
         } else {
-            // Ensure stringification before parsing
             numericValue = parseFloat(String(value));
             if (isNaN(numericValue)) numericValue = 0;
         }
 
-        // Determine cell class
         let cellClass = 'value-cell';
         if (numericValue !== 0) {
             cellClass += ' non-zero-value';
@@ -2472,24 +2469,23 @@ debugLEFiltering: function(records, nodeLabel) {
             }
         }
 
-        // Format value for display with added precision
+        // ICI : le formatage est codé en dur à 2 décimales
         let formattedValue;
+        const decimals = this.state?.decimalPlaces ?? 2;
         if (numericValue === 0) {
-            formattedValue = '0.00';
+            formattedValue = (0).toFixed(decimals);
         } else if (Math.abs(numericValue) >= 1000000000) {
-            formattedValue = (numericValue / 1000000000).toFixed(2) + 'b';
+            formattedValue = (numericValue / 1000000000).toFixed(decimals) + 'b';
         } else if (Math.abs(numericValue) >= 1000000) {
-            formattedValue = (numericValue / 1000000).toFixed(2) + 'm';
+            formattedValue = (numericValue / 1000000).toFixed(decimals) + 'm';
         } else if (Math.abs(numericValue) >= 1000) {
-            formattedValue = (numericValue / 1000).toFixed(2) + 'k';
+            formattedValue = (numericValue / 1000).toFixed(decimals) + 'k';
         } else {
-            formattedValue = numericValue.toFixed(2);
+            formattedValue = numericValue.toFixed(decimals);
         }
 
-        // Return HTML for the cell with data-raw-value for sorting and other operations
         return `<td class="${cellClass}" data-raw-value="${numericValue}">${formattedValue}</td>`;
     },
-
 
     /**
      * Render a single table row

@@ -342,6 +342,11 @@ function updateTableStatuses(tables, status) {
 // Call initialize when the DOM is loaded
 document.addEventListener('DOMContentLoaded', initializeApp);
 
+document.getElementById('decimalPlaces').addEventListener('change', function(e) {
+    const value = parseInt(e.target.value, 10);
+    window.App.state.decimalPlaces = isNaN(value) ? 2 : value;
+    window.App.pivotTable.generatePivotTable();
+});
 
 // Export the initialization function
 export default { initializeApp };
