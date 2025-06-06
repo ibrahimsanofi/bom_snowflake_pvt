@@ -343,7 +343,7 @@ function updateTableStatuses(tables, status) {
 document.addEventListener('DOMContentLoaded', initializeApp);
 
 document.getElementById('decimalPlaces').addEventListener('change', function(e) {
-    const value = parseInt(e.target.value, 10);
+    const value = parseInt(e.target.value, 4);
     window.App.state.decimalPlaces = isNaN(value) ? 2 : value;
     window.App.pivotTable.generatePivotTable();
 });
