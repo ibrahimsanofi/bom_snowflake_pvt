@@ -502,7 +502,7 @@ window.generatePivotTable = function() {
 
 
 function processHierarchicalFields(fieldIds, axisType) {
-    console.log(`⏳ Status: Processing hierarchical fields: ${fieldIds.join(', ')} for ${axisType}`);
+    // console.log(`⏳ Status: Processing hierarchical fields: ${fieldIds.join(', ')} for ${axisType}`);
     
     const result = {
         flatRows: [],
@@ -513,7 +513,7 @@ function processHierarchicalFields(fieldIds, axisType) {
     fieldIds.forEach(fieldId => {
         const field = state.availableFields.find(f => f.id === fieldId);
         if (!field) {
-            console.warn(`Field not found: ${fieldId}`);
+            // console.warn(`Field not found: ${fieldId}`);
             return;
         }
         
@@ -523,13 +523,13 @@ function processHierarchicalFields(fieldIds, axisType) {
         
         // Check if hierarchy exists
         if (!state.hierarchies || !state.hierarchies[dimName]) {
-            console.error(`No hierarchy found for ${dimName}`);
+            // console.error(`No hierarchy found for ${dimName}`);
             return;
         }
         
         const hierarchy = state.hierarchies[dimName];
         if (!hierarchy || !hierarchy.root) {
-            console.error(`Invalid hierarchy for ${dimName}`);
+            // console.error(`Invalid hierarchy for ${dimName}`);
             return;
         }
                 
@@ -1560,7 +1560,7 @@ function buildPathHierarchyWithSegmentLabels(data, config) {
         };
     }
     
-    console.log(`⏳ Status: Processing ${data.length} rows of data...`);
+    // console.log(`⏳ Status: Processing ${data.length} rows of data...`);
     
     // Merge with default config
     const defaultConfig = {
@@ -1651,7 +1651,7 @@ function buildPathHierarchyWithSegmentLabels(data, config) {
             const rootNode = rootNodes[firstSegment];
             
             if (!rootNode) {
-                console.warn(`No root node found for segment: ${firstSegment}`);
+                // console.warn(`No root node found for segment: ${firstSegment}`);
                 return;
             }
             
@@ -1708,7 +1708,7 @@ function buildPathHierarchyWithSegmentLabels(data, config) {
                 currentNode = nodesMap[existingNodeId];
                 
                 if (!currentNode) {
-                    console.warn(`Node not found: ${existingNodeId}`);
+                    // console.warn(`Node not found: ${existingNodeId}`);
                     break;
                 }
                 
@@ -2688,7 +2688,7 @@ function buildGmidDisplayMapping(gmidDisplayData, bomData) {
     
     // Then process the display mappings
     if (gmidDisplayData && gmidDisplayData.length > 0) {
-        console.log(`⏳ Status: Processing ${gmidDisplayData.length} rows of GMID Display data...`);
+        // console.log(`⏳ Status: Processing ${gmidDisplayData.length} rows of GMID Display data...`);
         
         // First find all root GMIDs to ensure we build complete hierarchies
         const rootGmidCounts = {};
@@ -2831,9 +2831,9 @@ function buildGmidDisplayMapping(gmidDisplayData, bomData) {
     const pathMappings = Object.keys(mapping.pathGmidToDisplay).length;
     const rootGmids = Object.keys(mapping.nodeToChildGmids).filter(id => !mapping.nodeToParent[id]).length;
     
-    console.log(`✅ Status: GMID Display mapping complete: ${mappedGmids} GMIDs mapped`);
-    console.log(`✅ Status: PATH_GMID mapping: ${pathMappings} path segments mapped`);
-    console.log(`✅ Status: Root GMID mapping: ${rootGmids} root GMIDs`);
+    // console.log(`✅ Status: GMID Display mapping complete: ${mappedGmids} GMIDs mapped`);
+    // console.log(`✅ Status: PATH_GMID mapping: ${pathMappings} path segments mapped`);
+    // console.log(`✅ Status: Root GMID mapping: ${rootGmids} root GMIDs`);
     
     return mapping;
 }
@@ -2940,8 +2940,8 @@ function buildLegalEntityMapping(legalEntityData, bomData) {
         });
     }
     
-    console.log(`✅ Status: Legal Entity mapping complete: ${Object.keys(mapping.leToDetails).length} LE codes mapped`);
-    console.log(`✅ Status: ${mapping.usedLeCodes.size} LE codes used in FACT_BOM`);
+    // console.log(`✅ Status: Legal Entity mapping complete: ${Object.keys(mapping.leToDetails).length} LE codes mapped`);
+    // console.log(`✅ Status: ${mapping.usedLeCodes.size} LE codes used in FACT_BOM`);
     
     // Diagnostic info: Check how many FACT_BOM LE codes are mapped
     const mappedLeCodesCount = Array.from(mapping.usedLeCodes).filter(leCode => 
@@ -3055,8 +3055,8 @@ function buildManagementCentreMapping(managementCentreData, bomData) {
         });
     }
     
-    console.log(`✅ Status: Legal Entity mapping complete: ${Object.keys(mapping.mcToDetails).length} MC codes mapped`);
-    console.log(`✅ Status: ${mapping.usedMcCodes.size} MC codes used in FACT_BOM`);
+    // console.log(`✅ Status: Legal Entity mapping complete: ${Object.keys(mapping.mcToDetails).length} MC codes mapped`);
+    // console.log(`✅ Status: ${mapping.usedMcCodes.size} MC codes used in FACT_BOM`);
     
     // Diagnostic info: Check how many FACT_BOM LE codes are mapped
     const mappedMcCodesCount = Array.from(mapping.usedMcCodes).filter(mcCode => 
@@ -3121,8 +3121,8 @@ function buildCostElementMapping(costElementData, bomData) {
         });
     }
     
-    console.log(`✅ Status: Cost Element mapping complete: ${Object.keys(mapping.costElementToDetails).length} cost elements mapped`);
-    console.log(`✅ Status: ${mapping.usedCostElements.size} cost elements used in FACT_BOM`);
+    // console.log(`✅ Status: Cost Element mapping complete: ${Object.keys(mapping.costElementToDetails).length} cost elements mapped`);
+    // console.log(`✅ Status: ${mapping.usedCostElements.size} cost elements used in FACT_BOM`);
     
     return mapping;
 }
@@ -3178,8 +3178,8 @@ function buildSmartCodeMapping(smartCodeData, bomData) {
         });
     }
     
-    console.log(`✅ Status: Smart Code mapping complete: ${Object.keys(mapping.smartCodeToDetails).length} smart codes mapped`);
-    console.log(`✅ Status: ${mapping.usedSmartCodes.size} smart codes used in FACT_BOM as ROOT_SMARTCODE`);
+    // console.log(`✅ Status: Smart Code mapping complete: ${Object.keys(mapping.smartCodeToDetails).length} smart codes mapped`);
+    // console.log(`✅ Status: ${mapping.usedSmartCodes.size} smart codes used in FACT_BOM as ROOT_SMARTCODE`);
     
     return mapping;
 }
@@ -3227,7 +3227,7 @@ function buildItemCostTypeMapping(itemCostTypeData, bomData) {
         });
     }
     
-    console.log(`✅ Status: ITEM_COST_TYPE mapping complete: ${Object.keys(mapping.costTypeToDetails).length} types mapped`);
+    // console.log(`✅ Status: ITEM_COST_TYPE mapping complete: ${Object.keys(mapping.costTypeToDetails).length} types mapped`);
     
     return mapping;
 }
@@ -3279,7 +3279,7 @@ function buildMaterialTypeMapping(data, bomData) {
         });
     }
     
-    console.log(`✅ Status: MATERIAL_TYPE mapping complete: ${Object.keys(mapping.materialTypeToDetails).length} types mapped`);
+    // console.log(`✅ Status: MATERIAL_TYPE mapping complete: ${Object.keys(mapping.materialTypeToDetails).length} types mapped`);
     
     return mapping;
 }
@@ -3331,8 +3331,8 @@ function buildBusinessYearMapping(businessYearData, bomData) {
         });
     }
     
-    console.log(`✅ Status: YEAR mapping complete: ${Object.keys(mapping.yearToDetails).length} years mapped`);
-    console.log(`✅ Status: ${mapping.usedYears.size} years used in FACT_BOM as ZYEAR`);
+    // console.log(`✅ Status: YEAR mapping complete: ${Object.keys(mapping.yearToDetails).length} years mapped`);
+    // console.log(`✅ Status: ${mapping.usedYears.size} years used in FACT_BOM as ZYEAR`);
     
     return mapping;
 }

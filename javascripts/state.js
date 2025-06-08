@@ -16,6 +16,7 @@ const state = {
     rootGmids: [],                  // Array to store all available ROOT_GMID values
     filteredFactData: null,
     decimalPlaces: 2,          // Number of decimal places for numeric values
+    valueFormat: 'regular',
     
     // Filter state
     filters: {                    // Filter state object

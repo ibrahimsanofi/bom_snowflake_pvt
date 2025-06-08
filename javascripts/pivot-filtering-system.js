@@ -39,65 +39,65 @@ class EnhancedFilterSystem {
     
     // Filter metadata for each dimension
     this.filterMeta = {
-  legalEntity: {
-    id: 'legalEntity',
-    label: 'Legal Entity',
-    dimensionKey: 'le',
-    factField: 'LE',
-    hierarchical: true
-  },
-  rootGmid: {
-    id: 'rootGmid',
-    label: 'Root DISPLAY',
-    dimensionKey: 'gmid_display',
-    factField: 'ROOT_GMID',
-    displayField: 'ROOT_DISPLAY', 
-    filterField: 'ROOT_GMID',     
-    hierarchical: false
-  },
-  smartcode: {
-    id: 'smartcode',
-    label: 'Smartcode',
-    dimensionKey: 'smartcode',
-    factField: 'ROOT_SMARTCODE',
-    hierarchical: false
-  },
-  costElement: {
-    id: 'costElement',
-    label: 'Cost Element',
-    dimensionKey: 'cost_element',
-    factField: 'COST_ELEMENT',
-    hierarchical: true
-  },
-  businessYear: {
-    id: 'businessYear',
-    label: 'Business Year',
-    dimensionKey: 'year',
-    factField: 'ZYEAR',
-    hierarchical: false
-  },
-  itemCostType: {
-    id: 'itemCostType',
-    label: 'Item Cost Type',
-    dimensionKey: 'item_cost_type',
-    factField: 'ITEM_COST_TYPE',
-    hierarchical: false
-  },
-  materialType: {
-    id: 'materialType',
-    label: 'Material Type',
-    dimensionKey: 'material_type',
-    factField: 'COMPONENT_MATERIAL_TYPE',
-    hierarchical: false
-  },
-  managementCentre: {
-    id: 'managementCentre',
-    label: 'MGT Centre',
-    dimensionKey: 'mc',
-    factField: 'MC',
-    hierarchical: true
-  }
-};
+      legalEntity: {
+        id: 'legalEntity',
+        label: 'Legal Entity',
+        dimensionKey: 'le',
+        factField: 'LE',
+        hierarchical: true
+      },
+      rootGmid: {
+        id: 'rootGmid',
+        label: 'Root DISPLAY',
+        dimensionKey: 'gmid_display',
+        factField: 'ROOT_GMID',
+        displayField: 'ROOT_DISPLAY', 
+        filterField: 'ROOT_GMID',     
+        hierarchical: false
+      },
+      smartcode: {
+        id: 'smartcode',
+        label: 'Smartcode',
+        dimensionKey: 'smartcode',
+        factField: 'ROOT_SMARTCODE',
+        hierarchical: false
+      },
+      costElement: {
+        id: 'costElement',
+        label: 'Cost Element',
+        dimensionKey: 'cost_element',
+        factField: 'COST_ELEMENT',
+        hierarchical: true
+      },
+      businessYear: {
+        id: 'businessYear',
+        label: 'Business Year',
+        dimensionKey: 'year',
+        factField: 'ZYEAR',
+        hierarchical: false
+      },
+      itemCostType: {
+        id: 'itemCostType',
+        label: 'Item Cost Type',
+        dimensionKey: 'item_cost_type',
+        factField: 'ITEM_COST_TYPE',
+        hierarchical: false
+      },
+      materialType: {
+        id: 'materialType',
+        label: 'Material Type',
+        dimensionKey: 'material_type',
+        factField: 'COMPONENT_MATERIAL_TYPE',
+        hierarchical: false
+      },
+      managementCentre: {
+        id: 'managementCentre',
+        label: 'MGT Centre',
+        dimensionKey: 'mc',
+        factField: 'MC',
+        hierarchical: true
+      }
+    };
 
     
     // Performance tracking
@@ -1298,19 +1298,19 @@ class EnhancedFilterSystem {
    * Select all items in a filter
    * @param {Object} dimension - Dimension configuration
    */
-selectAllInFilter(dimension) {
-  Object.values(this.filterMeta).forEach(dim => {
-    this.filterSelections[dim.id].clear();
-  });
+  selectAllInFilter(dimension) {
+    Object.values(this.filterMeta).forEach(dim => {
+      this.filterSelections[dim.id].clear();
+    });
 
-  this.applyAllFilters();
+    this.applyAllFilters();
 
-  this.updateSimpleFiltersAfterApply(true);
-  this.updateHierarchicalFiltersAfterApply(true);
+    this.updateSimpleFiltersAfterApply(true);
+    this.updateHierarchicalFiltersAfterApply(true);
 
-  this.updateSelectionCount(dimension);
-  this.updateSelectAllCheckbox(dimension);
-}
+    this.updateSelectionCount(dimension);
+    this.updateSelectAllCheckbox(dimension);
+  }
     
 
   /**
@@ -1797,187 +1797,6 @@ applyAllFilters() {
    * @param {Array} selectedRootGmids - Array of selected ROOT_GMID values
    * @returns {Object} - Hierarchy object with root, nodesMap and original data
    */
-// buildFilteredGmidDisplayHierarchy(data, selectedRootGmids = null) {
-//   console.log(`⏳ Status: Building GMID display hierarchy${selectedRootGmids ? ' with ROOT_GMID filtering' : ''}...`);
-  
-//   // Check if we should apply ROOT_GMID filtering
-//   const applyRootGmidFilter = selectedRootGmids && 
-//                              Array.isArray(selectedRootGmids) && 
-//                              selectedRootGmids.length > 0;
-  
-//   if (applyRootGmidFilter) {
-//     console.log(`✅ Status: Filtering GMID hierarchy to include only ${selectedRootGmids.length} selected ROOT_GMIDs`);
-    
-//     // Filter the dimension data to only include records with selected ROOT_GMIDs
-//     data = data.filter(item => item.ROOT_GMID && selectedRootGmids.includes(item.ROOT_GMID));
-    
-//     console.log(`✅ Status: Filtered to ${data.length} GMID dimension records`);
-//   }
-  
-//   // Create root node
-//   const rootNode = { 
-//     id: 'ROOT', 
-//     label: 'All GMIDs', 
-//     children: [], 
-//     level: 0, 
-//     path: ['ROOT'],
-//     expanded: true,
-//     isLeaf: false,
-//     hasChildren: false
-//   };
-  
-//   // Map to store all nodes by their ID for quick lookup
-//   const nodesMap = { 'ROOT': rootNode };
-  
-//   // Debug: Keep track of how many nodes we're creating at each level
-//   const levelCounts = { 0: 1 }; // Root node
-  
-//   // Process each row in the data
-//   data.forEach((item, index) => {
-//     if (!item) {
-//       console.warn(`Skipping null item at index ${index}`);
-//       return;
-//     }
-    
-//     // Handle missing required fields
-//     if (!item.PATH_GMID || !item.DISPLAY) {
-//       return;
-//     }
-    
-//     // Split the PATH_GMID and DISPLAY columns by their respective delimiters
-//     const pathSegments = item.PATH_GMID.split('/');
-//     const displaySegments = item.DISPLAY.split('//');
-    
-//     // Validate that we have matching segments
-//     if (pathSegments.length !== displaySegments.length) {
-//       return;
-//     }
-    
-//     // Determine the GMID for this row
-//     let gmid;
-//     if (pathSegments[pathSegments.length - 1] === '#') {
-//       // When leaf segment is '#', use the entire PATH_GMID as COMPONENT_GMID
-//       gmid = item.PATH_GMID;
-//     } else {
-//       // Otherwise, use the COMPONENT_GMID value
-//       gmid = item.COMPONENT_GMID || "Unknown GMID";
-//     }
-    
-//     // Track the maximum level
-//     const maxLevel = pathSegments.length;
-    
-//     let currentNode = rootNode;
-//     let currentPath = ['ROOT'];
-    
-//     // Process each level
-//     for (let i = 0; i < maxLevel; i++) {
-//       const pathSegment = pathSegments[i];
-//       const displaySegment = displaySegments[i];
-      
-//       // Skip if segment is empty
-//       if (!displaySegment || displaySegment.trim() === '') {
-//         continue;
-//       }
-      
-//       // Create a unique node ID for this segment that's safe for DOM
-//       // Using the path segment as part of the ID ensures uniqueness
-//       const safeId = pathSegment.replace(/[^a-zA-Z0-9]/g, '_');
-//       const nodeId = `LEVEL_${i+1}_${safeId}`;
-      
-//       // Track nodes created at this level
-//       levelCounts[i+1] = (levelCounts[i+1] || 0) + 1;
-      
-//       // Check if we already have a node for this segment
-//       if (!nodesMap[nodeId]) {
-//         // Create a new node
-//         const isLastLevel = i === maxLevel - 1;
-//         const newNode = {
-//           id: nodeId,
-//           label: displaySegment.trim(),  // Using the DISPLAY segment as the label
-//           levelNum: i + 1,
-//           levelValue: pathSegment.trim(),  // Store the PATH_GMID segment for reference
-//           children: [],
-//           level: i + 1,
-//           path: [...currentPath, nodeId],
-//           expanded: i < 2, // Auto-expand first two levels
-//           isLeaf: isLastLevel,
-//           hasChildren: false,
-//           // Store ROOT_GMID for filtering
-//           rootGmid: item.ROOT_GMID,
-//           // Store ROOT_DISPLAY for UI
-//           rootDisplay: item.ROOT_DISPLAY,
-//           // If this is the last level, associate with the GMID for filtering
-//           factId: isLastLevel ? gmid : null
-//         };
-        
-//         nodesMap[nodeId] = newNode;
-        
-//         // Add to parent's children
-//         currentNode.children.push(newNode);
-//         currentNode.isLeaf = false;
-//         currentNode.hasChildren = true;
-//       } else if (i === maxLevel - 1 && currentNode.id === nodesMap[nodeId].path[nodesMap[nodeId].path.length - 2]) {
-//         // If this node already exists but is now a leaf at this level under the same parent,
-//         // we need to handle potential multiple GMIDs mapping to the same node
-//         const existingNode = nodesMap[nodeId];
-        
-//         // If the node doesn't already have a factId, set it
-//         if (!existingNode.factId) {
-//           existingNode.factId = gmid;
-//           existingNode.isLeaf = true;
-//         } 
-//         // If it already has a factId but this is a different GMID,
-//         // we need to track both GMIDs
-//         else if (existingNode.factId !== gmid) {
-//           // Convert factId to array if it isn't already
-//           if (!Array.isArray(existingNode.factId)) {
-//             existingNode.factId = [existingNode.factId];
-//           }
-//           // Add this GMID if it's not already in the array
-//           if (!existingNode.factId.includes(gmid)) {
-//             existingNode.factId.push(gmid);
-//           }
-//         }
-        
-//         // Mark as non-leaf if it has children
-//         if (existingNode.children && existingNode.children.length > 0) {
-//           existingNode.isLeaf = false;
-//         }
-//       }
-      
-//       // Update current node and path for next level
-//       currentNode = nodesMap[nodeId];
-//       currentPath = [...currentPath, nodeId];
-//     }
-//   });
-  
-//   // Debug: Log how many nodes we created at each level
-//   console.log("✅ Status: Nodes created per level:", levelCounts);
-//   console.log("✅ Status: Total nodes in hierarchy:", Object.keys(nodesMap).length);
-  
-//   // Sort nodes at each level
-//   const sortHierarchyNodes = (node) => {
-//     if (node.children && node.children.length > 0) {
-//       // Sort children by label
-//       node.children.sort((a, b) => {
-//         return a.label.localeCompare(b.label);
-//       });
-      
-//       // Recursively sort children's children
-//       node.children.forEach(child => sortHierarchyNodes(child));
-//     }
-//   };
-  
-//   sortHierarchyNodes(rootNode);
-  
-//   // Return the hierarchy
-//   return {
-//     root: rootNode,
-//     nodesMap: nodesMap,
-//     flatData: data
-//   };
-// }
-
 buildFilteredGmidDisplayHierarchy(data, selectedRootGmids = null) {
     console.log(`⏳ Status: Building GMID display hierarchy${selectedRootGmids ? ' with ROOT_GMID filtering' : ''}...`);
     
@@ -2123,8 +1942,8 @@ buildFilteredGmidDisplayHierarchy(data, selectedRootGmids = null) {
     });
     
     // Debug: Log how many nodes we created at each level
-    console.log("✅ Status: Nodes created per level:", levelCounts);
-    console.log("✅ Status: Total nodes in hierarchy:", Object.keys(nodesMap).length);
+    // console.log("✅ Status: Nodes created per level:", levelCounts);
+    // console.log("✅ Status: Total nodes in hierarchy:", Object.keys(nodesMap).length);
     
     // Sort nodes at each level
     const sortHierarchyNodes = (node) => {

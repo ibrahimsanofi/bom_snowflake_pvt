@@ -306,13 +306,45 @@ const pivotTable = {
      * Format a value for display
      */
     formatValue: function (value) {
-        const decimals = this.state?.decimalPlaces;
-        const numericValue = typeof value === 'number' ? value : parseFloat(String(value)) || 0;
-        if (numericValue === 0) return (0).toFixed(decimals);
-        if (Math.abs(numericValue) >= 1000000000) return (numericValue / 1000000000).toFixed(decimals) + 'b';
-        if (Math.abs(numericValue) >= 1000000) return (numericValue / 1000000).toFixed(decimals) + 'm';
-        if (Math.abs(numericValue) >= 1000) return (numericValue / 1000).toFixed(decimals) + 'k';
-        return numericValue.toFixed(decimals);
+        let formattedValue;
+        const decimals = this.state?.decimalPlaces ?? 2;
+        const valFormat = this.state?.valueFormat;
+
+        switch (valFormat) {
+            case "regular":
+                if (numericValue === 0) {
+                    formattedValue = (0).toFixed(decimals);
+                } else {
+                    formattedValue = numericValue.toLocaleString(undefined, {
+                        minimumFractionDigits: decimals,
+                        maximumFractionDigits: decimals
+                    });
+                }
+                break;
+
+            case "thousands":
+                formattedValue = (numericValue / 1000).toLocaleString(undefined, {
+                    minimumFractionDigits: decimals,
+                    maximumFractionDigits: decimals
+                }) + 'k';
+                break;
+
+            case "millions":
+                formattedValue = (numericValue / 1000000).toLocaleString(undefined, {
+                    minimumFractionDigits: decimals,
+                    maximumFractionDigits: decimals
+                }) + 'm';
+                break;
+
+            case "billions":
+                formattedValue = (numericValue / 1000000000).toLocaleString(undefined, {
+                    minimumFractionDigits: decimals,
+                    maximumFractionDigits: decimals
+                }) + 'b';
+                break;
+        }
+
+        return this.formattedValue;
     },
 
     
@@ -354,14 +386,14 @@ const pivotTable = {
             rowDef._id === 'ROOT_WORLDWIDE' || rowDef._id === 'All GMIDs' ||
             rowDef.label === 'All GMIDs') {
             
-            console.log(`🔍 ROOT CALCULATION: Processing ${records.length} total records`);
+            // console.log(`🔍 ROOT CALCULATION: Processing ${records.length} total records`);
             return this.calculateDirectMeasure(records, measureField);
         }
 
         // For leaf nodes, filter and calculate directly
         if (rowDef.isLeaf) {
             const filteredRecords = this.filterRecordsByDimension(records, rowDef);
-            console.log(`🔍 LEAF CALCULATION: ${rowDef.label} - ${filteredRecords.length} filtered records`);
+            // console.log(`🔍 LEAF CALCULATION: ${rowDef.label} - ${filteredRecords.length} filtered records`);
             return this.calculateDirectMeasure(filteredRecords, measureField);
         }
 
@@ -400,7 +432,7 @@ const pivotTable = {
             return 0;
         }
 
-        console.log(`🔍 Parent ${rowDef.label}: Aggregating ${allLeafDescendants.length} total leaf descendants`);
+        // console.log(`🔍 Parent ${rowDef.label}: Aggregating ${allLeafDescendants.length} total leaf descendants`);
 
         // Calculate sum from ALL leaf descendants
         let total = 0;
@@ -515,25 +547,25 @@ const pivotTable = {
 
     // Dimension filter functions (simplified for brevity)
     filterByLegalEntity: function (records, node) {
-        console.log(`🔍 LE Filter: Processing node ${node.label} (${node._id})`);
+        // console.log(`🔍 LE Filter: Processing node ${node.label} (${node._id})`);
         
         // Don't filter ROOT nodes
         if (node._id === 'ROOT' || node.label === 'WORLDWIDE') {
-            console.log(`🔍 LE Filter: ROOT node - returning all ${records.length} records`);
+            // console.log(`🔍 LE Filter: ROOT node - returning all ${records.length} records`);
             return records;
         }
         
         // For leaf nodes with factId, filter directly
         if (node.isLeaf && node.factId) {
             const filtered = records.filter(r => r.LE === node.factId);
-            console.log(`🔍 LE Filter: Leaf node filtering ${records.length} → ${filtered.length} records by LE=${node.factId}`);
+            // console.log(`🔍 LE Filter: Leaf node filtering ${records.length} → ${filtered.length} records by LE=${node.factId}`);
             return filtered;
         }
         
         // For hierarchy nodes, use mapping
         const mapping = this.state.mappings?.legalEntity;
         if (!mapping) {
-            console.log("🔍 LE Filter: No LE mapping available - returning all records");
+            // console.log("🔍 LE Filter: No LE mapping available - returning all records");
             return records;
         }
         
@@ -543,7 +575,7 @@ const pivotTable = {
         // Method 1: Direct path mapping
         if (mapping.pathToLeCodes && mapping.pathToLeCodes[node.label]) {
             mapping.pathToLeCodes[node.label].forEach(le => leCodes.add(le));
-            console.log(`🔍 LE Filter: Found ${leCodes.size} LEs via pathToLeCodes for "${node.label}"`);
+            // console.log(`🔍 LE Filter: Found ${leCodes.size} LEs via pathToLeCodes for "${node.label}"`);
         }
         
         // Method 2: Reverse path lookup
@@ -553,29 +585,29 @@ const pivotTable = {
                     leCodes.add(le);
                 }
             });
-            console.log(`🔍 LE Filter: Found ${leCodes.size} LEs via leToPaths for "${node.label}"`);
+            // console.log(`🔍 LE Filter: Found ${leCodes.size} LEs via leToPaths for "${node.label}"`);
         }
         
         if (leCodes.size > 0) {
             const filtered = records.filter(r => leCodes.has(r.LE));
-            console.log(`🔍 LE Filter: Filtered ${records.length} → ${filtered.length} records using ${leCodes.size} LE codes`);
+            // console.log(`🔍 LE Filter: Filtered ${records.length} → ${filtered.length} records using ${leCodes.size} LE codes`);
             return filtered;
         }
         
-        console.log(`🔍 LE Filter: No matching LE codes found for "${node.label}" - returning all records`);
+        // console.log(`🔍 LE Filter: No matching LE codes found for "${node.label}" - returning all records`);
         return records;
     },
 
 
     // EMERGENCY: Simple calculation method that bypasses filtering for ROOT nodes
     emergencyCalculateMeasure: function(records, rowDef, colDef, measureField) {
-        console.log(`🚨 EMERGENCY CALC: ${rowDef?.label} - ${measureField}`);
+        // console.log(`🚨 EMERGENCY CALC: ${rowDef?.label} - ${measureField}`);
         
         if (!records || records.length === 0) return 0;
         
         // For ROOT/WORLDWIDE nodes, sum everything without filtering
         if (!rowDef || rowDef._id === 'ROOT' || rowDef.label === 'WORLDWIDE' || rowDef._id === 'ROOT_WORLDWIDE') {
-            console.log("🚨 ROOT NODE: Summing all records without filtering");
+            // console.log("🚨 ROOT NODE: Summing all records without filtering");
             let total = 0;
             let count = 0;
             
@@ -587,7 +619,7 @@ const pivotTable = {
                 }
             });
             
-            console.log(`🚨 Emergency result: ${total} from ${count} valid records`);
+            // console.log(`🚨 Emergency result: ${total} from ${count} valid records`);
             return total;
         }
         
@@ -615,12 +647,12 @@ const pivotTable = {
 
 
     filterByGmidDisplay: function (records, node) {
-        console.log(`🔍 GMID Filter: Processing node "${node.label}" (${node._id}) with ${records.length} records`);
+        // console.log(`🔍 GMID Filter: Processing node "${node.label}" (${node._id}) with ${records.length} records`);
         
         // CRITICAL: Don't filter ROOT nodes - include ALL records for grand totals
         if (node._id === 'ROOT' || node.label === 'All GMIDs' || 
             node._id.endsWith('_ROOT') || node.label === 'WORLDWIDE') {
-            console.log(`🔍 GMID Filter: ROOT node - returning all ${records.length} records`);
+            // console.log(`🔍 GMID Filter: ROOT node - returning all ${records.length} records`);
             return records;
         }
 
@@ -628,14 +660,14 @@ const pivotTable = {
         if (node.isLeaf && node.factId) {
             let filtered = [];
             
-            console.log(`🔍 GMID Filter: Leaf node factId: "${node.factId}"`);
+            // console.log(`🔍 GMID Filter: Leaf node factId: "${node.factId}"`);
             
             if (Array.isArray(node.factId)) {
                 // Handle multiple factIds (when multiple records map to same node)
                 node.factId.forEach(factId => {
                     const singleFiltered = this.filterByFactId(records, factId);
                     filtered = filtered.concat(singleFiltered);
-                    console.log(`🔍 GMID Filter: Array factId "${factId}" matched ${singleFiltered.length} records`);
+                    // console.log(`🔍 GMID Filter: Array factId "${factId}" matched ${singleFiltered.length} records`);
                 });
                 
                 // Remove duplicates
@@ -648,10 +680,10 @@ const pivotTable = {
             } else {
                 // Single factId
                 filtered = this.filterByFactId(records, node.factId);
-                console.log(`🔍 GMID Filter: Single factId "${node.factId}" matched ${filtered.length} records`);
+                // console.log(`🔍 GMID Filter: Single factId "${node.factId}" matched ${filtered.length} records`);
             }
             
-            console.log(`🔍 GMID Filter: Final result for "${node.label}": ${filtered.length} records`);
+            // console.log(`🔍 GMID Filter: Final result for "${node.label}": ${filtered.length} records`);
             return filtered;
         }
 
@@ -664,23 +696,24 @@ const pivotTable = {
                 const componentMatch = r.COMPONENT_GMID && r.COMPONENT_GMID.startsWith(node.prefixFilter);
                 return pathMatch || componentMatch;
             });
-            console.log(`🔍 GMID Filter: Prefix "${node.prefixFilter}" matched ${filtered.length} records`);
+            // console.log(`🔍 GMID Filter: Prefix "${node.prefixFilter}" matched ${filtered.length} records`);
             return filtered;
         }
         
         // Fallback: no specific filter criteria
-        console.log(`🔍 GMID Filter: No specific filter for "${node.label}" - returning all ${records.length} records`);
+        // console.log(`🔍 GMID Filter: No specific filter for "${node.label}" - returning all ${records.length} records`);
         return records;
     },
+    
 
     // Specific factId filtering logic
     filterByFactId: function(records, factId) {
         if (!factId) {
-            console.log(`🔍 FACT_ID Filter: Empty factId - returning no records`);
+            // console.log(`🔍 FACT_ID Filter: Empty factId - returning no records`);
             return [];
         }
         
-        console.log(`🔍 FACT_ID Filter: Processing factId "${factId}"`);
+        // console.log(`🔍 FACT_ID Filter: Processing factId "${factId}"`);
         
         // Strategy 1: If factId ends with '#', it's a PATH_GMID (for NULL COMPONENT_GMID records)
         if (factId.endsWith('#')) {
@@ -691,7 +724,7 @@ const pivotTable = {
             const componentMatches = records.filter(r => 
                 r.COMPONENT_GMID && r.PATH_GMID === factId
             );
-            console.log(`🔍 FACT_ID Filter: Additional COMPONENT_GMID matches: ${componentMatches.length} records`);
+            // console.log(`🔍 FACT_ID Filter: Additional COMPONENT_GMID matches: ${componentMatches.length} records`);
             
             // Combine and deduplicate
             const combined = [...pathMatches, ...componentMatches];
@@ -707,14 +740,14 @@ const pivotTable = {
         
         // Strategy 2: Regular COMPONENT_GMID matching
         const componentMatches = records.filter(r => r.COMPONENT_GMID === factId);
-        console.log(`🔍 FACT_ID Filter: COMPONENT_GMID exact match for "${factId}": ${componentMatches.length} records`);
+        // console.log(`🔍 FACT_ID Filter: COMPONENT_GMID exact match for "${factId}": ${componentMatches.length} records`);
         
         // Strategy 3: If no COMPONENT_GMID matches, try PATH_GMID contains
         if (componentMatches.length === 0) {
             const pathContains = records.filter(r => 
                 r.PATH_GMID && r.PATH_GMID.includes(factId)
             );
-            console.log(`🔍 FACT_ID Filter: PATH_GMID contains "${factId}": ${pathContains.length} records`);
+            // console.log(`🔍 FACT_ID Filter: PATH_GMID contains "${factId}": ${pathContains.length} records`);
             return pathContains;
         }
         
@@ -1077,7 +1110,7 @@ const pivotTable = {
             ? this.state.filteredData 
             : this.state.factData || [];
         
-        console.log(`🔍 CALC: Using ${this.state.filteredData ? 'FILTERED' : 'ORIGINAL'} data with ${factData.length} records`);
+        // console.log(`🔍 CALC: Using ${this.state.filteredData ? 'FILTERED' : 'ORIGINAL'} data with ${factData.length} records`);
         
         const valueFields = this.state.valueFields || ['COST_UNIT'];
 
@@ -1101,7 +1134,7 @@ const pivotTable = {
         );
         
         const hasRealColumnDimensions = realColumns.length > 0;
-        console.log(`🔍 CALC: Has real column dimensions: ${hasRealColumnDimensions}, ${realColumns.length} columns`);
+        // console.log(`🔍 CALC: Has real column dimensions: ${hasRealColumnDimensions}, ${realColumns.length} columns`);
 
         // Process each row with performance timing
         pivotData.rows.forEach((rowDef, rowIndex) => {
@@ -1126,7 +1159,7 @@ const pivotTable = {
                         const key = `${colDef._id}|${fieldId}`;
                         rowData[key] = typeof value === 'number' ? value : (parseFloat(value) || 0);
                         
-                        console.log(`🔍 CROSS-CALC: Row ${rowDef.label} × Col ${colDef.label} × ${fieldId} = ${value} (from ${crossFilteredData.length} records)`);
+                        // console.log(`🔍 CROSS-CALC: Row ${rowDef.label} × Col ${colDef.label} × ${fieldId} = ${value} (from ${crossFilteredData.length} records)`);
                     });
                 });
             } else {
@@ -1134,7 +1167,7 @@ const pivotTable = {
                 valueFields.forEach((fieldId) => {
                     const value = this.calculateMeasure(factData, rowDef, null, fieldId);
                     rowData[fieldId] = typeof value === 'number' ? value : (parseFloat(value) || 0);
-                    console.log(`🔍 DIRECT-CALC: Row ${rowDef.label} × ${fieldId} = ${value}`);
+                    // console.log(`🔍 DIRECT-CALC: Row ${rowDef.label} × ${fieldId} = ${value}`);
                 });
             }
 
@@ -1142,9 +1175,9 @@ const pivotTable = {
             const processingTime = endTime - startTime;
             
             // Only log slow calculations
-            if (processingTime > 10) {
-                console.log(`⏱️ Row ${rowIndex} (${rowDef.label}): ${processingTime.toFixed(2)}ms`);
-            }
+            // if (processingTime > 10) {
+            //     console.log(`⏱️ Row ${rowIndex} (${rowDef.label}): ${processingTime.toFixed(2)}ms`);
+            // }
 
             pivotData.data.push(rowData);
         });
@@ -1187,7 +1220,7 @@ const pivotTable = {
         
         // For parent nodes, this should not be called in the new approach
         // but keeping as fallback
-        console.warn(`⚠️ Filtering parent node ${node._id} - this should use descendant aggregation instead`);
+        // console.warn(`⚠️ Filtering parent node ${node._id} - this should use descendant aggregation instead`);
         
         // Dimension-specific filtering (fallback)
         switch (dimName) {
@@ -1387,13 +1420,13 @@ const pivotTable = {
         const dimName = rowDef.hierarchyField ? rowDef.hierarchyField.replace('DIM_', '').toLowerCase() : '';
         const indentation = rowDef.level ? rowDef.level * 20 : 0;
 
-        console.log("Rendering row cell:", {
-            id: rowDef._id,
-            label: rowDef.label,
-            hasChildren: rowDef.hasChildren,
-            isLeaf: rowDef.isLeaf,
-            expanded: rowDef.expanded
-        });
+        // console.log("Rendering row cell:", {
+        //     id: rowDef._id,
+        //     label: rowDef.label,
+        //     hasChildren: rowDef.hasChildren,
+        //     isLeaf: rowDef.isLeaf,
+        //     expanded: rowDef.expanded
+        // });
 
         let cellHtml = `<td class="hierarchy-cell" style="padding-left: ${indentation}px;">`;
 
@@ -1639,15 +1672,15 @@ const pivotTable = {
         
         const hasRealColumnDimensions = realColumns.length > 0;
         
-        console.log(`🔍 RENDER: ${valueFields.length} value fields, ${realColumns.length} real columns`);
-        console.log(`🔍 RENDER: Has real column dimensions: ${hasRealColumnDimensions}`);
+        // console.log(`🔍 RENDER: ${valueFields.length} value fields, ${realColumns.length} real columns`);
+        // console.log(`🔍 RENDER: Has real column dimensions: ${hasRealColumnDimensions}`);
 
         let bodyHtml = '';
         const visibleRows = this.getVisibleRows(pivotData.rows);
         
         visibleRows.forEach((row, index) => {
             const rowData = pivotData.data.find(d => d._id === row._id) || {};
-            console.log(`🔍 RENDER: Row ${index} (${row.label}) data keys:`, Object.keys(rowData));
+            // console.log(`🔍 RENDER: Row ${index} (${row.label}) data keys:`, Object.keys(rowData));
 
             bodyHtml += `<tr class="${index % 2 === 0 ? 'even' : 'odd'}">`;
             
@@ -1680,7 +1713,7 @@ const pivotTable = {
                     leafColumns.forEach(col => {
                         const key = `${col._id}|${field}`;
                         const value = rowData[key] || 0;
-                        console.log(`🔍 RENDER: [WITH COLUMNS] Looking for key "${key}", found: ${value}`);
+                        // console.log(`🔍 RENDER: [WITH COLUMNS] Looking for key "${key}", found: ${value}`);
                         bodyHtml += this.renderValueCell(value);
                     });
                 });
@@ -1688,7 +1721,7 @@ const pivotTable = {
                 // NO column hierarchies - use direct field names
                 valueFields.forEach(field => {
                     const value = rowData[field] || 0;
-                    console.log(`🔍 RENDER: [NO COLUMNS] Looking for field "${field}", found: ${value}`);
+                    // console.log(`🔍 RENDER: [NO COLUMNS] Looking for field "${field}", found: ${value}`);
                     bodyHtml += this.renderValueCell(value);
                 });
             }
@@ -1793,17 +1826,43 @@ const pivotTable = {
         }
 
         let formattedValue;
-        if (numericValue === 0) {
-            formattedValue = '0.00';
-        } else if (Math.abs(numericValue) >= 1000000000) {
-            formattedValue = (numericValue / 1000000000).toFixed(2) + 'b';
-        } else if (Math.abs(numericValue) >= 1000000) {
-            formattedValue = (numericValue / 1000000).toFixed(2) + 'm';
-        } else if (Math.abs(numericValue) >= 1000) {
-            formattedValue = (numericValue / 1000).toFixed(2) + 'k';
-        } else {
-            formattedValue = numericValue.toFixed(2);
+        const decimals = this.state?.decimalPlaces ?? 2;
+        const valFormat = this.state?.valueFormat;
+
+        switch (valFormat) {
+            case "regular":
+                if (numericValue === 0) {
+                    formattedValue = (0).toFixed(decimals);
+                } else {
+                    formattedValue = numericValue.toLocaleString(undefined, {
+                        minimumFractionDigits: decimals,
+                        maximumFractionDigits: decimals
+                    });
+                }
+                break;
+
+            case "thousands":
+                formattedValue = (numericValue / 1000).toLocaleString(undefined, {
+                    minimumFractionDigits: decimals,
+                    maximumFractionDigits: decimals
+                }) + 'k';
+                break;
+
+            case "millions":
+                formattedValue = (numericValue / 1000000).toLocaleString(undefined, {
+                    minimumFractionDigits: decimals,
+                    maximumFractionDigits: decimals
+                }) + 'm';
+                break;
+
+            case "billions":
+                formattedValue = (numericValue / 1000000000).toLocaleString(undefined, {
+                    minimumFractionDigits: decimals,
+                    maximumFractionDigits: decimals
+                }) + 'b';
+                break;
         }
+
 
         return `<td class="${cellClass}" data-raw-value="${numericValue}">${formattedValue}</td>`;
     },
@@ -1813,7 +1872,7 @@ const pivotTable = {
      * Render a single table row
      */
     renderTableRow: function (rowDef, dataRow, rowIndex, bodyHtml, useMultiDimension, validColumns) {
-        console.log(`Row data for ${rowDef.label}:`, dataRow);
+        // console.log(`Row data for ${rowDef.label}:`, dataRow);
 
         let rowHtml = `<tr class="${rowIndex % 2 === 0 ? 'even' : 'odd'}">`;
 
@@ -1838,66 +1897,6 @@ const pivotTable = {
 
         rowHtml += '</tr>';
         return rowHtml;
-    },
-    
-
-    /**
-     * Handle expand/collapse clicks in the pivot table
-     */
-    handleExpandCollapseClick: function (e) {
-        const target = e.target;
-        const nodeId = target.getAttribute('data-node-id');
-        const hierarchyName = target.getAttribute('data-hierarchy');
-        const zone = target.getAttribute('data-zone') || 'row';
-        
-        console.log(`🔄 Universal expand/collapse:`, { nodeId, hierarchyName, zone });
-        
-        // Prevent event propagation
-        e.preventDefault();
-        e.stopPropagation();
-        
-        const state = this.state;
-        if (!state) {
-            console.error("No state available");
-            return false;
-        }
-        
-        // Validate hierarchy exists
-        if (!state.hierarchies[hierarchyName]) {
-            console.error(`Hierarchy '${hierarchyName}' not found`);
-            console.log("Available hierarchies:", Object.keys(state.hierarchies));
-            return false;
-        }
-        
-        // Validate node exists
-        const node = state.hierarchies[hierarchyName].nodesMap[nodeId];
-        if (!node) {
-            console.error(`Node '${nodeId}' not found in hierarchy '${hierarchyName}'`);
-            return false;
-        }
-        
-        // Initialize expansion tracking
-        initializeExpansionTracking(state, hierarchyName, zone);
-        
-        // Toggle expansion state
-        const currentState = state.expandedNodes[hierarchyName][zone][nodeId] || false;
-        const newState = !currentState;
-        
-        state.expandedNodes[hierarchyName][zone][nodeId] = newState;
-        node.expanded = newState;
-        
-        console.log(`✅ Node '${nodeId}' in '${hierarchyName}' ${zone} expanded: ${newState}`);
-        
-        // Trigger refresh
-        if (typeof window.refreshPivotTable === 'function') {
-            window.refreshPivotTable();
-        } else if (typeof this.generatePivotTable === 'function') {
-            this.generatePivotTable();
-        } else {
-            console.error("No refresh function available");
-        }
-        
-        return true;
     },
 
 
@@ -1961,7 +1960,7 @@ const pivotTable = {
         if (dimDef._id === 'ROOT' || dimDef.label === 'WORLDWIDE' || 
             dimDef._id === 'ROOT_WORLDWIDE' || dimDef.label === 'All GMIDs' ||
             dimDef._id === 'All GMIDs') {
-            console.log(`🔍 FILTER: ROOT node "${dimDef.label}" - no filtering, ${records.length} records`);
+            // console.log(`🔍 FILTER: ROOT node "${dimDef.label}" - no filtering, ${records.length} records`);
             return records;
         }
 
@@ -2146,13 +2145,13 @@ const pivotTable = {
         const indentation = rowDef.level ? rowDef.level * 20 : 0; // 20px per level
 
         // Log for debugging
-        console.log("Rendering row cell:", {
-            id: rowDef._id,
-            label: rowDef.label,
-            hasChildren: rowDef.hasChildren,
-            isLeaf: rowDef.isLeaf,
-            expanded: rowDef.expanded
-        });
+        // console.log("Rendering row cell:", {
+        //     id: rowDef._id,
+        //     label: rowDef.label,
+        //     hasChildren: rowDef.hasChildren,
+        //     isLeaf: rowDef.isLeaf,
+        //     expanded: rowDef.expanded
+        // });
 
         // Add cell with proper indentation and expand/collapse control
         let cellHtml = `<td class="hierarchy-cell" style="padding-left: ${indentation}px;">`;
@@ -2194,7 +2193,7 @@ const pivotTable = {
         const pivotData = this.state.pivotData;
 
         if (!pivotData || !pivotData.rows || pivotData.rows.length === 0 || !pivotData.data) {
-            console.error("Invalid pivot data for rendering");
+            console.warn("Invalid pivot data for rendering");
             return;
         }
 
@@ -2289,7 +2288,7 @@ const pivotTable = {
      */
     renderTableRow: function (rowDef, dataRow, rowIndex, bodyHtml, useMultiDimension, validColumns) {
         // Debug the entire row data
-        console.log(`Row data for ${rowDef.label}:`, dataRow);
+        // console.log(`Row data for ${rowDef.label}:`, dataRow);
 
         let rowHtml = `<tr class="${rowIndex % 2 === 0 ? 'even' : 'odd'}">`;
 
