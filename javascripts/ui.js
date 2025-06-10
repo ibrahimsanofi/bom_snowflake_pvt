@@ -1,347 +1,202 @@
-// This module handles ui-centric tasks
+// Enhanced UI module with improved drag/drop restrictions and reset functionality
 
-// Import signature
 import core from './core.js';
 import stateModule from './state.js';
 
-
 const state = stateModule.state;
-
 
 /**
  * Sets default field selections for the pivot table
- * Configures initial row, column, and value fields
  */
 function setDefaultFields() {
-    // Initialize empty fields
     state.rowFields = [];
     state.columnFields = []; 
     state.valueFields = [];
-    
-    // Initialize the hierarchy expansion state
     core.initializeExpandedNodes();
 }
 
 
 /**
  * Renders available fields in the field panel
- * @param {object} elements - DOM elements object containing availableFields container
+ * FIXED: Added proper error handling and element validation
  */
 function renderAvailableFields(elements) {
-    // Exit if container is not available
-    if (!elements.availableFields) return;
+    // Validate elements parameter
+    if (!elements || !elements.availableFields) {
+        console.error("❌ renderAvailableFields called without proper elements parameter");
+        // Try to get the element directly if not provided
+        const availableFieldsEl = document.getElementById('availableFields');
+        if (!availableFieldsEl) {
+            console.error("❌ Could not find availableFields element");
+            return;
+        }
+        elements = { availableFields: availableFieldsEl };
+    }
     
-    // Clear the container
     elements.availableFields.innerHTML = '';
+    
+    // Ensure we have available fields
+    if (!state.availableFields || !Array.isArray(state.availableFields)) {
+        console.warn("⚠️ No available fields to render");
+        return;
+    }
     
     // Group fields by category
     const dimensionFields = state.availableFields.filter(field => field.type === 'dimension');
     const factFields = state.availableFields.filter(field => field.type === 'fact');
     
-    // Render dimension section if we have dimension fields
+    // Render dimension section
     if (dimensionFields.length > 0) {
-        // Create section header
         const dimensionHeader = document.createElement('div');
         dimensionHeader.className = 'field-category-header';
         dimensionHeader.textContent = 'Dimensions';
         elements.availableFields.appendChild(dimensionHeader);
         
-        // Add each dimension field
         dimensionFields.forEach(field => {
-            const fieldEl = document.createElement('div');
-            // Set classes based on field type and hierarchical status
-            fieldEl.className = `field dimension-field${field.hierarchical ? ' hierarchical' : ''}`;
-            
-            // Only allow drag if the field can go in at least one dimension zone
-            const canDrag = field.draggableTo && (
-                field.draggableTo.includes('row') ||
-                field.draggableTo.includes('column') ||
-                field.draggableTo.includes('filter')
-            );
-            fieldEl.setAttribute('draggable', canDrag ? 'true' : 'false');
-            fieldEl.setAttribute('data-field', field.id);
-            fieldEl.setAttribute('data-type', field.type);
-            fieldEl.setAttribute('data-hierarchical', field.hierarchical ? 'true' : 'false');
-            fieldEl.setAttribute('data-draggable-to', field.draggableTo.join(','));
-            if (!canDrag) fieldEl.classList.add('not-draggable');
-            
-            // Create and add field label
-            const fieldContent = document.createElement('span');
-            fieldContent.className = 'field-label';
-            fieldContent.textContent = field.label;
-            fieldEl.appendChild(fieldContent);
-            
-            // Add hierarchy icon for hierarchical dimensions
-            if (field.hierarchical) {
-                const hierarchyIcon = document.createElement('span');
-                hierarchyIcon.className = 'hierarchy-icon';
-                hierarchyIcon.innerHTML = '&#x1F4C1;'; // Folder icon
-                hierarchyIcon.title = 'Hierarchical dimension';
-                fieldEl.appendChild(hierarchyIcon);
-            }
-            
+            const fieldEl = createFieldElement(field, 'dimension');
             elements.availableFields.appendChild(fieldEl);
         });
     }
     
-    // Render fact (measures) section if we have fact fields
+    // Render measures section
     if (factFields.length > 0) {
-        // Create section header
         const factHeader = document.createElement('div');
         factHeader.className = 'field-category-header';
         factHeader.textContent = 'Measures';
         elements.availableFields.appendChild(factHeader);
         
-        // Add each fact field
         factFields.forEach(field => {
-            const fieldEl = document.createElement('div');
-            fieldEl.className = 'field fact-field';
-            
-            // Only allow drag if the field can go in valueFields
-            const canDrag = field.draggableTo && field.draggableTo.includes('value');
-            fieldEl.setAttribute('draggable', canDrag ? 'true' : 'false');
-            fieldEl.setAttribute('data-field', field.id);
-            fieldEl.setAttribute('data-type', field.type);
-            fieldEl.setAttribute('data-draggable-to', field.draggableTo.join(','));
-            if (!canDrag) fieldEl.classList.add('not-draggable');
-            
-            // Add measure name attribute if available
-            if (field.measureName) {
-                fieldEl.setAttribute('data-measure-name', field.measureName);
-            }
-            
-            // Set the field label
-            fieldEl.textContent = field.label;
-            
+            const fieldEl = createFieldElement(field, 'fact');
             elements.availableFields.appendChild(fieldEl);
         });
     }
 }
 
+/**
+ * Creates a field element with STRICT drag restrictions
+ * ENHANCED: More restrictive drag/drop rules
+ */
+function createFieldElement(field, category) {
+    const fieldEl = document.createElement('div');
+    
+    // Set classes based on field type
+    fieldEl.className = `field ${field.type}-field${field.hierarchical ? ' hierarchical' : ''}`;
+    
+    // STRICT DRAG RESTRICTIONS: Set drag restrictions based on field type
+    let draggableTo = [];
+    if (field.type === 'dimension') {
+        // Dimensions can ONLY go to row/column zones, NOT values
+        draggableTo = ['row', 'column', 'available'];
+    } else if (field.type === 'fact') {
+        // Facts/measures can ONLY go to value zone, NOT row/column
+        draggableTo = ['value', 'available'];
+    }
+    
+    fieldEl.setAttribute('draggable', 'true');
+    fieldEl.setAttribute('data-field', field.id);
+    fieldEl.setAttribute('data-type', field.type);
+    fieldEl.setAttribute('data-hierarchical', field.hierarchical ? 'true' : 'false');
+    fieldEl.setAttribute('data-draggable-to', draggableTo.join(','));
+    
+    // Create field content
+    const fieldContent = document.createElement('span');
+    fieldContent.className = 'field-label';
+    fieldContent.textContent = field.label;
+    fieldEl.appendChild(fieldContent);
+    
+    // Add hierarchy icon for hierarchical dimensions
+    if (field.hierarchical) {
+        const hierarchyIcon = document.createElement('span');
+        hierarchyIcon.className = 'hierarchy-icon';
+        hierarchyIcon.innerHTML = '&#x1F4C1;';
+        hierarchyIcon.title = 'Hierarchical dimension';
+        fieldEl.appendChild(hierarchyIcon);
+    }
+    
+    // Add type indicator
+    const typeIndicator = document.createElement('span');
+    typeIndicator.className = `type-indicator ${field.type}-indicator`;
+    typeIndicator.textContent = field.type === 'dimension' ? 'D' : 'M';
+    typeIndicator.title = field.type === 'dimension' ? 'Dimension' : 'Measure';
+    fieldEl.appendChild(typeIndicator);
+    
+    return fieldEl;
+}
+
 
 /**
- * Renders all field containers (row, column, value, filter zones)
- * @param {object} elements - DOM elements object containing field containers
- * @param {object} state - Application state object
+ * Renders all field containers
  */
 function renderFieldContainers(elements, state) {
-    // Render each field container zone
     renderFieldContainer(elements.rowFields, state.rowFields);
     renderFieldContainer(elements.columnFields, state.columnFields);
     renderFieldContainer(elements.valueFields, state.valueFields);
-    renderFieldContainer(elements.filterFields, state.filterFields);
+    if (elements.filterFields) {
+        renderFieldContainer(elements.filterFields, state.filterFields);
+    }
 }
 
 
 /**
  * Renders a single field container with its fields
- * @param {HTMLElement} container - The container element to render into
- * @param {Array} fieldIds - Array of field IDs to render in this container
  */
 function renderFieldContainer(container, fieldIds) {
-    // Exit if container is not available
     if (!container) return;
     
-    // Clear the container
     container.innerHTML = '';
     
-    // Add each field to the container
+    if (!fieldIds || !Array.isArray(fieldIds)) {
+        return;
+    }
+    
     fieldIds.forEach(fieldId => {
-        // Find the field definition
         const field = state.availableFields.find(f => f.id === fieldId);
-        if (!field) return; // Skip if field not found
+        if (!field) return;
         
-        // Create field element
-        const fieldEl = document.createElement('div');
-        
-        // Set class based on field type and hierarchical status
-        let className = `field ${field.type}-field`;
-        if (field.hierarchical) className += ' hierarchical';
-        fieldEl.className = className;
-        
-        // Set drag attributes
-        fieldEl.setAttribute('draggable', 'true');
-        fieldEl.setAttribute('data-field', field.id);
-        fieldEl.setAttribute('data-type', field.type);
-        fieldEl.setAttribute('data-hierarchical', field.hierarchical ? 'true' : 'false');
-        fieldEl.setAttribute('data-draggable-to', field.draggableTo.join(','));
-        
-        // Add measure name attribute if available
-        if (field.measureName) {
-            fieldEl.setAttribute('data-measure-name', field.measureName);
-        }
-        
-        // Add field label
-        const fieldContent = document.createElement('span');
-        fieldContent.className = 'field-label';
-        fieldContent.textContent = field.label;
-        fieldEl.appendChild(fieldContent);
-        
-        // Add hierarchy icon for hierarchical dimensions
-        if (field.hierarchical) {
-            const hierarchyIcon = document.createElement('span');
-            hierarchyIcon.className = 'hierarchy-icon';
-            hierarchyIcon.innerHTML = '&#x1F4C1;'; // Folder icon
-            hierarchyIcon.title = 'Hierarchical dimension';
-            fieldEl.appendChild(hierarchyIcon);
-        }
-        
+        const fieldEl = createFieldElement(field);
         container.appendChild(fieldEl);
     });
 }
 
 
 /**
- * Renders an expand/collapse control for nodes with children
- * @param {HTMLElement} nodeItem - The node item element
- * @param {object} node - The node data
- * @param {string} fieldId - The field ID
- */
-function renderExpandCollapseControl(nodeItem, node, fieldId) {
-    const expandControl = document.createElement('span');
-    expandControl.className = `expand-collapse ${state.filterTreeState[fieldId][node.id] ? 'expanded' : 'collapsed'}`;
-    expandControl.setAttribute('data-node-id', node.id);
-    expandControl.setAttribute('data-field-id', fieldId);
-    
-    // Add expand/collapse functionality
-    expandControl.addEventListener('click', function(e) {
-        e.stopPropagation(); // Prevent radio selection
-        
-        const nodeId = this.getAttribute('data-node-id');
-        const fieldId = this.getAttribute('data-field-id');
-        
-        // Toggle expanded state
-        state.filterTreeState[fieldId][nodeId] = !state.filterTreeState[fieldId][nodeId];
-        
-        // Toggle expanded/collapsed class
-        this.classList.toggle('expanded');
-        this.classList.toggle('collapsed');
-        
-        // Show/hide children container
-        const childrenContainer = this.parentElement.nextElementSibling;
-        if (childrenContainer && childrenContainer.classList.contains('filter-tree-children')) {
-            childrenContainer.style.display = state.filterTreeState[fieldId][nodeId] ? 'block' : 'none';
-        }
-    });
-    
-    nodeItem.appendChild(expandControl);
-}
-
-
-/**
- * Renders a radio button for a filter tree node
- * @param {HTMLElement} nodeItem - The node item element
- * @param {object} node - The node data
- * @param {string} fieldId - The field ID
- */
-function renderNodeRadioButton(nodeItem, node, fieldId) {
-    // Create radio button
-    const radio = document.createElement('input');
-    radio.type = 'radio';
-    radio.name = `filter-${fieldId}`;
-    radio.value = node.id;
-    radio.id = `filter-${fieldId}-${node.id}`;
-    
-    // Check if this node is selected
-    if (state.activeFilters && state.activeFilters[fieldId] === node.id) {
-        radio.checked = true;
-    }
-    
-    // Add change event
-    radio.addEventListener('change', function() {
-        if (this.checked) {
-            // Set filter for this field
-            state.activeFilters = state.activeFilters || {};
-            state.activeFilters[fieldId] = node.id;
-            
-            // Regenerate pivot table
-            generatePivotTable();
-        }
-    });
-    
-    // Create label
-    const label = document.createElement('label');
-    label.setAttribute('for', `filter-${fieldId}-${node.id}`);
-    label.textContent = node.label;
-    label.className = 'filter-tree-label';
-    
-    nodeItem.appendChild(radio);
-    nodeItem.appendChild(label);
-}
-
-
-/**
- * Renders a container for child nodes
- * @param {HTMLElement} nodeContainer - The parent node container
- * @param {object} node - The parent node data
- * @param {string} fieldId - The field ID
- * @param {number} level - The current indentation level
- */
-function renderChildrenContainer(nodeContainer, node, fieldId, level) {
-    const childrenContainer = document.createElement('div');
-    childrenContainer.className = 'filter-tree-children';
-    
-    // Set initial display based on expanded state
-    const isExpanded = state.filterTreeState[fieldId][node.id];
-    childrenContainer.style.display = isExpanded ? 'block' : 'none';
-    
-    // Add children recursively
-    node.children.forEach(child => {
-        buildTreeNode(child, childrenContainer, fieldId, level + 1);
-    });
-    
-    nodeContainer.appendChild(childrenContainer);
-}
-
-
-/**
- * Initializes drag and drop event listeners for the application
- * Sets up global event listeners to handle drag operations
+ * Initializes drag and drop with enhanced restrictions
  */
 function initDragAndDrop() {
-    // Set up drag event listeners for all field containers
     document.addEventListener('dragstart', handleDragStart);
     document.addEventListener('dragover', handleDragOver);
     document.addEventListener('drop', handleDrop);
     document.addEventListener('dragend', handleDragEnd);
     
-    // Set up enhanced reordering functionality
     enhanceDragDropReordering();
 }
 
 
-/**
- * Enhances drag and drop to support reordering within zones
+/**k
+ * Enhanced drag and drop reordering
  */
 function enhanceDragDropReordering() {
-    // Get all field containers
     const containers = [
         document.getElementById('rowFields'),
         document.getElementById('columnFields'),
         document.getElementById('valueFields'),
         document.getElementById('filterFields')
-    ];
+    ].filter(Boolean);
     
-    // Add dragover event listeners to each container for reordering
     containers.forEach(container => {
-        if (!container) return;
-        
         container.addEventListener('dragover', (e) => {
             e.preventDefault();
             const draggedItem = document.querySelector('.dragging');
             if (!draggedItem) return;
             
-            // Get the item being dragged over
             const afterElement = getDragAfterElement(container, e.clientY);
             
-            // Insert the dragged item at the appropriate position
             if (afterElement) {
                 container.insertBefore(draggedItem, afterElement);
             } else {
                 container.appendChild(draggedItem);
             }
             
-            // Update visual feedback
             e.dataTransfer.dropEffect = 'move';
         });
     });
@@ -349,21 +204,15 @@ function enhanceDragDropReordering() {
 
 
 /**
- * Helper function to determine where to insert the dragged item
- * @param {HTMLElement} container - The container element
- * @param {number} y - The vertical mouse position
- * @returns {HTMLElement|null} - The element after which to insert, or null to append
+ * Helper function to determine insertion point during drag
  */
 function getDragAfterElement(container, y) {
-    // Get all draggable elements in the container that aren't being dragged
     const draggableElements = [...container.querySelectorAll('.field:not(.dragging)')];
     
-    // Find the element that comes after the dragged item
     return draggableElements.reduce((closest, child) => {
         const box = child.getBoundingClientRect();
         const offset = y - box.top - box.height / 2;
         
-        // If this element is above the mouse but closer than the current closest element
         if (offset < 0 && offset > closest.offset) {
             return { offset: offset, element: child };
         } else {
@@ -374,23 +223,17 @@ function getDragAfterElement(container, y) {
 
 
 /**
- * Handles the start of drag operations
- * Sets up the drag data transfer object with field information
- * 
- * @param {DragEvent} e - The drag start event
+ * Enhanced drag start handler
  */
 function handleDragStart(e) {
-    // Only handle draggable field elements
     if (!e.target.classList.contains('field')) return;
     
-    // Get field attributes
     const fieldId = e.target.getAttribute('data-field');
     const fieldType = e.target.getAttribute('data-type');
     const isHierarchical = e.target.getAttribute('data-hierarchical') === 'true';
     const draggableTo = e.target.getAttribute('data-draggable-to');
     const sourceContainer = e.target.parentElement.id;
     
-    // Set up data transfer with field information
     e.dataTransfer.setData('field', fieldId);
     e.dataTransfer.setData('type', fieldType);
     e.dataTransfer.setData('hierarchical', isHierarchical);
@@ -398,21 +241,312 @@ function handleDragStart(e) {
     e.dataTransfer.setData('source', sourceContainer);
     e.dataTransfer.effectAllowed = 'move';
     
-    // Add visual styling for dragging
     e.target.classList.add('dragging');
 }
 
 
 /**
- * Finds the closest valid drop target container from an element
- * 
- * @param {HTMLElement} element - The element to start searching from
- * @returns {HTMLElement|null} - The found drop target or null if none exists
+ * Enhanced drag over handler with strict restrictions
+ */
+function handleDragOver(e) {
+    const dropTarget = getDropTarget(e.target);
+    if (!dropTarget) return;
+    
+    const targetId = dropTarget.id;
+    const dragging = document.querySelector('.dragging');
+    
+    if (!dragging) return;
+    
+    const fieldType = dragging.getAttribute('data-type');
+    const draggableTo = dragging.getAttribute('data-draggable-to');
+    
+    let dropAllowed = false;
+    let targetZone = '';
+    
+    // Determine target zone from element ID
+    if (targetId === 'availableFields') {
+        targetZone = 'available';
+        dropAllowed = true; // Always allow dropping back to available fields
+    } else if (targetId === 'rowFields') {
+        targetZone = 'row';
+    } else if (targetId === 'columnFields') {
+        targetZone = 'column';
+    } else if (targetId === 'valueFields') {
+        targetZone = 'value';
+    }
+    
+    // STRICT ENFORCEMENT: Check if the target zone is allowed for this field type
+    if (targetZone !== 'available') {
+        if (fieldType === 'dimension' && (targetZone === 'row' || targetZone === 'column')) {
+            dropAllowed = true;
+        } else if (fieldType === 'fact' && targetZone === 'value') {
+            dropAllowed = true;
+        } else {
+            dropAllowed = false;
+        }
+    }
+    
+    // Also check the draggableTo attribute as a secondary validation
+    if (draggableTo && !draggableTo.split(',').includes(targetZone)) {
+        dropAllowed = false;
+    }
+    
+    if (dropAllowed) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        
+        // Add visual feedback
+        dropTarget.classList.add('drag-over');
+        dropTarget.classList.remove('drag-invalid');
+    } else {
+        e.dataTransfer.dropEffect = 'none';
+        dropTarget.classList.remove('drag-over');
+        dropTarget.classList.add('drag-invalid');
+        
+        // Show visual feedback for invalid drop
+        showInvalidDropFeedback(dropTarget, fieldType, targetZone);
+    }
+}
+
+
+/**
+ * Enhanced drop handler
+ */
+function handleDrop(e) {
+    e.preventDefault();
+    
+    // Remove visual feedback
+    document.querySelectorAll('.drag-over, .drag-invalid').forEach(el => {
+        el.classList.remove('drag-over', 'drag-invalid');
+    });
+    
+    // Hide any tooltips
+    document.querySelectorAll('.invalid-drop-tooltip').forEach(el => {
+        el.style.display = 'none';
+    });
+    
+    const dropTarget = getDropTarget(e.target);
+    if (!dropTarget) return;
+    
+    const fieldId = e.dataTransfer.getData('field');
+    const fieldType = e.dataTransfer.getData('type');
+    const sourceContainer = e.dataTransfer.getData('source');
+    const targetContainer = dropTarget.id;
+    
+    // STRICT VALIDATION: Validate drop based on field type restrictions
+    let dropAllowed = false;
+    let errorMessage = '';
+    
+    if (targetContainer === 'availableFields') {
+        dropAllowed = true;
+    } else if ((targetContainer === 'rowFields' || targetContainer === 'columnFields') && fieldType === 'dimension') {
+        dropAllowed = true;
+    } else if (targetContainer === 'valueFields' && fieldType === 'fact') {
+        dropAllowed = true;
+    } else {
+        // Provide specific error messages
+        if (fieldType === 'dimension' && targetContainer === 'valueFields') {
+            errorMessage = 'Dimensions cannot be dropped into the Values area. Only measures are allowed there.';
+        } else if (fieldType === 'fact' && (targetContainer === 'rowFields' || targetContainer === 'columnFields')) {
+            errorMessage = 'Measures cannot be dropped into Row or Column areas. Only dimensions are allowed there.';
+        }
+        // } else {
+        //     errorMessage = `${fieldType} fields cannot be dropped in ${targetContainer}`;
+        // }
+    }
+    
+    if (!dropAllowed) {
+        console.warn(`❌ Drop rejected: ${errorMessage}`);
+        
+        // Show user-friendly error message
+        showUserErrorMessage(errorMessage);
+        return;
+    }
+    
+    // Check for duplicates
+    if (targetContainer !== 'availableFields' && targetContainer !== sourceContainer) {
+        if (checkForDuplicate(fieldId, targetContainer)) {
+            const duplicateMessage = `Field ${fieldId} already exists in ${targetContainer}`;
+            console.log(`❌ ${duplicateMessage}`);
+            showUserErrorMessage(duplicateMessage);
+            return;
+        }
+    }
+    
+    // Remove from source
+    removeFieldFromContainer(fieldId, sourceContainer);
+    
+    // Add to target (if not available fields)
+    if (targetContainer !== 'availableFields') {
+        insertFieldAtPosition(fieldId, targetContainer);
+    }
+    
+    // Update UI
+    const elements = {
+        rowFields: document.getElementById('rowFields'),
+        columnFields: document.getElementById('columnFields'),
+        valueFields: document.getElementById('valueFields'),
+        filterFields: document.getElementById('filterFields'),
+        availableFields: document.getElementById('availableFields')
+    };
+    
+    renderFieldContainers(elements, state);
+    renderAvailableFields(elements);
+}
+
+
+/**
+ * Show user-friendly error message
+ */
+function showUserErrorMessage(message) {
+    // Create or get existing error message container
+    let errorContainer = document.querySelector('.field-drop-error');
+    if (!errorContainer) {
+        errorContainer = document.createElement('div');
+        errorContainer.className = 'field-drop-error';
+        
+        // Style the error container
+        errorContainer.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #fee;
+            border: 1px solid #fcc;
+            color: #c33;
+            padding: 12px 16px;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            z-index: 10000;
+            max-width: 300px;
+            font-size: 14px;
+            line-height: 1.4;
+        `;
+        
+        document.body.appendChild(errorContainer);
+    }
+    
+    errorContainer.textContent = message;
+    errorContainer.style.display = 'block';
+    
+    // Auto-hide after 4 seconds
+    setTimeout(() => {
+        if (errorContainer && errorContainer.parentNode) {
+            errorContainer.style.display = 'none';
+        }
+    }, 4000);
+}
+
+
+/**
+ * Show visual feedback for invalid drops
+ */
+function showInvalidDropFeedback(dropTarget, fieldType, targetZone) {
+    // Create or update tooltip showing why drop is invalid
+    let tooltip = dropTarget.querySelector('.invalid-drop-tooltip');
+    if (!tooltip) {
+        tooltip = document.createElement('div');
+        tooltip.className = 'invalid-drop-tooltip';
+        dropTarget.appendChild(tooltip);
+    }
+    
+    let message = '';
+    if (fieldType === 'dimension' && targetZone === 'value') {
+        message = 'Dimensions cannot be used as measures';
+    } else if (fieldType === 'fact' && (targetZone === 'row' || targetZone === 'column')) {
+        message = 'Measures cannot be used as dimensions';
+    }
+    
+    tooltip.textContent = message;
+    tooltip.style.display = 'block';
+    
+    // Hide tooltip after 2 seconds
+    setTimeout(() => {
+        if (tooltip && tooltip.parentNode) {
+            tooltip.style.display = 'none';
+        }
+    }, 2000);
+}
+
+
+/**
+ * Remove field from source container
+ */
+function removeFieldFromContainer(fieldId, sourceContainer) {
+    switch (sourceContainer) {
+        case 'rowFields':
+            state.rowFields = state.rowFields.filter(f => f !== fieldId);
+            break;
+        case 'columnFields':
+            state.columnFields = state.columnFields.filter(f => f !== fieldId);
+            break;
+        case 'valueFields':
+            state.valueFields = state.valueFields.filter(f => f !== fieldId);
+            break;
+        case 'filterFields':
+            if (state.filterFields) {
+                state.filterFields = state.filterFields.filter(f => f !== fieldId);
+            }
+            break;
+    }
+}
+
+
+/**
+ * Insert field at correct position in target container
+ */
+function insertFieldAtPosition(fieldId, targetContainer) {
+    const container = document.getElementById(targetContainer);
+    if (!container) return;
+    
+    const draggedItem = document.querySelector('.dragging');
+    const fieldElements = Array.from(container.querySelectorAll('.field:not(.dragging)'));
+    const nextElement = getDragAfterElement(container, draggedItem ? draggedItem.getBoundingClientRect().top : 0);
+    
+    let insertIndex = nextElement ? fieldElements.indexOf(nextElement) : fieldElements.length;
+    
+    switch (targetContainer) {
+        case 'rowFields':
+            state.rowFields.splice(insertIndex, 0, fieldId);
+            break;
+        case 'columnFields':
+            state.columnFields.splice(insertIndex, 0, fieldId);
+            break;
+        case 'valueFields':
+            state.valueFields.splice(insertIndex, 0, fieldId);
+            break;
+        case 'filterFields':
+            if (!state.filterFields) state.filterFields = [];
+            state.filterFields.splice(insertIndex, 0, fieldId);
+            break;
+    }
+}
+
+
+/**
+ * Check for duplicate fields in target container
+ */
+function checkForDuplicate(fieldId, targetContainer) {
+    switch (targetContainer) {
+        case 'rowFields':
+            return state.rowFields.includes(fieldId);
+        case 'columnFields':
+            return state.columnFields.includes(fieldId);
+        case 'valueFields':
+            return state.valueFields.includes(fieldId);
+        case 'filterFields':
+            return state.filterFields && state.filterFields.includes(fieldId);
+        default:
+            return false;
+    }
+}
+
+
+/**
+ * Find closest valid drop target
  */
 function getDropTarget(element) {
     let current = element;
     
-    // Traverse up the DOM hierarchy to find a valid container
     while (current && 
            !current.classList.contains('pivot-fields') && 
            current.id !== 'availableFields') {
@@ -424,129 +558,78 @@ function getDropTarget(element) {
 
 
 /**
- * Handles the drag over event to determine if dropping is allowed
- * Prevents default behavior for valid drop targets
- * 
- * @param {DragEvent} e - The drag over event
+ * Clean up after drag operation
  */
-function handleDragOver(e) {
-    const dropTarget = getDropTarget(e.target);
-
-    if (dropTarget) {
-        const targetId = dropTarget.id;
-        const dataTransfer = e.dataTransfer;
-
-        let dropAllowed = false;
-
-        // Always allow dropping back to available fields
-        if (targetId === 'availableFields') {
-            dropAllowed = true;
-        } else {
-            const dragging = document.querySelector('.dragging');
-            let fieldType = null;
-            if (dragging) {
-                fieldType = dragging.getAttribute('data-type');
-            }
-            if (targetId === 'valueFields') {
-                if (fieldType === 'fact') {
-                    dropAllowed = true;
-                }
-            } else if (
-                targetId === 'rowFields' ||
-                targetId === 'columnFields' ||
-                targetId === 'filterFields'
-            ) {
-                if (fieldType === 'dimension') {
-                    dropAllowed = true;
-                }
-            }
-        }
-
-        if (dropAllowed) {
-            e.preventDefault();
-            dataTransfer.dropEffect = 'move';
-        } else {
-            // Explicitly block forbidden drop
-            dataTransfer.dropEffect = 'none';
-        }
+function handleDragEnd(e) {
+    if (e.target.classList.contains('field')) {
+        e.target.classList.remove('dragging');
+        updateFieldOrder();
     }
+    
+    // Remove all visual feedback
+    document.querySelectorAll('.drag-over, .drag-invalid').forEach(el => {
+        el.classList.remove('drag-over', 'drag-invalid');
+    });
+    
+    // Hide any tooltips
+    document.querySelectorAll('.invalid-drop-tooltip').forEach(el => {
+        el.style.display = 'none';
+    });
 }
 
 
 /**
- * Handles the drop event when a field is dropped onto a target container
- * Updates application state based on the field movement
- * Prevents duplications across zones
- * 
- * @param {DragEvent} e - The drop event
+ * Update field order based on current DOM structure
  */
-function handleDrop(e) {
-    e.preventDefault();
+function updateFieldOrder() {
+    const containers = {
+        rowFields: document.getElementById('rowFields'),
+        columnFields: document.getElementById('columnFields'),
+        valueFields: document.getElementById('valueFields'),
+        filterFields: document.getElementById('filterFields')
+    };
 
-    const dropTarget = getDropTarget(e.target);
-    if (!dropTarget) return;
-
-    const fieldId = e.dataTransfer.getData('field');
-    const fieldType = e.dataTransfer.getData('type');
-    const isHierarchical = e.dataTransfer.getData('hierarchical') === 'true';
-    const sourceContainer = e.dataTransfer.getData('source');
-    const targetContainer = dropTarget.id;
-
-    // Check if drop is allowed based on field type and target zone
-    let dropAllowed = false;
-    
-    if (targetContainer === 'availableFields') {
-        // Always allow dropping back to available fields
-        dropAllowed = true;
-    } else if ((targetContainer === 'rowFields' || 
-                targetContainer === 'columnFields' || 
-                targetContainer === 'filterFields') && 
-               fieldType === 'dimension') {
-        dropAllowed = true;
-    } else if (targetContainer === 'valueFields' && 
-               fieldType === 'fact') {
-        dropAllowed = true;
-    }
-    
-    // If dropping in the same container, update order but don't change containers
-    if (sourceContainer === targetContainer) {
-        if (dropAllowed) {
-            // Update the order without changing containers
-            updateFieldOrder();
+    Object.entries(containers).forEach(([key, container]) => {
+        if (container) {
+            const fieldElements = Array.from(container.querySelectorAll('.field'));
+            const fieldIds = fieldElements.map(el => el.getAttribute('data-field'));
+            
+            switch (key) {
+                case 'rowFields':
+                    state.rowFields = fieldIds;
+                    break;
+                case 'columnFields':
+                    state.columnFields = fieldIds;
+                    break;
+                case 'valueFields':
+                    state.valueFields = fieldIds;
+                    break;
+                case 'filterFields':
+                    state.filterFields = fieldIds;
+                    break;
+            }
         }
-        return;
-    } else if (!dropAllowed) {
-        return;
-    }
-    
-    // Check for duplicates before proceeding
-    if (targetContainer !== 'availableFields') {
-        // Check if the field already exists in the target zone
-        const isDuplicate = checkForDuplicate(fieldId, targetContainer);
-        if (isDuplicate) {
-            console.log(`✅ Status: Field ${fieldId} already exists in ${targetContainer}, skipping addition`);
-            return;
-        }
-    }
-    
-    // Remove from source container's state array
-    if (sourceContainer === 'rowFields') {
-        state.rowFields = state.rowFields.filter(f => f !== fieldId);
-    } else if (sourceContainer === 'columnFields') {
-        state.columnFields = state.columnFields.filter(f => f !== fieldId);
-    } else if (sourceContainer === 'valueFields') {
-        state.valueFields = state.valueFields.filter(f => f !== fieldId);
-    } else if (sourceContainer === 'filterFields') {
-        state.filterFields = state.filterFields.filter(f => f !== fieldId);
-    }
-    
-    // Add to target container's state array in the correct position
-    if (targetContainer !== 'availableFields') {
-        // Insert at the correct position
-        insertFieldAtPosition(fieldId, targetContainer);
-    }
+    });
+}
 
-    // Update the UI
+
+/**
+ * Enhanced Reset UI functionality
+ */
+function handleResetUI(e) {
+    if (e) e.preventDefault();
+    
+    console.log("⏳ Resetting UI - Clearing all field zones...");
+    
+    // Clear all field arrays in state
+    state.rowFields = [];
+    state.columnFields = [];
+    state.valueFields = [];
+    if (state.filterFields) {
+        state.filterFields = [];
+    }
+    
+    // Get field containers with error handling
     const elements = {
         rowFields: document.getElementById('rowFields'),
         columnFields: document.getElementById('columnFields'),
@@ -555,258 +638,57 @@ function handleDrop(e) {
         availableFields: document.getElementById('availableFields')
     };
     
-    // If we added a hierarchical field, initialize its expansion state
-    if (isHierarchical && targetContainer !== 'availableFields') {
-        const zone = targetContainer.replace('Fields', '');
-        core.debugLog("Dropped hierarchical field", {fieldId, zone});
-        
-        // Only handle row and column zones
-        if (zone === 'row' || zone === 'column') {
-            initializeHierarchyExpansion(fieldId, zone);
-        }
-    }
-
-    if (targetContainer === 'filterFields' && window.renderFilterControls) {
-        console.log('✅ Status: Field dropped into filter zone, rendering filters');
-        window.renderFilterControls();
-    }
+    // Validate that we found the elements
+    const missingElements = Object.entries(elements)
+        .filter(([key, element]) => !element && key !== 'filterFields')
+        .map(([key]) => key);
     
-    // Render the updated field containers
-    renderFieldContainers(elements, state);
-    renderAvailableFields(elements);
-    
-    // Regenerate the pivot table
-    // if (window.generatePivotTable) {
-    //     window.generatePivotTable();
-    // }
-}
-
-
-/**
- * Checks if a field already exists in the target container
- * 
- * @param {string} fieldId - The field ID to check
- * @param {string} targetContainer - The target container ID
- * @returns {boolean} - Whether the field already exists in the target
- */
-function checkForDuplicate(fieldId, targetContainer) {
-    if (targetContainer === 'rowFields') {
-        return state.rowFields.includes(fieldId);
-    } else if (targetContainer === 'columnFields') {
-        return state.columnFields.includes(fieldId);
-    } else if (targetContainer === 'valueFields') {
-        return state.valueFields.includes(fieldId);
-    } else if (targetContainer === 'filterFields') {
-        return state.filterFields.includes(fieldId);
-    }
-    return false;
-}
-
-
-/**
- * Inserts a field at the correct position in a target container
- * 
- * @param {string} fieldId - The field ID to insert
- * @param {string} targetContainer - The target container ID
- */
-function insertFieldAtPosition(fieldId, targetContainer) {
-    const container = document.getElementById(targetContainer);
-    if (!container) return;
-    
-    // Get the dragged element and all other field elements
-    const draggedItem = document.querySelector('.dragging');
-    if (!draggedItem) {
-        // Fallback to just adding at the end
-        if (targetContainer === 'rowFields') {
-            state.rowFields.push(fieldId);
-        } else if (targetContainer === 'columnFields') {
-            state.columnFields.push(fieldId);
-        } else if (targetContainer === 'valueFields') {
-            state.valueFields.push(fieldId);
-        } else if (targetContainer === 'filterFields') {
-            state.filterFields.push(fieldId);
-        }
+    if (missingElements.length > 0) {
+        console.error(`❌ Missing UI elements for reset: ${missingElements.join(', ')}`);
         return;
     }
     
-    // Find the position based on DOM order
-    const fieldElements = Array.from(container.querySelectorAll('.field:not(.dragging)'));
-    const nextElement = getDragAfterElement(container, draggedItem.getBoundingClientRect().top);
+    // Clear all field containers
+    Object.values(elements).forEach(container => {
+        if (container) container.innerHTML = '';
+    });
     
-    // Determine the index to insert at
-    let insertIndex = nextElement ? 
-        fieldElements.indexOf(nextElement) : 
-        fieldElements.length;
-    
-    // Update the appropriate state array
-    if (targetContainer === 'rowFields') {
-        state.rowFields.splice(insertIndex, 0, fieldId);
-    } else if (targetContainer === 'columnFields') {
-        state.columnFields.splice(insertIndex, 0, fieldId);
-    } else if (targetContainer === 'valueFields') {
-        state.valueFields.splice(insertIndex, 0, fieldId);
-    } else if (targetContainer === 'filterFields') {
-        state.filterFields.splice(insertIndex, 0, fieldId);
-    }
-}
-
-
-/**
- * Initialize hierarchy expansion state when a hierarchical field is dropped
- * 
- * @param {string} fieldId - The field ID
- * @param {string} zone - The zone (row/column)
- */
-function initializeHierarchyExpansion(fieldId, zone) {
-    const dimName = fieldId.replace('DIM_', '').toLowerCase();
-    if (['le', 'gmid_display', 'smartcode', 'cost_element', 'cost_item_type', 'material_type', 'mc', 'year'].includes(dimName)) {
-        // Initialize expansion state for this dimension if it doesn't exist
-        state.expandedNodes[dimName] = state.expandedNodes[dimName] || {};
-        state.expandedNodes[dimName][zone] = state.expandedNodes[dimName][zone] || {};
-        state.expandedNodes[dimName][zone]['ROOT'] = false;
-    }
-}
-
-
-/**
- * Updates the order of fields in state based on current DOM order
- */
-function updateFieldOrder() {
-    const rowContainer = document.getElementById('rowFields');
-    const columnContainer = document.getElementById('columnFields');
-    const valueContainer = document.getElementById('valueFields');
-    const filterContainer = document.getElementById('filterFields');
-
-    // Use conditional checks to avoid calling querySelectorAll on null
-    const rowFieldElements = rowContainer ? Array.from(rowContainer.querySelectorAll('.field')) : [];
-    const columnFieldElements = columnContainer ? Array.from(columnContainer.querySelectorAll('.field')) : [];
-    const valueFieldElements = valueContainer ? Array.from(valueContainer.querySelectorAll('.field')) : [];
-    const filterFieldElements = filterContainer ? Array.from(filterContainer.querySelectorAll('.field')) : [];
-
-    state.rowFields = rowFieldElements.map(el => el.getAttribute('data-field'));
-    state.columnFields = columnFieldElements.map(el => el.getAttribute('data-field'));
-    state.valueFields = valueFieldElements.map(el => el.getAttribute('data-field'));
-    state.filterFields = filterFieldElements.map(el => el.getAttribute('data-field'));
-
-    // Optionally trigger pivot table generation only if the container exists
-    if (document.getElementById('pivotTableHeader') && window.generatePivotTable) {
-        window.generatePivotTable();
-    }
-}
-
-
-/**
- * Handles the end of drag operations
- * Cleans up visual styling from dragged elements and updates field order
- * 
- * @param {DragEvent} e - The drag end event
- */
-function handleDragEnd(e) {
-    // Remove dragging class
-    if (e.target.classList.contains('field')) {
-        e.target.classList.remove('dragging');
-        
-        // Update the field order based on the current DOM structure
-        updateFieldOrder();
-    }
-}
-
-
-/**
- * Handles the Reset UI button click
- * Clears all fields from Row, Column, and Value zones
- * @param {Event} e - The click event
- */
-function handleResetUI(e) {
-    // Prevent default button behavior
-    if (e) {
-        e.preventDefault();
-    }
-    
-    console.log("⏳ Status: Resetting UI - Clearing all field zones...");
-    
-    // Reset fields in state
-    state.rowFields = [];
-    state.columnFields = [];
-    state.valueFields = [];
-    
-    // Get field containers
-    const elements = {
-        rowFields: document.getElementById('rowFields'),
-        columnFields: document.getElementById('columnFields'),
-        valueFields: document.getElementById('valueFields'),
-        availableFields: document.getElementById('availableFields')
-    };
-    
-    // Clear the fields in the UI
-    if (elements.rowFields) elements.rowFields.innerHTML = '';
-    if (elements.columnFields) elements.columnFields.innerHTML = '';
-    if (elements.valueFields) elements.valueFields.innerHTML = '';
-    
-    // Re-render available fields to ensure all fields appear there
+    // Re-render available fields to restore all fields
     renderAvailableFields(elements);
     
-    console.log("✅ Status: UI Reset complete - All field zones cleared");
+    // Clear pivot table
+    const pivotTableHeader = document.getElementById('pivotTableHeader');
+    const pivotTableBody = document.getElementById('pivotTableBody');
     
-    // Regenerate the pivot table (empty)
-    if (window.generatePivotTable) {
-        window.generatePivotTable();
-    }
+    if (pivotTableHeader) pivotTableHeader.innerHTML = '';
+    if (pivotTableBody) pivotTableBody.innerHTML = '';
+    
+    console.log("✅ UI Reset complete - All fields returned to Available Fields");
 }
 
 
 /**
- * Initializes the Reset UI button functionality
- * Binds the click event to the button
+ * Initialize Reset UI button
  */
 function initializeResetUIButton() {
     const resetButton = document.getElementById('resetBtn');
     if (resetButton) {
         resetButton.addEventListener('click', handleResetUI);
-        console.log("✅ Status: Reset UI button initialized");
+        console.log("✅ Reset UI button initialized");
     }
 }
 
 
-// Add this to your init or document ready function to set up the Reset UI button
+/**
+ * Setup Reset UI functionality
+ */
 function setupResetUI() {
-    // Wait for DOM to be fully loaded
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
         initializeResetUIButton();
     } else {
         document.addEventListener('DOMContentLoaded', initializeResetUIButton);
     }
 }
-
-/**
- * Set up global event handlers
- */
-function setupGlobalHandlers() {
-    // [Existing code]
-    // Make handleExpandCollapseClick globally available
-    window.handleExpandCollapseClick = this.handleExpandCollapseClick.bind(this);
-
-    // Make generatePivotTable globally available
-    window.generatePivotTable = this.generatePivotTable.bind(this);
-    
-    // Make handleMultiDimensionExpandCollapseClick globally available
-    window.handleMultiDimensionExpandCollapseClick = 
-        multiDimensionPivotHandler.handleMultiDimensionExpandCollapseClick;
-    
-    // Make refreshPivotTable globally available
-    window.refreshPivotTable = this.generatePivotTable.bind(this);
-    
-    // Add this line to make handleResetUI globally available
-    window.handleResetUI = this.handleResetUI.bind(this);
-}
-
-
-// Override console.log to add timestamp
-const originalConsoleLog = console.log;
-console.log = function(...args) {
-    const timestamp = new Date().toISOString().split('T')[1].split('.')[0]; // HH:MM:SS
-    originalConsoleLog.apply(console, [`[${timestamp}]`, ...args]);
-};
 
 
 // Function to initialize the enhanced console logger
@@ -852,144 +734,6 @@ function initializeEnhancedConsole() {
 }
 
 
-/**
- * Set up event handlers for the activity log UI controls
- */
-function setupActivityLogControls() {
-    // Collapsible functionality
-    const collapseBtn = document.getElementById('collapseActivityLog');
-    if (collapseBtn) {
-        collapseBtn.addEventListener('click', function() {
-            const cardBody = this.closest('.card-header').nextElementSibling;
-            const icon = this.querySelector('i');
-            
-            if (cardBody.style.display === 'none') {
-                cardBody.style.display = 'block';
-                icon.className = 'fas fa-chevron-down';
-            } else {
-                cardBody.style.display = 'none';
-                icon.className = 'fas fa-chevron-up';
-            }
-        });
-    }
-    
-    // Clear log button
-    const clearBtn = document.getElementById('clearLogBtn');
-    if (clearBtn) {
-        clearBtn.addEventListener('click', function() {
-            const logContainer = document.getElementById('activityLog');
-            if (logContainer) {
-                logContainer.innerHTML = '';
-                addLogEntry('Log cleared', 'info');
-            }
-        });
-    }
-}
-
-
-/**
- * Set up console method interception to capture logs to the activity log
- */
-function setupConsoleInterception() {
-    // Store original console methods
-    const originalConsoleLog = console.log;
-    const originalConsoleWarn = console.warn;
-    const originalConsoleError = console.error;
-    
-    // Override console.log
-    console.log = function() {
-        // Call the original method
-        originalConsoleLog.apply(console, arguments);
-        
-        // Add to activity log
-        const message = Array.from(arguments).map(arg => 
-            typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-        ).join(' ');
-        
-        addLogEntry(message, 'info');
-    };
-    
-    // Override console.warn
-    console.warn = function() {
-        // Call the original method
-        originalConsoleWarn.apply(console, arguments);
-        
-        // Add to activity log
-        const message = Array.from(arguments).map(arg => 
-            typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-        ).join(' ');
-        
-        addLogEntry(message, 'warning');
-    };
-    
-    // Override console.error
-    console.error = function() {
-        // Call the original method
-        originalConsoleError.apply(console, arguments);
-        
-        // Add to activity log
-        const message = Array.from(arguments).map(arg => 
-            typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-        ).join(' ');
-        
-        addLogEntry(message, 'error');
-    };
-    
-    // Also add a global function to manually add log entries
-    window.addActivityLog = function(message, type = 'info') {
-        addLogEntry(message, type);
-    };
-}
-
-
-/**
- * Add a log entry to the activity log
- * @param {string} message - The log message
- * @param {string} type - The type of log ('info', 'warning', 'error')
- */
-function addLogEntry(message, type = 'info') {
-    const logContainer = document.getElementById('activityLog');
-    if (!logContainer) return;
-    
-    // Create log entry element
-    const entry = document.createElement('div');
-    entry.className = `activity-log-entry activity-log-${type}`;
-    
-    // Add timestamp
-    const timestamp = new Date().toLocaleTimeString();
-    const timestampSpan = document.createElement('span');
-    timestampSpan.className = 'activity-log-timestamp';
-    timestampSpan.textContent = timestamp;
-    
-    // Add message
-    const messageSpan = document.createElement('span');
-    messageSpan.className = 'activity-log-message';
-    messageSpan.textContent = message;
-    
-    // Assemble entry
-    entry.appendChild(timestampSpan);
-    entry.appendChild(messageSpan);
-    
-    // Add to log container
-    logContainer.appendChild(entry);
-    
-    // Scroll to bottom
-    logContainer.scrollTop = logContainer.scrollHeight;
-}
-
-
-// Expose key functions globally
-window.activityLog = {
-    addEntry: addLogEntry,
-    clear: function() {
-        const logContainer = document.getElementById('activityLog');
-        if (logContainer) {
-            logContainer.innerHTML = '';
-        }
-    }
-};
-
-
 // Add a message to the processing status display
 function addToProcessingStatus(message, type = 'info') {
     // Get the processing status container
@@ -1019,6 +763,7 @@ function addToProcessingStatus(message, type = 'info') {
         loadingIndicator.style.display = 'flex';
     }
 }
+
 
 // Update progress bar based on message content
 function updateProgressFromMessage(message) {
@@ -1090,62 +835,130 @@ function updateProgressFromMessage(message) {
 }
 
 
-// Function to format numbers with commas for better readability
-function formatNumber(num) {
-    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+/**
+ * Set up console method interception to capture logs to the activity log
+ */
+function setupConsoleInterception() {
+    // Store original console methods
+    const originalConsoleLog = console.log;
+    const originalConsoleWarn = console.warn;
+    const originalConsoleError = console.error;
+    
+    // Override console.log
+    console.log = function() {
+        // Call the original method
+        originalConsoleLog.apply(console, arguments);
+        
+        // Add to activity log
+        const message = Array.from(arguments).map(arg => 
+            typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+        ).join(' ');
+        
+        addLogEntry(message, 'info');
+    };
+    
+    // Override console.warn
+    console.warn = function() {
+        // Call the original method
+        originalConsoleWarn.apply(console, arguments);
+        
+        // Add to activity log
+        const message = Array.from(arguments).map(arg => 
+            typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+        ).join(' ');
+        
+        addLogEntry(message, 'warning');
+    };
+    
+    // Override console.error
+    console.error = function() {
+        // Call the original method
+        originalConsoleError.apply(console, arguments);
+        
+        // Add to activity log
+        const message = Array.from(arguments).map(arg => 
+            typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+        ).join(' ');
+        
+        addLogEntry(message, 'error');
+    };
+    
+    // Also add a global function to manually add log entries
+    window.addActivityLog = function(message, type = 'info') {
+        addLogEntry(message, type);
+    };
 }
 
 
-// Update row counts for all files when data is loaded
-function updateFileRowCounts() {
-    // Get reference to the application state
-    const state = window.stateModule?.state;
-    if (!state) return;
-    
-    // Update FACT_BOM row count
-    if (state.factData && state.factData.length) {
-        const rowCountElement = document.getElementById('factBOMRows');
-        if (rowCountElement) {
-            rowCountElement.textContent = formatNumber(state.factData.length) + ' rows';
-        }
+/**
+ * Set up event handlers for the activity log UI controls
+ */
+function setupActivityLogControls() {
+    // Collapsible functionality
+    const collapseBtn = document.getElementById('collapseActivityLog');
+    if (collapseBtn) {
+        collapseBtn.addEventListener('click', function() {
+            const cardBody = this.closest('.card-header').nextElementSibling;
+            const icon = this.querySelector('i');
+            
+            if (cardBody.style.display === 'none') {
+                cardBody.style.display = 'block';
+                icon.className = 'fas fa-chevron-down';
+            } else {
+                cardBody.style.display = 'none';
+                icon.className = 'fas fa-chevron-up';
+            }
+        });
     }
     
-    // Update dimension row counts
-    if (state.dimensions) {
-        // Update DIM_LE.csv row count
-        if (state.dimensions.le) {
-            const rowCountElement = document.getElementById('dimLERows');
-            if (rowCountElement) {
-                rowCountElement.textContent = formatNumber(state.dimensions.le.length) + ' rows';
+    // Clear log button
+    const clearBtn = document.getElementById('clearLogBtn');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function() {
+            const logContainer = document.getElementById('activityLog');
+            if (logContainer) {
+                logContainer.innerHTML = '';
+                addLogEntry('Log cleared', 'info');
             }
-        }
-        
-        // Update DIM_COST_ELEMENT.csv row count
-        if (state.dimensions.cost_element) {
-            const rowCountElement = document.getElementById('dimCostElementRows');
-            if (rowCountElement) {
-                rowCountElement.textContent = formatNumber(state.dimensions.cost_element.length) + ' rows';
-            }
-        }
-        
-        // Update DIM_GMID_DISPLAY.csv row count
-        if (state.dimensions.gmid_display) {
-            const rowCountElement = document.getElementById('dimGMIDDisplayRows');
-            if (rowCountElement) {
-                rowCountElement.textContent = formatNumber(state.dimensions.gmid_display.length) + ' rows';
-            }
-        }
-        
-        // Update DIM_SMARTCODE.csv row count
-        if (state.dimensions.smartcode) {
-            const rowCountElement = document.getElementById('dimSmartCodeRows');
-            if (rowCountElement) {
-                rowCountElement.textContent = formatNumber(state.dimensions.smartcode.length) + ' rows';
-            }
-        }
+        });
     }
 }
 
+
+/**
+ * Add a log entry to the activity log
+ * @param {string} message - The log message
+ * @param {string} type - The type of log ('info', 'warning', 'error')
+ */
+function addLogEntry(message, type = 'info') {
+    const logContainer = document.getElementById('activityLog');
+    if (!logContainer) return;
+    
+    // Create log entry element
+    const entry = document.createElement('div');
+    entry.className = `activity-log-entry activity-log-${type}`;
+    
+    // Add timestamp
+    const timestamp = new Date().toLocaleTimeString();
+    const timestampSpan = document.createElement('span');
+    timestampSpan.className = 'activity-log-timestamp';
+    timestampSpan.textContent = timestamp;
+    
+    // Add message
+    const messageSpan = document.createElement('span');
+    messageSpan.className = 'activity-log-message';
+    messageSpan.textContent = message;
+    
+    // Assemble entry
+    entry.appendChild(timestampSpan);
+    entry.appendChild(messageSpan);
+    
+    // Add to log container
+    logContainer.appendChild(entry);
+    
+    // Scroll to bottom
+    logContainer.scrollTop = logContainer.scrollHeight;
+}
 
 // Function to setup console log interception to update row counts when appropriate
 function setupRowCountUpdates() {
@@ -1199,42 +1012,44 @@ function updateTableStatus(tableName, status, rowCount) {
 }
 
 
-// Export signature
+// Expose key functions globally
+window.activityLog = {
+    addEntry: addLogEntry,
+    clear: function() {
+        const logContainer = document.getElementById('activityLog');
+        if (logContainer) {
+            logContainer.innerHTML = '';
+        }
+    }
+};
+
+
+// Export functions
 export default {
-    // Rendering functions
+    setupRowCountUpdates,
+    updateTableStatus,
+    addLogEntry,
+    setupActivityLogControls,
+    updateProgressFromMessage,
+    setupConsoleInterception,
     setDefaultFields,
     renderAvailableFields,
     renderFieldContainers,
     renderFieldContainer,
-    // renderFilterControls,
-    
-    // Drag and drop functionality
+    createFieldElement,
     initDragAndDrop,
     handleDragStart,
     handleDragOver,
     handleDrop,
     handleDragEnd,
     enhanceDragDropReordering,
-
-    // UI reset
-    handleResetUI, 
-    initializeResetUIButton, 
+    handleResetUI,
+    initializeResetUIButton,
     setupResetUI,
-    setupGlobalHandlers,
-
-    // Others
+    removeFieldFromContainer,
+    insertFieldAtPosition,
+    checkForDuplicate,
+    updateFieldOrder,
     initializeEnhancedConsole,
-    updateFileRowCounts,
-    setupRowCountUpdates,
-    addToProcessingStatus,
-    updateProgressFromMessage,
-    formatNumber,
-    setupConsoleInterception,
-    setupActivityLogControls,
-    addLogEntry,
-    renderExpandCollapseControl,
-    renderChildrenContainer,
-    renderNodeRadioButton,
-    updateTableStatus
-
-  };
+    addToProcessingStatus
+};
