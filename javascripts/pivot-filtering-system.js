@@ -3277,7 +3277,7 @@ buildFilteredGmidDisplayHierarchy(data, selectedRootGmids = null) {
         allValues.forEach(item => {
           const safeId = (item.id || item.value).toString().replace(/[^a-zA-Z0-9]/g, '_');
           const isValid = validSet.has(item.value);
-          const isChecked = isValid && !previousSelection.has(item.value);
+          const isChecked = !this.filterSelections[dimension.id].has(item.value);
           const checkboxOption = document.createElement('div');
           checkboxOption.className = 'checkbox-option';
           checkboxOption.innerHTML = `
@@ -3294,21 +3294,9 @@ buildFilteredGmidDisplayHierarchy(data, selectedRootGmids = null) {
           });
           checkboxList.appendChild(checkboxOption);
 
-          // Ne pas exclure si on vient de faire "Select All"
-          if (!selectAllMode) {
-            if (!isValid) {
-              this.filterSelections[dimension.id].add(item.value);
-              checkbox.checked = false;
-              allAreValid = false;
-            } else {
-              this.filterSelections[dimension.id].delete(item.value);
-            }
-          }
+          // NE TOUCHEZ PLUS À filterSelections ICI !
+          // On ne modifie plus filterSelections selon isValid
         });
-
-        if (allAreValid) {
-          this.filterSelections[dimension.id].clear();
-        }
 
         this.updateSelectionCount(dimension);
       }
@@ -3338,33 +3326,24 @@ buildFilteredGmidDisplayHierarchy(data, selectedRootGmids = null) {
           const node = this.state.hierarchies[dimension.dimensionKey]?.nodesMap?.[nodeId];
           let nodeFactIds = [];
           if (node) {
-            // Récupère tous les factIds descendants
             if (node.isLeaf && node.factId) {
               nodeFactIds = Array.isArray(node.factId) ? node.factId : [node.factId];
             } else if (node.children && node.children.length > 0) {
               nodeFactIds = Array.from(this.collectLeafDescendantFactIds(node, this.state.hierarchies[dimension.dimensionKey].nodesMap));
             }
           }
-
           const hasValid = nodeFactIds.some(fid => validFactIds.has(fid));
 
           if (selectAllMode) {
-            // En mode "Select All", tout est coché, rien n'est exclu
             checkbox.checked = true;
             // Ne pas modifier filterSelections
           } else {
-            checkbox.checked = hasValid && !this.filterSelections[dimension.id].has(nodeId);
-            // Mets à jour l'état de sélection (exclusion) pour les noeuds invalides
-            if (!hasValid) {
-              this.filterSelections[dimension.id].add(nodeId);
-            } else {
-              this.filterSelections[dimension.id].delete(nodeId);
-            }
+            checkbox.checked = !this.filterSelections[dimension.id].has(nodeId);
+            // NE TOUCHEZ PLUS À filterSelections ICI !
           }
           // Ne jamais désactiver (si tu veux garder la possibilité de recocher)
           checkbox.disabled = false;
         });
-        // Mets à jour le compteur
         this.updateSelectionCount(dimension);
       }
     });
