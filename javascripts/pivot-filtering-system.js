@@ -1367,9 +1367,9 @@ applyAllFilters() {
     
     // Store original hierarchies if not already stored
     this.initializeHierarchyFilters();
-    
-    // Start with a fresh copy of the original data
-    this.state.filteredData = [...this.state.factData];   
+
+    // Reset filtered data to original fact data (if we have trouble with loading change with [...this.state.filteredData])
+    this.state.filteredData = this.state.factData;
     
     // Track filter reductions for logging
     const filterReductions = {};
