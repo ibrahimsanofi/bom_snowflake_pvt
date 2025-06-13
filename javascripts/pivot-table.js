@@ -846,65 +846,87 @@ const pivotTable = {
         return smartCodes ? records.filter(r => smartCodes.has(r.ROOT_SMARTCODE)) : records;
     },
 
-
+    
     filterByGmidDisplay: function (records, node) {
-        // console.log(`🔍 GMID Filter: Processing node "${node.label}" (${node._id}) with ${records.length} records`);
-        
-        // CRITICAL: Don't filter ROOT nodes - include ALL records for grand totals
-        if (node._id === 'ROOT' || node.label === 'All GMIDs' || 
-            node._id.endsWith('_ROOT') || node.label === 'WORLDWIDE') {
-            // console.log(`🔍 GMID Filter: ROOT node - returning all ${records.length} records`);
-            return records;
-        }
-
-        // For leaf nodes with factId, handle both COMPONENT_GMID and PATH_GMID matching
-        if (node.isLeaf && node.factId) {
-            let filtered = [];
-            
-            // console.log(`🔍 GMID Filter: Leaf node factId: "${node.factId}"`);
-            
-            if (Array.isArray(node.factId)) {
-                // Handle multiple factIds (when multiple records map to same node)
-                node.factId.forEach(factId => {
-                    const singleFiltered = this.filterByFactId(records, factId);
-                    filtered = filtered.concat(singleFiltered);
-                    // console.log(`🔍 GMID Filter: Array factId "${factId}" matched ${singleFiltered.length} records`);
-                });
-                
-                // Remove duplicates
-                filtered = filtered.filter((record, index, self) => 
-                    index === self.findIndex(r => 
-                        r.PATH_GMID === record.PATH_GMID && 
-                        r.COMPONENT_GMID === record.COMPONENT_GMID
-                    )
-                );
-            } else {
-                // Single factId
-                filtered = this.filterByFactId(records, node.factId);
-                // console.log(`🔍 GMID Filter: Single factId "${node.factId}" matched ${filtered.length} records`);
-            }
-            
-            // console.log(`🔍 GMID Filter: Final result for "${node.label}": ${filtered.length} records`);
-            return filtered;
-        }
-
-        // For parent/hierarchy nodes, use prefix matching
-        if (node.prefixFilter) {
-            const filtered = records.filter(r => {
-                // Check PATH_GMID contains the prefix
-                const pathMatch = r.PATH_GMID && r.PATH_GMID.includes(node.prefixFilter);
-                // Check COMPONENT_GMID starts with prefix (if not null)
-                const componentMatch = r.COMPONENT_GMID && r.COMPONENT_GMID.startsWith(node.prefixFilter);
-                return pathMatch || componentMatch;
-            });
-            // console.log(`🔍 GMID Filter: Prefix "${node.prefixFilter}" matched ${filtered.length} records`);
-            return filtered;
-        }
-        
-        // Fallback: no specific filter criteria
-        // console.log(`🔍 GMID Filter: No specific filter for "${node.label}" - returning all ${records.length} records`);
+    console.log(`🔍 GMID Filter: Processing node "${node.label}" (${node._id}) with ${records.length} records`);
+    
+    // CRITICAL: Don't filter ROOT nodes - include ALL records for grand totals
+    if (node._id === 'ROOT' || 
+        node.label === 'All GMIDs' || 
+        node._id.endsWith('_ROOT') || 
+        node.label === 'WORLDWIDE' ||
+        node._id === 'All GMIDs') {
+        console.log(`🔍 GMID Filter: ROOT node "${node.label}" - returning all ${records.length} records`);
         return records;
-    },
+    }
+
+    // For leaf nodes with factId, handle both COMPONENT_GMID and PATH_GMID matching
+    if (node.isLeaf && node.factId) {
+        console.log(`🔍 GMID Filter: Leaf node with factId: "${node.factId}"`);
+        
+        let filtered = [];
+        
+        if (Array.isArray(node.factId)) {
+            // Handle multiple factIds
+            node.factId.forEach(factId => {
+                const singleFiltered = this.filterByFactId(records, factId);
+                filtered = filtered.concat(singleFiltered);
+            });
+            
+            // Remove duplicates
+            filtered = filtered.filter((record, index, self) => 
+                index === self.findIndex(r => 
+                    r.PATH_GMID === record.PATH_GMID && 
+                    r.COMPONENT_GMID === record.COMPONENT_GMID
+                )
+            );
+        } else {
+            // Single factId
+            filtered = this.filterByFactId(records, node.factId);
+        }
+        
+        console.log(`🔍 GMID Filter: Leaf node result: ${filtered.length} records`);
+        return filtered;
+    }
+
+    // For parent/hierarchy nodes, get all descendant factIds
+    const dimName = 'gmid_display';
+    const hierarchy = this.state.hierarchies?.[dimName];
+    
+    if (hierarchy && hierarchy.nodesMap && hierarchy.nodesMap[node._id]) {
+        const hierarchyNode = hierarchy.nodesMap[node._id];
+        const descendants = this.getAllLeafDescendants(hierarchyNode, hierarchy);
+        
+        if (descendants.length > 0) {
+            const factIds = new Set();
+            descendants.forEach(desc => {
+                if (desc.factId) {
+                    if (Array.isArray(desc.factId)) {
+                        desc.factId.forEach(id => factIds.add(id));
+                    } else {
+                        factIds.add(desc.factId);
+                    }
+                }
+            });
+            
+            if (factIds.size > 0) {
+                const filtered = records.filter(record => {
+                    // Check both COMPONENT_GMID and PATH_GMID
+                    return factIds.has(record.COMPONENT_GMID) || 
+                           (record.PATH_GMID && Array.from(factIds).some(factId => 
+                               record.PATH_GMID === factId || record.PATH_GMID.includes(factId)
+                           ));
+                });
+                console.log(`🔍 GMID Filter: Parent node with ${descendants.length} descendants, ${factIds.size} factIds -> ${filtered.length} records`);
+                return filtered;
+            }
+        }
+    }
+    
+    // Fallback: no specific filter criteria - return all records
+    console.log(`🔍 GMID Filter: No filter criteria for "${node.label}" - returning all ${records.length} records`);
+    return records;
+},
     
 
     // Specific factId filtering logic
@@ -1099,7 +1121,7 @@ const pivotTable = {
      */
     renderTableBody: function(elements, pivotData) {
         if (!elements || !elements.pivotTableBody || !pivotData) return;
-    
+
         const valueFields = this.state?.valueFields || ['COST_UNIT'];
         const columns = pivotData.columns.filter(col => col._id !== 'ROOT');
         
@@ -1115,20 +1137,28 @@ const pivotTable = {
         
         const visibleRows = this.getVisibleRowsWithoutDuplicates(pivotData.rows);
         
+        // Check maximum depth for this render
+        let maxDepthThisRender = 0;
+        
         visibleRows.forEach((row, index) => {
             const rowData = pivotData.data.find(d => d._id === row._id) || {};
             const level = row.level || 0;
             const dimName = row.hierarchyField ? row.hierarchyField.replace('DIM_', '').toLowerCase() : 'unknown';
             
-            // CALCULATE INDENTATION: 4px base + 20px per level
-            const indentationPx = 4 + (level * 20);
-    
+            // Track maximum depth
+            if (level > maxDepthThisRender) {
+                maxDepthThisRender = level;
+            }
+            
+            // Calculate 30px indentation per level (supports up to level 30)
+            const indentationPx = 4 + (Math.min(level, 30) * 30); // Cap at level 30
+            
             bodyHtml += `<tr class="${index % 2 === 0 ? 'even' : 'odd'}">`;
             
-            // CRITICAL: Row header cell with BOTH data-level AND inline padding for guaranteed indentation
+            // Enhanced row header cell with proper indentation and level tracking
             bodyHtml += `<td class="hierarchy-cell" data-level="${level}" data-node-id="${row._id}" style="padding-left: ${indentationPx}px !important;">`;
             
-            // Add expand/collapse control
+            // Add expand/collapse control with enhanced styling
             if (row.hasChildren) {
                 const expandClass = row.expanded ? 'expanded' : 'collapsed';
                 bodyHtml += `<span class="expand-collapse ${expandClass}" 
@@ -1136,7 +1166,6 @@ const pivotTable = {
                     data-hierarchy="${dimName}" 
                     data-zone="row"
                     onclick="handleExpandCollapseClick(event)"
-                    style="cursor: pointer;"
                     title="Click to expand/collapse ${row.label}"></span>`;
             } else {
                 bodyHtml += '<span class="leaf-node"></span>';
@@ -1144,7 +1173,7 @@ const pivotTable = {
             
             bodyHtml += `<span class="dimension-label">${row.label || row._id}</span>`;
             bodyHtml += '</td>';
-    
+
             // Value cells
             if (hasRealColumnDimensions) {
                 const leafColumns = this.getVisibleLeafColumns(realColumns);
@@ -1164,11 +1193,255 @@ const pivotTable = {
             
             bodyHtml += '</tr>';
         });
-    
+
         elements.pivotTableBody.innerHTML = bodyHtml;
         this.attachEventListeners(elements.pivotTableBody);
         
-        console.log(`✅ Rendered ${visibleRows.length} rows with guaranteed indentation`);
+        // Apply visual hierarchy styles
+        this.applyHierarchyStyles();
+        
+        console.log(`✅ Rendered ${visibleRows.length} rows with max depth ${maxDepthThisRender} (30px indentation per level)`);
+    },
+
+
+    applyHierarchyStyles: function() {
+        // Add CSS for enhanced hierarchy visualization with 30 levels support
+        let styleElement = document.getElementById('pivot-hierarchy-styles');
+        if (!styleElement) {
+            styleElement = document.createElement('style');
+            styleElement.id = 'pivot-hierarchy-styles';
+            document.head.appendChild(styleElement);
+            
+            // Generate CSS for 30 levels dynamically
+            let levelCSS = '';
+            for (let level = 0; level <= 30; level++) {
+                const indentationPx = 4 + (level * 30);
+                levelCSS += `.hierarchy-cell[data-level="${level}"] { padding-left: ${indentationPx}px !important; }\n`;
+                levelCSS += `.dimension-cell[data-level="${level}"] { padding-left: ${indentationPx}px !important; }\n`;
+            }
+            
+            const css = `
+                /* Enhanced hierarchy visualization with 30px indentation for 30 levels */
+                .hierarchy-cell, .dimension-cell {
+                    position: relative !important;
+                    border-left: 2px solid transparent !important;
+                    transition: background-color 0.2s ease !important;
+                }
+                
+                /* Level-specific indentation (0-30 levels) */
+                ${levelCSS}
+                
+                /* Visual styling by level groups */
+                .hierarchy-cell[data-level="0"], .dimension-cell[data-level="0"] {
+                    font-weight: bold !important;
+                    background-color: #f8f9fa !important;
+                    border-left-color: #007bff !important;
+                    border-left-width: 4px !important;
+                }
+                
+                .hierarchy-cell[data-level="1"], .dimension-cell[data-level="1"] {
+                    font-weight: 600 !important;
+                    background-color: #f1f3f5 !important;
+                    border-left-color: #28a745 !important;
+                    border-left-width: 3px !important;
+                }
+                
+                .hierarchy-cell[data-level="2"], .dimension-cell[data-level="2"] {
+                    font-weight: 500 !important;
+                    background-color: #ffffff !important;
+                    border-left-color: #ffc107 !important;
+                    border-left-width: 2px !important;
+                }
+                
+                /* Levels 3-5: Orange gradient */
+                .hierarchy-cell[data-level="3"], .hierarchy-cell[data-level="4"], .hierarchy-cell[data-level="5"],
+                .dimension-cell[data-level="3"], .dimension-cell[data-level="4"], .dimension-cell[data-level="5"] {
+                    background-color: #fff8f0 !important;
+                    border-left-color: #fd7e14 !important;
+                    border-left-width: 2px !important;
+                }
+                
+                /* Levels 6-10: Purple gradient */
+                .hierarchy-cell[data-level="6"], .hierarchy-cell[data-level="7"], .hierarchy-cell[data-level="8"], 
+                .hierarchy-cell[data-level="9"], .hierarchy-cell[data-level="10"],
+                .dimension-cell[data-level="6"], .dimension-cell[data-level="7"], .dimension-cell[data-level="8"], 
+                .dimension-cell[data-level="9"], .dimension-cell[data-level="10"] {
+                    background-color: #f8f0ff !important;
+                    border-left-color: #6f42c1 !important;
+                    border-left-width: 1px !important;
+                }
+                
+                /* Levels 11-15: Teal gradient */
+                .hierarchy-cell[data-level="11"], .hierarchy-cell[data-level="12"], .hierarchy-cell[data-level="13"], 
+                .hierarchy-cell[data-level="14"], .hierarchy-cell[data-level="15"],
+                .dimension-cell[data-level="11"], .dimension-cell[data-level="12"], .dimension-cell[data-level="13"], 
+                .dimension-cell[data-level="14"], .dimension-cell[data-level="15"] {
+                    background-color: #f0fdff !important;
+                    border-left-color: #20c997 !important;
+                    border-left-width: 1px !important;
+                    font-size: 0.9rem !important;
+                }
+                
+                /* Levels 16-20: Pink gradient */
+                .hierarchy-cell[data-level="16"], .hierarchy-cell[data-level="17"], .hierarchy-cell[data-level="18"], 
+                .hierarchy-cell[data-level="19"], .hierarchy-cell[data-level="20"],
+                .dimension-cell[data-level="16"], .dimension-cell[data-level="17"], .dimension-cell[data-level="18"], 
+                .dimension-cell[data-level="19"], .dimension-cell[data-level="20"] {
+                    background-color: #fff0f5 !important;
+                    border-left-color: #e83e8c !important;
+                    border-left-width: 1px !important;
+                    font-size: 0.85rem !important;
+                }
+                
+                /* Levels 21-25: Dark blue gradient */
+                .hierarchy-cell[data-level="21"], .hierarchy-cell[data-level="22"], .hierarchy-cell[data-level="23"], 
+                .hierarchy-cell[data-level="24"], .hierarchy-cell[data-level="25"],
+                .dimension-cell[data-level="21"], .dimension-cell[data-level="22"], .dimension-cell[data-level="23"], 
+                .dimension-cell[data-level="24"], .dimension-cell[data-level="25"] {
+                    background-color: #f0f4ff !important;
+                    border-left-color: #0d6efd !important;
+                    border-left-width: 1px !important;
+                    font-size: 0.8rem !important;
+                }
+                
+                /* Levels 26-30: Gray gradient for deepest levels */
+                .hierarchy-cell[data-level="26"], .hierarchy-cell[data-level="27"], .hierarchy-cell[data-level="28"], 
+                .hierarchy-cell[data-level="29"], .hierarchy-cell[data-level="30"],
+                .dimension-cell[data-level="26"], .dimension-cell[data-level="27"], .dimension-cell[data-level="28"], 
+                .dimension-cell[data-level="29"], .dimension-cell[data-level="30"] {
+                    background-color: #f8f9fa !important;
+                    border-left-color: #6c757d !important;
+                    border-left-width: 1px !important;
+                    font-size: 0.75rem !important;
+                    color: #495057 !important;
+                }
+                
+                /* Hover effects for all levels */
+                .hierarchy-cell[data-level]:hover, .dimension-cell[data-level]:hover {
+                    background-color: #e9ecef !important;
+                    cursor: pointer !important;
+                }
+                
+                /* Enhanced expand/collapse controls */
+                .expand-collapse {
+                    display: inline-block !important;
+                    width: 16px !important;
+                    height: 16px !important;
+                    margin-right: 8px !important;
+                    cursor: pointer !important;
+                    font-size: 12px !important;
+                    line-height: 14px !important;
+                    text-align: center !important;
+                    border: 1px solid #6c757d !important;
+                    border-radius: 2px !important;
+                    background-color: #ffffff !important;
+                    font-weight: bold !important;
+                }
+                
+                .expand-collapse.expanded::before {
+                    content: '−' !important;
+                    color: #dc3545 !important;
+                }
+                
+                .expand-collapse.collapsed::before {
+                    content: '+' !important;
+                    color: #28a745 !important;
+                }
+                
+                .expand-collapse:hover {
+                    background-color: #f8f9fa !important;
+                    border-color: #495057 !important;
+                }
+                
+                /* Leaf node indicators */
+                .leaf-node {
+                    display: inline-block !important;
+                    width: 16px !important;
+                    height: 16px !important;
+                    margin-right: 8px !important;
+                    text-align: center !important;
+                    line-height: 14px !important;
+                    color: #6c757d !important;
+                    font-size: 10px !important;
+                }
+                
+                .leaf-node::before {
+                    content: '•' !important;
+                }
+                
+                /* Connection lines for very deep hierarchies */
+                .hierarchy-cell[data-level]:before, .dimension-cell[data-level]:before {
+                    content: '' !important;
+                    position: absolute !important;
+                    left: 2px !important;
+                    top: 0 !important;
+                    bottom: 0 !important;
+                    width: 1px !important;
+                    background: linear-gradient(to bottom, #dee2e6 0%, #dee2e6 50%, transparent 50%) !important;
+                    opacity: 0.5 !important;
+                }
+                
+                /* Hide connection lines for root level */
+                .hierarchy-cell[data-level="0"]:before, .dimension-cell[data-level="0"]:before {
+                    display: none !important;
+                }
+                
+                /* Responsive adjustments for deep hierarchies */
+                @media (max-width: 1200px) {
+                    .hierarchy-cell[data-level], .dimension-cell[data-level] {
+                        font-size: 0.8rem !important;
+                    }
+                    
+                    .expand-collapse {
+                        width: 14px !important;
+                        height: 14px !important;
+                        font-size: 10px !important;
+                        line-height: 12px !important;
+                    }
+                }
+                
+                /* Ensure text doesn't get cut off at deep levels */
+                .dimension-label {
+                    white-space: nowrap !important;
+                    overflow: hidden !important;
+                    text-overflow: ellipsis !important;
+                    max-width: calc(100vw - 50px) !important;
+                }
+                
+                /* Add subtle shadows for depth perception */
+                .hierarchy-cell[data-level]:after, .dimension-cell[data-level]:after {
+                    content: '' !important;
+                    position: absolute !important;
+                    top: 0 !important;
+                    left: 0 !important;
+                    right: 0 !important;
+                    bottom: 0 !important;
+                    box-shadow: inset 1px 0 0 rgba(0,0,0,0.1) !important;
+                    pointer-events: none !important;
+                }
+            `;
+            
+            styleElement.textContent = css;
+            console.log("✅ Applied enhanced hierarchy styles with 30-level support (30px indentation per level)");
+        }
+    },
+
+
+    // Method to check maximum depth
+    getMaxHierarchyDepth: function() {
+        let maxDepth = 0;
+        
+        if (this.state && this.state.pivotData && this.state.pivotData.rows) {
+            this.state.pivotData.rows.forEach(row => {
+                const level = row.level || 0;
+                if (level > maxDepth) {
+                    maxDepth = level;
+                }
+            });
+        }
+        
+        console.log(`📊 Maximum hierarchy depth detected: ${maxDepth} levels`);
+        return maxDepth;
     },
 
 
@@ -1228,6 +1501,78 @@ const pivotTable = {
     /**
      * Process pivot data
      */
+    // processPivotData: function () {
+    //     if (!this.state.factData || this.state.factData.length === 0) {
+    //         console.error("No fact data available for pivot table");
+    //         return;
+    //     }
+
+    //     const rowFields = this.state.rowFields || [];
+    //     const columnFields = this.state.columnFields || [];
+    //     const valueFields = this.state.valueFields || ['COST_UNIT'];
+
+    //     if (rowFields.length === 0) {
+    //         console.warn("No row fields selected, defaulting to first available dimension");
+    //     }
+
+    //     if (valueFields.length === 0) {
+    //         console.warn("No value fields selected, defaulting to COST_UNIT");
+    //         this.state.valueFields = ['COST_UNIT'];
+    //     }
+
+    //     // console.log(`📊 Processing pivot data: ${rowFields.length} row fields, ${columnFields.length} column fields`);
+
+    //     // ENHANCED: Use data.js functions with better error handling
+    //     let rowData;
+    //     try {
+    //         if (typeof data !== 'undefined' && data.processHierarchicalFields) {
+    //             rowData = data.processHierarchicalFields(rowFields, 'row');
+    //         } else {
+    //             // Fallback processing
+    //             rowData = this.processMultiDimensionFields(rowFields, 'row');
+    //         }
+    //     } catch (error) {
+    //         console.error("Error processing row fields:", error);
+    //         rowData = { flatRows: [], flatMappings: [] };
+    //     }
+        
+    //     // Process columns using data.js function or create default
+    //     let columnData;
+    //     try {
+    //         if (columnFields.length > 0) {
+    //             if (typeof data !== 'undefined' && data.processHierarchicalFields) {
+    //                 columnData = data.processHierarchicalFields(columnFields, 'column');
+    //             } else {
+    //                 columnData = this.processMultiDimensionFields(columnFields, 'column');
+    //             }
+    //         } else {
+    //             columnData = { 
+    //                 flatRows: [{ _id: 'default', label: 'Value' }], 
+    //                 flatMappings: [{ _id: 'default', isLeaf: true }] 
+    //             };
+    //         }
+    //     } catch (error) {
+    //         console.error("Error processing column fields:", error);
+    //         columnData = { 
+    //             flatRows: [{ _id: 'default', label: 'Value' }], 
+    //             flatMappings: [{ _id: 'default', isLeaf: true }] 
+    //         };
+    //     }
+
+    //     // Initialize pivotData with all required properties
+    //     this.state.pivotData = {
+    //         rows: rowData.flatRows || [],
+    //         rowMappings: rowData.flatMappings || [],
+    //         columns: columnData.flatRows || [],
+    //         columnMappings: columnData.flatMappings || [],
+    //         data: []
+    //     };
+
+    //     // console.log(`📊 Pivot data structure: ${this.state.pivotData.rows.length} rows, ${this.state.pivotData.columns.length} columns`);
+
+    //     // Calculate the values for each cell
+    //     this.calculatePivotCells();
+    // },
     processPivotData: function () {
         if (!this.state.factData || this.state.factData.length === 0) {
             console.error("No fact data available for pivot table");
@@ -1242,20 +1587,17 @@ const pivotTable = {
             console.warn("No row fields selected, defaulting to first available dimension");
         }
 
-        if (valueFields.length === 0) {
-            console.warn("No value fields selected, defaulting to COST_UNIT");
-            this.state.valueFields = ['COST_UNIT'];
-        }
+        console.log(`📊 Processing pivot data: ${rowFields.length} row fields, ${columnFields.length} column fields`);
 
-        // console.log(`📊 Processing pivot data: ${rowFields.length} row fields, ${columnFields.length} column fields`);
+        // CRITICAL FIX: Auto-expand hierarchies when all items are selected
+        this.autoExpandForAllSelected(rowFields);
 
-        // ENHANCED: Use data.js functions with better error handling
+        // Process row data with better error handling
         let rowData;
         try {
             if (typeof data !== 'undefined' && data.processHierarchicalFields) {
                 rowData = data.processHierarchicalFields(rowFields, 'row');
             } else {
-                // Fallback processing
                 rowData = this.processMultiDimensionFields(rowFields, 'row');
             }
         } catch (error) {
@@ -1263,7 +1605,7 @@ const pivotTable = {
             rowData = { flatRows: [], flatMappings: [] };
         }
         
-        // Process columns using data.js function or create default
+        // Process columns
         let columnData;
         try {
             if (columnFields.length > 0) {
@@ -1286,7 +1628,7 @@ const pivotTable = {
             };
         }
 
-        // Initialize pivotData with all required properties
+        // Initialize pivotData
         this.state.pivotData = {
             rows: rowData.flatRows || [],
             rowMappings: rowData.flatMappings || [],
@@ -1295,11 +1637,256 @@ const pivotTable = {
             data: []
         };
 
-        // console.log(`📊 Pivot data structure: ${this.state.pivotData.rows.length} rows, ${this.state.pivotData.columns.length} columns`);
+        console.log(`📊 Pivot data structure: ${this.state.pivotData.rows.length} rows, ${this.state.pivotData.columns.length} columns`);
 
         // Calculate the values for each cell
         this.calculatePivotCells();
     },
+
+
+    // Method to auto-expand hierarchies when all items are selected
+    autoExpandForAllSelected: function(rowFields) {
+    console.log("🔧 Auto-expanding hierarchies for 'all selected' state...");
+    
+    rowFields.forEach(field => {
+        const dimName = extractDimensionName(field);
+        
+        // First analyze the hierarchy structure
+        this.analyzeHierarchyStructure(dimName);
+        
+        // Check if this dimension has all items selected (no exclusions)
+        const filterSystem = window.EnhancedFilterSystem;
+        if (!filterSystem) return;
+        
+        const dimensionMeta = Object.values(filterSystem.filterMeta).find(meta => 
+            extractDimensionName(meta.dimensionKey) === dimName
+        );
+        
+        if (!dimensionMeta) return;
+        
+        const exclusions = filterSystem.filterSelections[dimensionMeta.id];
+        const allSelected = !exclusions || exclusions.size === 0;
+        
+        if (allSelected) {
+            console.log(`✅ All items selected for ${dimName} - expanding hierarchy`);
+            this.expandFirstLevelForDimension(dimName);
+        } else {
+            console.log(`⏸️ Some items filtered for ${dimName} - keeping current expansion`);
+        }
+    });
+},
+
+
+// Method to manually expand GMID hierarchy for debugging
+manuallyExpandGMIDHierarchy: function() {
+    console.log("🔧 Manually expanding GMID hierarchy...");
+    
+    const dimName = 'gmid_display';
+    
+    // First analyze what we have
+    this.analyzeHierarchyStructure(dimName);
+    
+    const hierarchy = this.state.hierarchies?.[dimName];
+    if (!hierarchy || !hierarchy.nodesMap) {
+        console.error("❌ GMID hierarchy not found");
+        return false;
+    }
+    
+    // Initialize expansion tracking
+    if (!this.state.expandedNodes) {
+        this.state.expandedNodes = {};
+    }
+    if (!this.state.expandedNodes[dimName]) {
+        this.state.expandedNodes[dimName] = { row: {}, column: {} };
+    }
+    
+    // Strategy 1: Try to expand ROOT if it exists
+    const rootNode = hierarchy.nodesMap['ROOT'];
+    if (rootNode) {
+        rootNode.expanded = true;
+        this.state.expandedNodes[dimName].row['ROOT'] = true;
+        console.log(`✅ Expanded ROOT node`);
+    }
+    
+    // Strategy 2: Find and expand top-level nodes
+    const topLevelNodes = [];
+    Object.values(hierarchy.nodesMap).forEach(node => {
+        // Look for nodes at level 0 or 1 that are not ROOT
+        if ((node.level === 0 || node.level === 1) && node.id !== 'ROOT') {
+            topLevelNodes.push(node);
+        }
+    });
+    
+    console.log(`🔍 Found ${topLevelNodes.length} potential top-level nodes`);
+    
+    // Expand first few top-level nodes
+    const nodesToExpand = Math.min(topLevelNodes.length, 3);
+    for (let i = 0; i < nodesToExpand; i++) {
+        const node = topLevelNodes[i];
+        node.expanded = true;
+        this.state.expandedNodes[dimName].row[node.id] = true;
+        console.log(`✅ Expanded top-level node: ${node.label || node.id}`);
+    }
+    
+    // Strategy 3: If still no expansion, try expanding nodes with children
+    if (nodesToExpand === 0) {
+        console.log(`🔍 No top-level nodes found, looking for nodes with children...`);
+        const nodesWithChildren = Object.values(hierarchy.nodesMap).filter(node => 
+            node.children && node.children.length > 0
+        );
+        
+        console.log(`🔍 Found ${nodesWithChildren.length} nodes with children`);
+        
+        // Expand first few nodes with children
+        const childNodesToExpand = Math.min(nodesWithChildren.length, 3);
+        for (let i = 0; i < childNodesToExpand; i++) {
+            const node = nodesWithChildren[i];
+            node.expanded = true;
+            this.state.expandedNodes[dimName].row[node.id] = true;
+            console.log(`✅ Expanded node with children: ${node.label || node.id} (${node.children.length} children)`);
+        }
+    }
+    
+    // Regenerate pivot table
+    console.log(`🔄 Regenerating pivot table...`);
+    this.generatePivotTable();
+    
+    return true;
+},
+
+
+    // Method to expand first level of a hierarchy
+    expandFirstLevelForDimension: function(dimName) {
+    const hierarchy = this.state.hierarchies?.[dimName];
+    if (!hierarchy || !hierarchy.nodesMap) {
+        console.warn(`No hierarchy found for ${dimName}`);
+        return;
+    }
+    
+    // Initialize expansion tracking if needed
+    if (!this.state.expandedNodes) {
+        this.state.expandedNodes = {};
+    }
+    if (!this.state.expandedNodes[dimName]) {
+        this.state.expandedNodes[dimName] = { row: {}, column: {} };
+    }
+    
+    console.log(`🔍 Analyzing hierarchy structure for ${dimName}...`);
+    console.log(`🔍 Total nodes in hierarchy: ${Object.keys(hierarchy.nodesMap).length}`);
+    
+    // CRITICAL FIX: Handle both single-root and multi-root hierarchies
+    const rootNode = hierarchy.nodesMap['ROOT'];
+    
+    if (rootNode && rootNode.children && rootNode.children.length > 0) {
+        // Traditional single-root hierarchy
+        console.log(`📂 Single-root hierarchy detected for ${dimName}`);
+        rootNode.expanded = true;
+        this.state.expandedNodes[dimName].row['ROOT'] = true;
+        console.log(`📂 Expanded ROOT node, showing ${rootNode.children.length} children`);
+        
+    } else {
+        // MULTI-ROOT HIERARCHY (like GMID_DISPLAY)
+        console.log(`📂 Multi-root hierarchy detected for ${dimName}`);
+        
+        // Find all level-1 nodes (top-level nodes that are not ROOT)
+        const topLevelNodes = [];
+        Object.values(hierarchy.nodesMap).forEach(node => {
+            if (node.level === 1 || (node.level === 0 && node.id !== 'ROOT')) {
+                topLevelNodes.push(node);
+            }
+        });
+        
+        console.log(`📂 Found ${topLevelNodes.length} top-level nodes`);
+        topLevelNodes.forEach(node => {
+            console.log(`  - ${node.label || node.id} (${node.id})`);
+        });
+        
+        if (topLevelNodes.length > 0) {
+            // Expand the first few top-level nodes to show meaningful data
+            const nodesToExpand = Math.min(topLevelNodes.length, 5); // Limit to first 5 to avoid overwhelming
+            
+            for (let i = 0; i < nodesToExpand; i++) {
+                const node = topLevelNodes[i];
+                node.expanded = true;
+                this.state.expandedNodes[dimName].row[node.id] = true;
+                console.log(`📂 Auto-expanded top-level node: ${node.label || node.id}`);
+            }
+            
+            console.log(`✅ Auto-expanded ${nodesToExpand} top-level nodes for ${dimName}`);
+        } else {
+            console.warn(`⚠️ No top-level nodes found for ${dimName}`);
+        }
+        
+        // Also try to expand ROOT if it exists but has no children
+        if (rootNode) {
+            rootNode.expanded = true;
+            this.state.expandedNodes[dimName].row['ROOT'] = true;
+            console.log(`📂 Also expanded ROOT node for visibility`);
+        }
+    }
+},
+
+// FIX 2: Add method to analyze and debug hierarchy structure
+analyzeHierarchyStructure: function(dimName) {
+    console.log(`🔍 ANALYZING HIERARCHY STRUCTURE: ${dimName}`);
+    console.log("=".repeat(50));
+    
+    const hierarchy = this.state.hierarchies?.[dimName];
+    if (!hierarchy || !hierarchy.nodesMap) {
+        console.log("❌ No hierarchy found");
+        return;
+    }
+    
+    const nodes = Object.values(hierarchy.nodesMap);
+    console.log(`📊 Total nodes: ${nodes.length}`);
+    
+    // Group by level
+    const nodesByLevel = {};
+    nodes.forEach(node => {
+        const level = node.level || 0;
+        if (!nodesByLevel[level]) {
+            nodesByLevel[level] = [];
+        }
+        nodesByLevel[level].push(node);
+    });
+    
+    // Show structure by level
+    Object.keys(nodesByLevel).sort((a, b) => parseInt(a) - parseInt(b)).forEach(level => {
+        const levelNodes = nodesByLevel[level];
+        console.log(`📊 Level ${level}: ${levelNodes.length} nodes`);
+        
+        // Show first few nodes as examples
+        const examples = levelNodes.slice(0, 3);
+        examples.forEach(node => {
+            const hasChildren = node.children && node.children.length > 0;
+            const expanded = node.expanded ? '📂' : '📁';
+            console.log(`  ${expanded} ${node.label || node.id} (${node.id}) - Children: ${hasChildren ? node.children.length : 0}`);
+        });
+        
+        if (levelNodes.length > 3) {
+            console.log(`  ... and ${levelNodes.length - 3} more`);
+        }
+    });
+    
+    // Check ROOT node specifically
+    const rootNode = hierarchy.nodesMap['ROOT'];
+    if (rootNode) {
+        console.log(`🎯 ROOT node analysis:`);
+        console.log(`  - Label: ${rootNode.label}`);
+        console.log(`  - Level: ${rootNode.level}`);
+        console.log(`  - Has children: ${rootNode.children ? rootNode.children.length : 0}`);
+        console.log(`  - Expanded: ${rootNode.expanded}`);
+    } else {
+        console.log(`🎯 No ROOT node found`);
+    }
+    
+    // Check expansion state
+    const expansionState = this.state.expandedNodes?.[dimName]?.row || {};
+    const expandedCount = Object.values(expansionState).filter(Boolean).length;
+    console.log(`🎯 Currently expanded nodes: ${expandedCount}`);
+    
+    console.log("=".repeat(50));
+},
 
 
     /**
@@ -1712,9 +2299,59 @@ const pivotTable = {
     /**
      * Renders a single row cell
      */
+    // renderRowCell: function(rowDef) {
+    //     const level = rowDef.level || 0;
+    //     const indentationPx = 4 + (level * 20);
+    //     const dimName = rowDef.hierarchyField ? rowDef.hierarchyField.replace('DIM_', '').toLowerCase() : '';
+
+    //     let cellHtml = `<td class="hierarchy-cell" data-level="${level}" style="padding-left: ${indentationPx}px !important;">`;
+
+    //     if (rowDef.hasChildren === true) {
+    //         const expandClass = rowDef.expanded ? 'expanded' : 'collapsed';
+    //         cellHtml += `<span class="expand-collapse ${expandClass}" 
+    //             data-node-id="${rowDef._id}" 
+    //             data-hierarchy="${dimName}" 
+    //             data-zone="row"
+    //             onclick="handleExpandCollapseClick(event)"
+    //             style="cursor: pointer;"
+    //             title="Click to expand/collapse ${rowDef.label}"></span>`;
+    //     } else {
+    //         cellHtml += '<span class="leaf-node"></span>';
+    //     }
+
+    //     cellHtml += `<span class="dimension-label">${rowDef.label || rowDef._id}</span>`;
+    //     cellHtml += '</td>';
+
+    //     console.log(`🔧 Rendered row cell for ${rowDef.label} at level ${level} with ${indentationPx}px indentation`);
+    //     return cellHtml;
+    // },
+
+
+    // // Force indentation after table render (as backup)
+    // forceIndentationFix: function() {
+    //     console.log("🔧 Applying forced indentation fix...");
+        
+    //     const hierarchyCells = document.querySelectorAll('.hierarchy-cell[data-level], .dimension-cell[data-level]');
+    //     let fixedCount = 0;
+        
+    //     hierarchyCells.forEach(cell => {
+    //         const level = parseInt(cell.getAttribute('data-level') || '0');
+    //         const expectedPadding = 4 + (level * 20);
+            
+    //         // Force the padding with high specificity
+    //         cell.style.setProperty('padding-left', `${expectedPadding}px`, 'important');
+    //         fixedCount++;
+            
+    //         if (level > 0) {
+    //             console.log(`🔧 Fixed cell at level ${level} with ${expectedPadding}px padding`);
+    //         }
+    //     });
+        
+    //     console.log(`✅ Applied forced indentation to ${fixedCount} cells`);
+    // },
     renderRowCell: function(rowDef) {
         const level = rowDef.level || 0;
-        const indentationPx = 4 + (level * 20);
+        const indentationPx = 4 + (level * 30); // Enhanced to 30px per level
         const dimName = rowDef.hierarchyField ? rowDef.hierarchyField.replace('DIM_', '').toLowerCase() : '';
 
         let cellHtml = `<td class="hierarchy-cell" data-level="${level}" style="padding-left: ${indentationPx}px !important;">`;
@@ -1726,41 +2363,16 @@ const pivotTable = {
                 data-hierarchy="${dimName}" 
                 data-zone="row"
                 onclick="handleExpandCollapseClick(event)"
-                style="cursor: pointer;"
+                style="cursor: pointer; display: inline-block; width: 16px; height: 16px; margin-right: 8px; text-align: center; border: 1px solid #6c757d; border-radius: 2px; background: white; line-height: 14px; font-size: 12px;"
                 title="Click to expand/collapse ${rowDef.label}"></span>`;
         } else {
-            cellHtml += '<span class="leaf-node"></span>';
+            cellHtml += '<span class="leaf-node" style="display: inline-block; width: 16px; height: 16px; margin-right: 8px; text-align: center; line-height: 14px; color: #6c757d;">•</span>';
         }
 
         cellHtml += `<span class="dimension-label">${rowDef.label || rowDef._id}</span>`;
         cellHtml += '</td>';
 
-        console.log(`🔧 Rendered row cell for ${rowDef.label} at level ${level} with ${indentationPx}px indentation`);
         return cellHtml;
-    },
-
-
-    // Force indentation after table render (as backup)
-    forceIndentationFix: function() {
-        console.log("🔧 Applying forced indentation fix...");
-        
-        const hierarchyCells = document.querySelectorAll('.hierarchy-cell[data-level], .dimension-cell[data-level]');
-        let fixedCount = 0;
-        
-        hierarchyCells.forEach(cell => {
-            const level = parseInt(cell.getAttribute('data-level') || '0');
-            const expectedPadding = 4 + (level * 20);
-            
-            // Force the padding with high specificity
-            cell.style.setProperty('padding-left', `${expectedPadding}px`, 'important');
-            fixedCount++;
-            
-            if (level > 0) {
-                console.log(`🔧 Fixed cell at level ${level} with ${expectedPadding}px padding`);
-            }
-        });
-        
-        console.log(`✅ Applied forced indentation to ${fixedCount} cells`);
     },
 
 
@@ -3415,37 +4027,68 @@ const pivotTable = {
     },
 
 
-    renderMultiDimensionCell: function(node, field, dimIndex) {
-        if (!node) {
-            return `<td class="dimension-cell dimension-${dimIndex} error" data-level="0" style="padding-left: 4px !important;">Missing Node</td>`;
-        }
+    // renderMultiDimensionCell: function(node, field, dimIndex) {
+    //     if (!node) {
+    //         return `<td class="dimension-cell dimension-${dimIndex} error" data-level="0" style="padding-left: 4px !important;">Missing Node</td>`;
+    //     }
 
-        const level = node.level || 0;
-        const indentationPx = 4 + (level * 20);
-        const dimName = extractDimensionName(field);
+    //     const level = node.level || 0;
+    //     const indentationPx = 4 + (level * 20);
+    //     const dimName = extractDimensionName(field);
         
-        let cellHtml = `<td class="dimension-cell dimension-${dimIndex}" data-level="${level}" style="padding-left: ${indentationPx}px !important;">`;
+    //     let cellHtml = `<td class="dimension-cell dimension-${dimIndex}" data-level="${level}" style="padding-left: ${indentationPx}px !important;">`;
         
-        if (node.hasChildren) {
-            const expandClass = node.expanded ? 'expanded' : 'collapsed';
-            cellHtml += `<span class="expand-collapse ${expandClass}" 
-                data-node-id="${node._id}" 
-                data-hierarchy="${dimName}" 
-                data-zone="row"
-                data-dimension-index="${dimIndex}"
-                onclick="handleExpandCollapseClick(event)"
-                style="cursor: pointer;"
-                title="Click to expand/collapse ${node.label}"></span>`;
-        } else {
-            cellHtml += '<span class="leaf-node"></span>';
-        }
+    //     if (node.hasChildren) {
+    //         const expandClass = node.expanded ? 'expanded' : 'collapsed';
+    //         cellHtml += `<span class="expand-collapse ${expandClass}" 
+    //             data-node-id="${node._id}" 
+    //             data-hierarchy="${dimName}" 
+    //             data-zone="row"
+    //             data-dimension-index="${dimIndex}"
+    //             onclick="handleExpandCollapseClick(event)"
+    //             style="cursor: pointer;"
+    //             title="Click to expand/collapse ${node.label}"></span>`;
+    //     } else {
+    //         cellHtml += '<span class="leaf-node"></span>';
+    //     }
         
-        cellHtml += `<span class="dimension-label">${node.label || node._id}</span>`;
-        cellHtml += '</td>';
+    //     cellHtml += `<span class="dimension-label">${node.label || node._id}</span>`;
+    //     cellHtml += '</td>';
         
-        console.log(`🔧 Rendered cell for ${node.label} at level ${level} with ${indentationPx}px indentation`);
-        return cellHtml;
-    },
+    //     console.log(`🔧 Rendered cell for ${node.label} at level ${level} with ${indentationPx}px indentation`);
+    //     return cellHtml;
+    // },
+
+renderMultiDimensionCell: function(node, field, dimIndex) {
+    if (!node) {
+        return `<td class="dimension-cell dimension-${dimIndex} error" data-level="0" style="padding-left: 4px !important;">Missing Node</td>`;
+    }
+
+    const level = node.level || 0;
+    const indentationPx = 4 + (level * 30); // Enhanced to 30px per level
+    const dimName = extractDimensionName(field);
+    
+    let cellHtml = `<td class="dimension-cell dimension-${dimIndex}" data-level="${level}" style="padding-left: ${indentationPx}px !important;">`;
+    
+    if (node.hasChildren) {
+        const expandClass = node.expanded ? 'expanded' : 'collapsed';
+        cellHtml += `<span class="expand-collapse ${expandClass}" 
+            data-node-id="${node._id}" 
+            data-hierarchy="${dimName}" 
+            data-zone="row"
+            data-dimension-index="${dimIndex}"
+            onclick="window.handleExpandCollapseClick(event)"
+            style="cursor: pointer; display: inline-block; width: 16px; height: 16px; margin-right: 8px; text-align: center; border: 1px solid #6c757d; border-radius: 2px; background: white; line-height: 14px; font-size: 12px;"
+            title="Expand/collapse ${node.label}"></span>`;
+    } else {
+        cellHtml += '<span class="leaf-node" style="display: inline-block; width: 16px; height: 16px; margin-right: 8px; text-align: center; line-height: 14px; color: #6c757d;">•</span>';
+    }
+    
+    cellHtml += `<span class="dimension-label">${node.label || node._id || 'Unknown'}</span>`;
+    cellHtml += '</td>';
+    
+    return cellHtml;
+},
 
 
     calculateGrandTotals: function(valueFields) {
