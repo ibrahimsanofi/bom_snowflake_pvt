@@ -1,7 +1,7 @@
 /* ===========================================
    Enhanced Pivot Table CSS - Clean Version
    Features:
-   - Dynamic hierarchical indentation
+   - Dynamic hierarchical indentation UP TO 30 LEVELS
    - Auto-fit column headers
    - Scrollable table with sticky headers
    - Responsive design
@@ -75,8 +75,8 @@ table {
 
 th, td {
     border: 1px solid var(--border-light);
-    border-collapse: collapse;
-    margin: 0;
+    border-collapse: collapse !important;
+    margin: 0 !important;
     padding: 0.5rem 0.75rem;
     vertical-align: middle;
     box-sizing: border-box;
@@ -138,6 +138,7 @@ tbody td {
 
 /* Clean up expand/collapse controls */
 .expand-collapse {
+    margin-left:10px !important;
     border: 1px solid #64748b !important;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
 }
@@ -238,7 +239,7 @@ tr:nth-child(odd) .row-dimension-cell {
 }
 
 
-/* ---------- 6. DYNAMIC HIERARCHICAL INDENTATION ---------- */
+/* ---------- 6. DYNAMIC HIERARCHICAL INDENTATION UP TO 30 LEVELS ---------- */
 /* Base styles for expand/collapse controls and labels */
 .expand-collapse,
 .leaf-node {
@@ -264,7 +265,7 @@ tr:nth-child(odd) .row-dimension-cell {
     max-width: calc(100% - 30px); /* Account for expand/collapse button */
 }
 
-/* Dynamic indentation based on data-level attribute */
+/* Dynamic indentation based on data-level attribute - Extended to 30 levels */
 [data-level="0"] {
     --indent: 4px;
     --font-weight: 700;
@@ -350,41 +351,48 @@ tr:nth-child(odd) .row-dimension-cell {
 }
 
 [data-level="12"] {
-    --indent: 264px;
+    --indent: 244px;
     --font-weight: 400;
     --font-size: 0.75rem;
     --text-color: var(--text-light);
 }
 
 [data-level="13"] {
-    --indent: 284px;
+    --indent: 264px;
     --font-weight: 400;
     --font-size: 0.75rem;
     --text-color: var(--text-light);
 }
 
 [data-level="14"] {
-    --indent: 304px;
+    --indent: 284px;
     --font-weight: 400;
     --font-size: 0.75rem;
     --text-color: var(--text-light);
 }
 
 [data-level="15"] {
-    --indent: 324px;
+    --indent: 304px;
     --font-weight: 400;
     --font-size: 0.75rem;
     --text-color: var(--text-light);
 }
 
 [data-level="16"] {
-    --indent: 344px;
+    --indent: 324px;
     --font-weight: 400;
     --font-size: 0.75rem;
     --text-color: var(--text-light);
 }
 
 [data-level="17"] {
+    --indent: 344px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
+}
+
+[data-level="18"] {
     --indent: 364px;
     --font-weight: 400;
     --font-size: 0.75rem;
@@ -440,10 +448,78 @@ tr:nth-child(odd) .row-dimension-cell {
     --text-color: var(--text-light);
 }
 
-/* Apply dynamic indentation */
+[data-level="26"] {
+    --indent: 524px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
+}
+
+[data-level="27"] {
+    --indent: 544px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
+}
+
+[data-level="28"] {
+    --indent: 564px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
+}
+
+[data-level="29"] {
+    --indent: 584px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
+}
+
+[data-level="30"] {
+    --indent: 604px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
+}
+
+/* Apply dynamic indentation - FIXED to use padding-left instead of margin-left */
+[data-level="0"] { padding-left: 4px !important; }
+[data-level="1"] { padding-left: 24px !important; }
+[data-level="2"] { padding-left: 44px !important; }
+[data-level="3"] { padding-left: 64px !important; }
+[data-level="4"] { padding-left: 84px !important; }
+[data-level="5"] { padding-left: 104px !important; }
+[data-level="6"] { padding-left: 124px !important; }
+[data-level="7"] { padding-left: 144px !important; }
+[data-level="8"] { padding-left: 164px !important; }
+[data-level="9"] { padding-left: 184px !important; }
+[data-level="10"] { padding-left: 204px !important; }
+[data-level="11"] { padding-left: 224px !important; }
+[data-level="12"] { padding-left: 244px !important; }
+[data-level="13"] { padding-left: 264px !important; }
+[data-level="14"] { padding-left: 284px !important; }
+[data-level="15"] { padding-left: 304px !important; }
+[data-level="16"] { padding-left: 324px !important; }
+[data-level="17"] { padding-left: 344px !important; }
+[data-level="18"] { padding-left: 364px !important; }
+[data-level="19"] { padding-left: 384px !important; }
+[data-level="20"] { padding-left: 404px !important; }
+[data-level="21"] { padding-left: 424px !important; }
+[data-level="22"] { padding-left: 444px !important; }
+[data-level="23"] { padding-left: 464px !important; }
+[data-level="24"] { padding-left: 484px !important; }
+[data-level="25"] { padding-left: 504px !important; }
+[data-level="26"] { padding-left: 524px !important; }
+[data-level="27"] { padding-left: 544px !important; }
+[data-level="28"] { padding-left: 564px !important; }
+[data-level="29"] { padding-left: 584px !important; }
+[data-level="30"] { padding-left: 604px !important; }
+
+/* Apply dynamic styling to child elements */
 [data-level] .expand-collapse,
 [data-level] .leaf-node {
-    margin-left: var(--indent);
+    margin-left: 0; /* Remove margin, let parent padding handle indentation */
 }
 
 [data-level] .dimension-label {
@@ -452,7 +528,7 @@ tr:nth-child(odd) .row-dimension-cell {
     color: var(--text-color);
 }
 
-/* Fallback for levels beyond 9 */
+/* Fallback for levels beyond 30 */
 [data-level] {
     --max-indent: calc(20px * var(--level, 0) + 4px);
 }
@@ -467,16 +543,6 @@ tr:nth-child(odd) .row-dimension-cell {
     font-weight: bold;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-.expand-collapse.collapsed:before {
-    content: "+";
-    color: #16a34a;
-}
-
-.expand-collapse.expanded:before {
-    content: "−";
-    color: #dc2626;
 }
 
 .expand-collapse:hover {
@@ -495,12 +561,11 @@ tr:nth-child(odd) .row-dimension-cell {
 }
 
 .leaf-node::after {
-    content: "•";
+    content: "";
     position: absolute;
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
-    color: #ff5722;
     font-size: 16px;
 }
 
@@ -709,7 +774,7 @@ tr[data-level="0"] {
 /* Root node styling with distinct border */
 .hierarchy-cell[data-level="0"],
 .dimension-header[data-level="0"] {
-    border: 3px solid #2563eb !important;
+    border: 1px solid #2563eb !important;
     border-radius: 4px;
     background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important;
     font-weight: 700;
@@ -718,7 +783,7 @@ tr[data-level="0"] {
 
 /* Root node in multi-dimension setup */
 .multi-dimension-cell .dimension-row[data-level="0"] {
-    border: 2px solid #2563eb;
+    border: 1px solid #2563eb;
     border-radius: 4px;
     background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
     margin: 2px;
@@ -735,8 +800,8 @@ tr[data-level="0"] {
     margin-right: 8px;
     vertical-align: middle;
     flex-shrink: 0;
-    border: 2px solid #64748b;
-    border-radius: 4px;
+    border: 1px solid #64748b;
+    border-radius: 2px;
     background: linear-gradient(135deg, white 0%, #f8fafc 100%);
     cursor: pointer;
     font-size: 14px;
@@ -777,7 +842,7 @@ tr[data-level="0"] {
 
 /* Root node expand/collapse controls - special styling */
 [data-level="0"] .expand-collapse {
-    border-color: #2563eb;
+    border-color: #ddd;
     background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
     color: #1e40af;
     font-weight: 900;
@@ -792,7 +857,7 @@ tr[data-level="0"] {
 /* Root node styling for column headers */
 .column-header[data-level="0"],
 .dimension-header[data-level="0"] {
-    border: 3px solid #dc2626 !important; /* Red border for column headers */
+    border: 1px solid #dc2626 !important; /* Red border for column headers */
     border-radius: 4px;
     background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%) !important;
     font-weight: 700;
@@ -809,7 +874,7 @@ tr[data-level="0"] {
     height: 16px;
     margin-right: 6px;
     vertical-align: middle;
-    border: 2px solid #64748b;
+    border: 1px solid #ddd;
     border-radius: 3px;
     background: linear-gradient(135deg, white 0%, #f8fafc 100%);
     cursor: pointer;
@@ -889,8 +954,8 @@ tr[data-level="0"] {
     height: 16px !important;
     margin-right: 6px;
     vertical-align: middle;
-    border: 2px solid #64748b;
-    border-radius: 3px;
+    border: 1px solid #ddd;
+    border-radius: 2px;
     background: linear-gradient(135deg, white 0%, #f8fafc 100%);
     cursor: pointer;
     font-size: 12px !important;
@@ -965,7 +1030,7 @@ tr[data-level="0"] {
 /* Column header with children should have different styling */
 .column-header.has-children {
     background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-    border: 2px solid #3b82f6;
+    border: 1px solid #3b82f6;
     font-weight: 600;
     color: #1e40af;
 }
@@ -985,7 +1050,6 @@ tr[data-level="0"] {
     text-overflow: ellipsis;
 }
 
-
 /* Base styling for all measure headers - applies to any measure field */
 th[class*="value-header"],
 th[class*="measure-header"],
@@ -997,7 +1061,7 @@ th[class*="merged-measure"] {
     letter-spacing: 1px !important;
     color: var(--dimension-text) !important;
     padding: 12px 8px !important;
-    border: 2px solid var(--border-medium) !important;
+    border: 1px solid var(--border-medium) !important;
     min-width: fit-content;
     width: auto;
 }
@@ -1011,26 +1075,16 @@ th[class*="merged-measure"] {
     min-width: fit-content;
     width: auto;
     padding: 8px 12px;
-    border: 2px solid var(--border-medium);
+    border: 1px solid var(--border-medium);
     position: relative;
     vertical-align: middle;
     transition: all 0.2s ease;
 }
 
-/* Root level styling for any dimension - detected by data-level="0" */
-/* .column-header[data-level="0"] {
-    border: 3px solid #dc2626 !important;
-    border-radius: 4px;
-    background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%) !important;
-    font-weight: 700 !important;
-    color: #991b1b !important;
-    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
-} */
-
 /* Parent nodes with children - detected by presence of expand/collapse control */
 .column-header:has(.expand-collapse) {
     background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-    border: 2px solid #3b82f6;
+    border: 1px solid #ddd;
     font-weight: 700;
     color: #1e40af;
 }
@@ -1038,7 +1092,7 @@ th[class*="merged-measure"] {
 /* Leaf nodes - detected by absence of expand/collapse control */
 .column-header:not(:has(.expand-collapse)) {
     background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-    border: 2px solid #22c55e;
+    border: 1px solid #22c55e;
     color: #15803d;
     font-weight: 600;
 }
@@ -1046,14 +1100,14 @@ th[class*="merged-measure"] {
 /* Fallback for browsers that don't support :has() selector */
 .column-header.has-children {
     background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-    border: 2px solid #3b82f6;
+    border: 1px solid #3b82f6;
     font-weight: 700;
     color: #1e40af;
 }
 
 .column-header.leaf-node {
     background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-    border: 2px solid #22c55e;
+    border: 1px solid #22c55e;
     color: #15803d;
     font-weight: 600;
 }
@@ -1068,7 +1122,7 @@ th[class*="merged-measure"] {
     margin-right: 8px;
     vertical-align: middle;
     flex-shrink: 0;
-    border: 2px solid #64748b;
+    border: 1px solid #64748b;
     border-radius: 4px;
     background: linear-gradient(135deg, white 0%, #f8fafc 100%);
     cursor: pointer;
@@ -1216,7 +1270,6 @@ tr:hover .dimension-label {
     }
 }
 
-
 /* Universal measure header styling - works with any measure field */
 th[class*="value-header"],
 th[class*="measure-header"],
@@ -1229,7 +1282,7 @@ th[class*="merged-measure"],
     letter-spacing: 1px !important;
     color: var(--dimension-text) !important;
     padding: 12px 8px !important;
-    border: 2px solid var(--border-medium) !important;
+    border: 1px solid var(--border-medium) !important;
     min-width: fit-content;
     width: auto;
 }
@@ -1243,7 +1296,7 @@ th[class*="merged-measure"],
     min-width: fit-content;
     width: auto;
     padding: 8px 12px;
-    border: 2px solid var(--border-medium);
+    border: 1px solid var(--border-medium);
     position: relative;
     vertical-align: middle;
     transition: all 0.2s ease;
@@ -1323,7 +1376,6 @@ thead tr {
     border-radius: 0 !important;
 }
 
-
 /* Root level styling - works for any dimension at level 0 */
 .column-header[data-level="0"],
 .column-header.root-level {
@@ -1339,7 +1391,7 @@ thead tr {
 .column-header.has-children,
 .column-header:has(.expand-collapse) {
     background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-    border: 2px solid #3b82f6;
+    border: 1px solid #3b82f6;
     font-weight: 700;
     color: #1e40af;
 }
@@ -1348,7 +1400,7 @@ thead tr {
 .column-header.leaf-node,
 .column-header:not(:has(.expand-collapse)) {
     background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-    border: 2px solid #22c55e;
+    border: 1px solid #22c55e;
     color: #15803d;
     font-weight: 600;
 }
@@ -1533,19 +1585,6 @@ thead .leaf-node::after {
     content: none !important;
 }
 
-/* Alternative: completely hide leaf-node spans in headers */
-/* thead .leaf-node {
-    display: none !important;
-    width: 0 !important;
-    height: 0 !important;
-    margin: 0 !important;
-} */
-
-/* Ensure proper spacing when leaf-node is hidden */
-/* thead th .column-label {
-    margin-left: 0 !important;
-} */
-
 /* Ensure consistent borders with no gaps */
 thead th:not(:last-child) {
     border-right: 1px solid var(--border-light) !important;
@@ -1584,17 +1623,6 @@ th[data-level="0"][data-material-type],
     width: auto !important;
     white-space: nowrap !important;
     padding: 8px 16px !important; /* Slightly more padding for root nodes */
-}
-
-/* Ensure table accommodates content width */
-/* .pivot-table-container table {
-    min-width: max-content !important;
-    width: auto !important;
-} */
-
-/* Remove any max-width constraints */
-th, td {
-    max-width: none !important;
 }
 
 /* Fix sticky header backgrounds to prevent visual gaps */

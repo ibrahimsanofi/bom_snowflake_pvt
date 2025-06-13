@@ -501,8 +501,235 @@ window.generatePivotTable = function() {
 };
 
 
+// function processHierarchicalFields(fieldIds, axisType) {
+//     // console.log(`⏳ Status: Processing hierarchical fields: ${fieldIds.join(', ')} for ${axisType}`);
+    
+//     const result = {
+//         flatRows: [],
+//         flatMappings: [],
+//         hierarchyFields: []
+//     };
+    
+//     fieldIds.forEach(fieldId => {
+//         const field = state.availableFields.find(f => f.id === fieldId);
+//         if (!field) {
+//             // console.warn(`Field not found: ${fieldId}`);
+//             return;
+//         }
+        
+//         // Get dimension name (lowercase without DIM_ prefix)
+//         const dimName = field.id.replace('DIM_', '').toLowerCase();
+//         // console.log(`Processing dimension: ${dimName}`);
+        
+//         // Check if hierarchy exists
+//         if (!state.hierarchies || !state.hierarchies[dimName]) {
+//             // console.error(`No hierarchy found for ${dimName}`);
+//             return;
+//         }
+        
+//         const hierarchy = state.hierarchies[dimName];
+//         if (!hierarchy || !hierarchy.root) {
+//             // console.error(`Invalid hierarchy for ${dimName}`);
+//             return;
+//         }
+                
+//         // Store the field for reference
+//         result.hierarchyFields.push(field);
+        
+//         // Get zone-specific expanded nodes
+//         const zone = axisType;
+        
+//         // Ensure expandedNodes is initialized
+//         if (!state.expandedNodes[dimName]) {
+//             state.expandedNodes[dimName] = { row: {}, column: {} };
+//         }
+//         if (!state.expandedNodes[dimName][zone]) {
+//             state.expandedNodes[dimName][zone] = {};
+//         }
+        
+//         // Ensure ROOT is expanded
+//         const rootId = hierarchy.root.id;
+//         state.expandedNodes[dimName][zone][rootId] = true;
+        
+//         // Apply expansion state to nodes
+//         applyExpansionState(hierarchy.root, state.expandedNodes[dimName][zone]);
+        
+//         // Flatten the hierarchy
+//         let flattenedNodes = [];
+//         try {
+//             flattenedNodes = flattenHierarchy(hierarchy.root);
+//         } catch (error) {
+//             console.error(`Error flattening ${dimName} hierarchy:`, error);
+//             flattenedNodes = [hierarchy.root]; // At least include the root
+//         }
+        
+//         // Dimension-specific processing
+//         if (dimName === 'material_type') {
+//             // Add to result with special handling for material type
+//             flattenedNodes.forEach(node => {
+//                 // Ensure materialTypeCode is correctly passed to the factId
+//                 const factId = node.materialTypeCode !== undefined ? node.materialTypeCode : 
+//                             (node.factId !== undefined ? node.factId : null);
+                
+//                 result.flatRows.push({
+//                     _id: node.id,
+//                     label: node.label || node.id,
+//                     level: node.level,
+//                     hasChildren: node.hasChildren,
+//                     isLeaf: node.isLeaf,
+//                     expanded: node.expanded,
+//                     hierarchyField: field.id,
+//                     path: node.path,
+//                     factId: factId,
+//                     materialTypeCode: node.materialTypeCode
+//                 });
+                
+//                 result.flatMappings.push({
+//                     id: node.id,
+//                     dimensionName: dimName,
+//                     nodeId: node.id,
+//                     isHierarchical: true,
+//                     isLeaf: node.isLeaf,
+//                     factId: factId,
+//                     factIdField: 'COMPONENT_MATERIAL_TYPE'
+//                 });
+//             });
+//         } else if (dimName === 'item_cost_type') {
+//             // Special handling for item cost type
+//             flattenedNodes.forEach(node => {
+//                 const factId = node.factId !== undefined ? node.factId : node.itemCostTypeCode;
+                
+//                 result.flatRows.push({
+//                     _id: node.id,
+//                     label: node.label || node.id,
+//                     level: node.level,
+//                     hasChildren: node.hasChildren,
+//                     isLeaf: node.isLeaf,
+//                     expanded: node.expanded,
+//                     hierarchyField: field.id,
+//                     path: node.path,
+//                     factId: factId,
+//                     itemCostTypeCode: node.itemCostTypeCode
+//                 });
+                
+//                 result.flatMappings.push({
+//                     id: node.id,
+//                     dimensionName: dimName,
+//                     nodeId: node.id,
+//                     isHierarchical: true,
+//                     isLeaf: node.isLeaf,
+//                     factId: factId,
+//                     factIdField: 'ITEM_COST_TYPE'
+//                 });
+//             });
+//         } else if (dimName === 'material_type') {
+//             flattenedNodes.forEach(node => {
+//                 // No need for materialTypeCode or factId - we'll extract from node ID
+//                 result.flatRows.push({
+//                     _id: node.id,
+//                     label: node.label || node.id,
+//                     level: node.level,
+//                     hasChildren: node.hasChildren,
+//                     isLeaf: node.isLeaf,
+//                     expanded: node.expanded,
+//                     hierarchyField: field.id,
+//                     path: node.path
+//                 });
+                
+//                 result.flatMappings.push({
+//                     id: node.id,
+//                     dimensionName: dimName,
+//                     nodeId: node.id,
+//                     isHierarchical: true,
+//                     isLeaf: node.isLeaf,
+//                     factIdField: 'COMPONENT_MATERIAL_TYPE'
+//                 });
+//             });
+//         } else if (dimName === 'year') {
+//             // Special handling for year
+//             flattenedNodes.forEach(node => {
+//                 result.flatRows.push({
+//                     _id: node.id,
+//                     label: node.label || node.id,
+//                     level: node.level,
+//                     hasChildren: node.hasChildren,
+//                     isLeaf: node.isLeaf,
+//                     expanded: node.expanded,
+//                     hierarchyField: field.id,
+//                     path: node.path,
+//                     factId: node.factId
+//                 });
+                
+//                 result.flatMappings.push({
+//                     id: node.id,
+//                     dimensionName: dimName,
+//                     nodeId: node.id,
+//                     isHierarchical: true,
+//                     isLeaf: node.isLeaf,
+//                     factId: node.factId,
+//                     factIdField: 'ZYEAR'
+//                 });
+//             });
+//         } else if (dimName === 'mc') {
+//             // Special handling for MC
+//             flattenedNodes.forEach(node => {
+//                 result.flatRows.push({
+//                     _id: node.id,
+//                     label: node.label || node.id,
+//                     level: node.level,
+//                     hasChildren: node.hasChildren,
+//                     isLeaf: node.isLeaf,
+//                     expanded: node.expanded,
+//                     hierarchyField: field.id,
+//                     path: node.path,
+//                     factId: node.factId
+//                 });
+                
+//                 result.flatMappings.push({
+//                     id: node.id,
+//                     dimensionName: dimName,
+//                     nodeId: node.id,
+//                     isHierarchical: true,
+//                     isLeaf: node.isLeaf,
+//                     factId: node.factId,
+//                     factIdField: 'MC'
+//                 });
+//             });
+//         } else {
+//             // Default handling for other dimensions
+//             flattenedNodes.forEach(node => {
+//                 result.flatRows.push({
+//                     _id: node.id,
+//                     label: node.label || node.id,
+//                     level: node.level,
+//                     hasChildren: node.hasChildren,
+//                     isLeaf: node.isLeaf,
+//                     expanded: node.expanded,
+//                     hierarchyField: field.id,
+//                     path: node.path,
+//                     factId: node.factId
+//                 });
+                
+//                 result.flatMappings.push({
+//                     id: node.id,
+//                     dimensionName: dimName,
+//                     nodeId: node.id,
+//                     isHierarchical: true,
+//                     isLeaf: node.isLeaf,
+//                     factId: node.factId,
+//                     factIdField: getFactIdField(dimName)
+//                 });
+//             });
+//         }
+//     });
+    
+//     // console.log(`Processed ${fieldIds.length} fields. Result contains ${result.flatRows.length} rows.`);
+//     return result;
+// }
+
+
 function processHierarchicalFields(fieldIds, axisType) {
-    // console.log(`⏳ Status: Processing hierarchical fields: ${fieldIds.join(', ')} for ${axisType}`);
+    console.log(`⏳ Status: Processing hierarchical fields: ${fieldIds.join(', ')} for ${axisType}`);
     
     const result = {
         flatRows: [],
@@ -513,30 +740,46 @@ function processHierarchicalFields(fieldIds, axisType) {
     fieldIds.forEach(fieldId => {
         const field = state.availableFields.find(f => f.id === fieldId);
         if (!field) {
-            // console.warn(`Field not found: ${fieldId}`);
+            console.warn(`Field not found: ${fieldId}`);
             return;
         }
         
         // Get dimension name (lowercase without DIM_ prefix)
         const dimName = field.id.replace('DIM_', '').toLowerCase();
-        // console.log(`Processing dimension: ${dimName}`);
+        console.log(`Processing dimension: ${dimName}`);
         
         // Check if hierarchy exists
         if (!state.hierarchies || !state.hierarchies[dimName]) {
-            // console.error(`No hierarchy found for ${dimName}`);
+            console.error(`No hierarchy found for ${dimName}`);
             return;
         }
         
         const hierarchy = state.hierarchies[dimName];
         if (!hierarchy || !hierarchy.root) {
-            // console.error(`Invalid hierarchy for ${dimName}`);
+            console.error(`Invalid hierarchy for ${dimName}`);
             return;
+        }
+        
+        // CRITICAL FIX: Ensure root node always has ID 'ROOT'
+        if (hierarchy.root.id !== 'ROOT') {
+            console.warn(`Fixing root node ID from ${hierarchy.root.id} to ROOT for ${dimName}`);
+            const oldId = hierarchy.root.id;
+            hierarchy.root.id = 'ROOT';
+            hierarchy.root.path = ['ROOT'];
+            
+            // Update nodesMap
+            if (hierarchy.nodesMap) {
+                hierarchy.nodesMap['ROOT'] = hierarchy.root;
+                if (oldId !== 'ROOT') {
+                    delete hierarchy.nodesMap[oldId];
+                }
+            }
         }
                 
         // Store the field for reference
         result.hierarchyFields.push(field);
         
-        // Get zone-specific expanded nodes
+        // Get zone-specific expanded nodes - CRITICAL: Use axisType parameter
         const zone = axisType;
         
         // Ensure expandedNodes is initialized
@@ -547,208 +790,162 @@ function processHierarchicalFields(fieldIds, axisType) {
             state.expandedNodes[dimName][zone] = {};
         }
         
-        // Ensure ROOT is expanded
-        const rootId = hierarchy.root.id;
-        state.expandedNodes[dimName][zone][rootId] = true;
+        // CRITICAL FIX: Don't auto-expand ROOT - respect current state
+        const rootId = 'ROOT';  // Always use 'ROOT'
+        if (state.expandedNodes[dimName][zone][rootId] === undefined) {
+            // Only set to collapsed if not yet defined
+            state.expandedNodes[dimName][zone][rootId] = false;
+        }
         
         // Apply expansion state to nodes
         applyExpansionState(hierarchy.root, state.expandedNodes[dimName][zone]);
         
-        // Flatten the hierarchy
+        // Flatten the hierarchy - CRITICAL: Only show visible nodes
         let flattenedNodes = [];
         try {
-            flattenedNodes = flattenHierarchy(hierarchy.root);
+            flattenedNodes = flattenHierarchyRespectingState(hierarchy.root, state.expandedNodes[dimName][zone]);
         } catch (error) {
             console.error(`Error flattening ${dimName} hierarchy:`, error);
             flattenedNodes = [hierarchy.root]; // At least include the root
         }
         
-        // Dimension-specific processing
-        if (dimName === 'material_type') {
-            // Add to result with special handling for material type
-            flattenedNodes.forEach(node => {
-                // Ensure materialTypeCode is correctly passed to the factId
-                const factId = node.materialTypeCode !== undefined ? node.materialTypeCode : 
-                            (node.factId !== undefined ? node.factId : null);
-                
-                result.flatRows.push({
-                    _id: node.id,
-                    label: node.label || node.id,
-                    level: node.level,
-                    hasChildren: node.hasChildren,
-                    isLeaf: node.isLeaf,
-                    expanded: node.expanded,
-                    hierarchyField: field.id,
-                    path: node.path,
-                    factId: factId,
-                    materialTypeCode: node.materialTypeCode
-                });
-                
-                result.flatMappings.push({
-                    id: node.id,
-                    dimensionName: dimName,
-                    nodeId: node.id,
-                    isHierarchical: true,
-                    isLeaf: node.isLeaf,
-                    factId: factId,
-                    factIdField: 'COMPONENT_MATERIAL_TYPE'
-                });
+        // Process flattened nodes
+        flattenedNodes.forEach(node => {
+            const factId = node.factId !== undefined ? node.factId : null;
+            
+            result.flatRows.push({
+                _id: node.id,
+                label: node.label || node.id,
+                level: node.level,
+                hasChildren: node.hasChildren,
+                isLeaf: node.isLeaf,
+                expanded: node.expanded,
+                hierarchyField: field.id,
+                path: node.path,
+                factId: factId
             });
-        } else if (dimName === 'item_cost_type') {
-            // Special handling for item cost type
-            flattenedNodes.forEach(node => {
-                const factId = node.factId !== undefined ? node.factId : node.itemCostTypeCode;
-                
-                result.flatRows.push({
-                    _id: node.id,
-                    label: node.label || node.id,
-                    level: node.level,
-                    hasChildren: node.hasChildren,
-                    isLeaf: node.isLeaf,
-                    expanded: node.expanded,
-                    hierarchyField: field.id,
-                    path: node.path,
-                    factId: factId,
-                    itemCostTypeCode: node.itemCostTypeCode
-                });
-                
-                result.flatMappings.push({
-                    id: node.id,
-                    dimensionName: dimName,
-                    nodeId: node.id,
-                    isHierarchical: true,
-                    isLeaf: node.isLeaf,
-                    factId: factId,
-                    factIdField: 'ITEM_COST_TYPE'
-                });
+            
+            result.flatMappings.push({
+                id: node.id,
+                dimensionName: dimName,
+                nodeId: node.id,
+                isHierarchical: true,
+                isLeaf: node.isLeaf,
+                factId: factId,
+                factIdField: getFactIdField(dimName)
             });
-        } else if (dimName === 'material_type') {
-            flattenedNodes.forEach(node => {
-                // No need for materialTypeCode or factId - we'll extract from node ID
-                result.flatRows.push({
-                    _id: node.id,
-                    label: node.label || node.id,
-                    level: node.level,
-                    hasChildren: node.hasChildren,
-                    isLeaf: node.isLeaf,
-                    expanded: node.expanded,
-                    hierarchyField: field.id,
-                    path: node.path
-                });
-                
-                result.flatMappings.push({
-                    id: node.id,
-                    dimensionName: dimName,
-                    nodeId: node.id,
-                    isHierarchical: true,
-                    isLeaf: node.isLeaf,
-                    factIdField: 'COMPONENT_MATERIAL_TYPE'
-                });
-            });
-        } else if (dimName === 'year') {
-            // Special handling for year
-            flattenedNodes.forEach(node => {
-                result.flatRows.push({
-                    _id: node.id,
-                    label: node.label || node.id,
-                    level: node.level,
-                    hasChildren: node.hasChildren,
-                    isLeaf: node.isLeaf,
-                    expanded: node.expanded,
-                    hierarchyField: field.id,
-                    path: node.path,
-                    factId: node.factId
-                });
-                
-                result.flatMappings.push({
-                    id: node.id,
-                    dimensionName: dimName,
-                    nodeId: node.id,
-                    isHierarchical: true,
-                    isLeaf: node.isLeaf,
-                    factId: node.factId,
-                    factIdField: 'ZYEAR'
-                });
-            });
-        } else if (dimName === 'mc') {
-            // Special handling for MC
-            flattenedNodes.forEach(node => {
-                result.flatRows.push({
-                    _id: node.id,
-                    label: node.label || node.id,
-                    level: node.level,
-                    hasChildren: node.hasChildren,
-                    isLeaf: node.isLeaf,
-                    expanded: node.expanded,
-                    hierarchyField: field.id,
-                    path: node.path,
-                    factId: node.factId
-                });
-                
-                result.flatMappings.push({
-                    id: node.id,
-                    dimensionName: dimName,
-                    nodeId: node.id,
-                    isHierarchical: true,
-                    isLeaf: node.isLeaf,
-                    factId: node.factId,
-                    factIdField: 'MC'
-                });
-            });
-        } else {
-            // Default handling for other dimensions
-            flattenedNodes.forEach(node => {
-                result.flatRows.push({
-                    _id: node.id,
-                    label: node.label || node.id,
-                    level: node.level,
-                    hasChildren: node.hasChildren,
-                    isLeaf: node.isLeaf,
-                    expanded: node.expanded,
-                    hierarchyField: field.id,
-                    path: node.path,
-                    factId: node.factId
-                });
-                
-                result.flatMappings.push({
-                    id: node.id,
-                    dimensionName: dimName,
-                    nodeId: node.id,
-                    isHierarchical: true,
-                    isLeaf: node.isLeaf,
-                    factId: node.factId,
-                    factIdField: getFactIdField(dimName)
-                });
-            });
-        }
+        });
     });
     
-    // console.log(`Processed ${fieldIds.length} fields. Result contains ${result.flatRows.length} rows.`);
+    console.log(`Processed ${fieldIds.length} fields. Result contains ${result.flatRows.length} rows.`);
     return result;
 }
 
 
+/**
+ * ENHANCED: Initialize all dimensions with proper collapsed state
+ */
+function initializeAllDimensionsCollapsed() {
+    if (!state.expandedNodes) {
+        state.expandedNodes = {};
+    }
+    
+    // Get all available dimensions
+    const allDimensions = ['le', 'cost_element', 'smartcode', 'gmid_display', 'item_cost_type', 'material_type', 'mc', 'year'];
+    
+    allDimensions.forEach(dimName => {
+        if (!state.expandedNodes[dimName]) {
+            state.expandedNodes[dimName] = { row: {}, column: {} };
+        }
+        
+        // Initialize both row and column zones as collapsed
+        ['row', 'column'].forEach(zone => {
+            if (!state.expandedNodes[dimName][zone]) {
+                state.expandedNodes[dimName][zone] = {};
+            }
+            
+            // CRITICAL FIX: Always use 'ROOT' as the key
+            state.expandedNodes[dimName][zone]['ROOT'] = false;
+            
+            // Set all other nodes to collapsed if they exist
+            const hierarchy = state.hierarchies[dimName];
+            if (hierarchy && hierarchy.nodesMap) {
+                Object.keys(hierarchy.nodesMap).forEach(nodeId => {
+                    if (nodeId !== 'ROOT' && state.expandedNodes[dimName][zone][nodeId] === undefined) {
+                        state.expandedNodes[dimName][zone][nodeId] = false;
+                    }
+                });
+            }
+        });
+    });
+    
+    console.log("✅ All dimensions initialized with collapsed state for both row and column zones");
+}
+
+
 // Helper function to apply expansion state
+// function applyExpansionState(node, expansionState) {
+//     if (!node) return;
+    
+//     // Set expansion state
+//     node.expanded = expansionState[node.id] === true;
+    
+//     // Apply to children
+//     if (node.children && node.children.length > 0) {
+//         node.children.forEach(childId => {
+//             // Handle both string IDs and direct node references
+//             const childNode = typeof childId === 'string' ? 
+//                 findNodeById(childId, node.hierarchyName) : childId;
+            
+//             if (childNode) {
+//                 applyExpansionState(childNode, expansionState);
+//             } else {
+//                 console.warn(`Child node ID ${childId} not found during expansion`);
+//             }
+//         });
+//     }
+// }
 function applyExpansionState(node, expansionState) {
     if (!node) return;
     
-    // Set expansion state
+    // Set expansion state from the zone-specific state
     node.expanded = expansionState[node.id] === true;
     
     // Apply to children
     if (node.children && node.children.length > 0) {
         node.children.forEach(childId => {
-            // Handle both string IDs and direct node references
-            const childNode = typeof childId === 'string' ? 
-                findNodeById(childId, node.hierarchyName) : childId;
-            
+            const childNode = typeof childId === 'string' ? findNodeById(childId) : childId;
             if (childNode) {
                 applyExpansionState(childNode, expansionState);
-            } else {
-                console.warn(`Child node ID ${childId} not found during expansion`);
             }
         });
     }
+}
+
+
+/**
+ * Flatten hierarchy respecting expansion state
+ */
+function flattenHierarchyRespectingState(node, expansionState) {
+    if (!node) return [];
+    
+    const result = [node];
+    
+    // Only process children if this node is expanded AND has children
+    if (node.expanded && node.children && node.children.length > 0) {
+        node.children.forEach(childId => {
+            const childNode = typeof childId === 'string' ? findNodeById(childId) : childId;
+            if (childNode) {
+                // Apply expansion state to child
+                childNode.expanded = expansionState[childNode.id] === true;
+                
+                // Recursively flatten child
+                result.push(...flattenHierarchyRespectingState(childNode, expansionState));
+            }
+        });
+    }
+    
+    return result;
 }
 
 
@@ -1560,7 +1757,7 @@ function buildPathHierarchyWithSegmentLabels(data, config) {
         };
     }
     
-    // console.log(`⏳ Status: Processing ${data.length} rows of data...`);
+    console.log(`⏳ Status: Processing ${data.length} rows of data...`);
     
     // Merge with default config
     const defaultConfig = {
@@ -1607,27 +1804,38 @@ function buildPathHierarchyWithSegmentLabels(data, config) {
         };
     }
     
-    // Create root nodes based on first segments
-    const rootNodes = {};
+    // CRITICAL FIX: Always create a single ROOT node regardless of number of segments
     const nodesMap = {};
+    let rootNode;
     
-    // Create root node for each first segment
-    firstLevelSegments.forEach(segment => {
-        const rootId = `ROOT_${segment.replace(/[^a-zA-Z0-9_]/g, '_')}`;
-        const rootNode = {
-            id: rootId,
-            label: segment,  // Use the segment itself as the label
+    if (firstLevelSegments.size === 1) {
+        // Single segment - create root with that segment's label
+        const singleSegment = Array.from(firstLevelSegments)[0];
+        rootNode = {
+            id: 'ROOT',  // ALWAYS use 'ROOT' as ID
+            label: singleSegment,
             children: [],
             level: 0,
-            path: [rootId],
+            path: ['ROOT'],
             expanded: false,
             isLeaf: false,
             hasChildren: false
         };
-        
-        rootNodes[segment] = rootNode;
-        nodesMap[rootId] = rootNode;
-    });
+    } else {
+        // Multiple segments - create a master root
+        rootNode = {
+            id: 'ROOT',  // ALWAYS use 'ROOT' as ID
+            label: 'All',
+            children: [],
+            level: 0,
+            path: ['ROOT'],
+            expanded: false,
+            isLeaf: false,
+            hasChildren: false
+        };
+    }
+    
+    nodesMap['ROOT'] = rootNode;
     
     // Map to track nodes by path
     const nodesByPathKey = new Map();
@@ -1646,21 +1854,12 @@ function buildPathHierarchyWithSegmentLabels(data, config) {
             
             if (pathSegments.length === 0) return;
             
-            // Get first segment and root node
-            const firstSegment = pathSegments[0];
-            const rootNode = rootNodes[firstSegment];
-            
-            if (!rootNode) {
-                // console.warn(`No root node found for segment: ${firstSegment}`);
-                return;
-            }
-            
             // Start with root node
             let currentNode = rootNode;
-            let currentPath = [rootNode.id];
+            let currentPath = ['ROOT'];
             
-            // Process remaining segments (skip first which is the root)
-            for (let i = 1; i < pathSegments.length; i++) {
+            // Process ALL segments (including first)
+            for (let i = 0; i < pathSegments.length; i++) {
                 const segment = pathSegments[i];
                 
                 // Skip empty segments
@@ -1708,7 +1907,6 @@ function buildPathHierarchyWithSegmentLabels(data, config) {
                 currentNode = nodesMap[existingNodeId];
                 
                 if (!currentNode) {
-                    // console.warn(`Node not found: ${existingNodeId}`);
                     break;
                 }
                 
@@ -1721,50 +1919,21 @@ function buildPathHierarchyWithSegmentLabels(data, config) {
     
     // Sort hierarchy nodes
     try {
-        Object.values(rootNodes).forEach(rootNode => {
-            sortHierarchyNodes(rootNode);
-        });
+        sortHierarchyNodes(rootNode);
     } catch (error) {
         console.warn("Error sorting nodes:", error);
     }
     
-    // Create result object
+    // Create result object with single root
     const result = {
-        roots: Object.values(rootNodes),
+        root: rootNode,
+        roots: [rootNode],
         nodesMap: nodesMap,
         flatData: data,
         isEmpty: false
     };
     
-    // Set root property based on number of roots
-    if (Object.keys(rootNodes).length === 1) {
-        // Single root case
-        result.root = Object.values(rootNodes)[0];
-    } else if (Object.keys(rootNodes).length > 1) {
-        // Multiple roots case - create a master root
-        const masterRootId = "MASTER_ROOT";
-        const masterRoot = {
-            id: masterRootId,
-            label: "All", // Simple label for master root
-            children: Object.values(rootNodes),
-            level: 0,
-            path: [masterRootId],
-            expanded: true,
-            isLeaf: false,
-            hasChildren: true
-        };
-        
-        // Add master root to nodes map
-        nodesMap[masterRootId] = masterRoot;
-        
-        // Set as root
-        result.root = masterRoot;
-    } else {
-        // No roots case
-        result.root = null;
-    }
-    
-    console.log(`✅ Status: Built hierarchy with ${result.roots.length} root nodes and ${Object.keys(nodesMap).length} total nodes`);
+    console.log(`✅ Status: Built hierarchy with ROOT node and ${Object.keys(nodesMap).length} total nodes`);
     
     return result;
 }
@@ -1793,15 +1962,15 @@ function buildStandaloneFlatHierarchy(data, dimensionName, idField, labelField) 
     
     console.log(`⏳ Status: Building standalone flat hierarchy for ${dimensionName} with ${data.length} records`);
     
-    // Create root node
-    const rootId = `${dimensionName}_ROOT`;
+    // CRITICAL FIX: Always use 'ROOT' as the root node ID
+    const rootId = 'ROOT';
     const rootNode = {
         id: rootId,
         label: `All ${dimensionName.replace(/_/g, ' ')}`,
         children: [],
         level: 0,
         path: [rootId],
-        expanded: true,
+        expanded: false,
         isLeaf: false,
         hasChildren: false
     };
@@ -1837,7 +2006,7 @@ function buildStandaloneFlatHierarchy(data, dimensionName, idField, labelField) 
             // Get label value (fallback to ID if missing)
             const labelValue = item[labelField] !== undefined ? item[labelField] : idValueStr;
             
-            // Create node ID
+            // Create node ID - FIXED: Use consistent naming
             const safeId = idValueStr.replace(/[^a-zA-Z0-9_]/g, '_');
             const nodeId = `${dimensionName}_${safeId}`;
             
@@ -1915,7 +2084,8 @@ function buildLegalEntityHierarchy(data) {
     // Build hierarchy with segment labels
     const hierarchy = buildPathHierarchyWithSegmentLabels(data, config);
     
-    console.log(`✅ Status: Legal Entity hierarchy built with ${hierarchy.roots?.length || 0} root nodes`);
+    // The buildPathHierarchyWithSegmentLabels now ensures ROOT ID consistency
+    console.log(`✅ Status: Legal Entity hierarchy built with ROOT node`);
     return hierarchy;
 }
 
@@ -1939,7 +2109,8 @@ function buildSmartCodeHierarchy(data) {
     // Build hierarchy with segment labels
     const hierarchy = buildPathHierarchyWithSegmentLabels(data, config);
     
-    console.log(`✅ Status: SmartCode hierarchy built with ${hierarchy.roots?.length || 0} root nodes`);
+    // The buildPathHierarchyWithSegmentLabels now ensures ROOT ID consistency
+    console.log(`✅ Status: SmartCode hierarchy built with ROOT node`);
     return hierarchy;
 }
 
@@ -1960,7 +2131,9 @@ function buildManagementCentreHierarchy(data) {
     
     if (!hasPathData) {
         console.log("MC data appears to be flat. Using flat hierarchy builder.");
-        return buildStandaloneFlatHierarchy(data, 'MC', 'MC', 'DIM_MC');
+        const hierarchy = buildStandaloneFlatHierarchy(data, 'MC', 'MC', 'DIM_MC');
+        // The buildStandaloneFlatHierarchy now ensures ROOT ID consistency
+        return hierarchy;
     }
     
     // Create config for path segment labels
@@ -1974,7 +2147,8 @@ function buildManagementCentreHierarchy(data) {
     // Build hierarchy with segment labels
     const hierarchy = buildPathHierarchyWithSegmentLabels(data, config);
     
-    console.log(`✅ Status: Management Centre hierarchy built with ${hierarchy.roots?.length || 0} root nodes`);
+    // The buildPathHierarchyWithSegmentLabels now ensures ROOT ID consistency
+    console.log(`✅ Status: Management Centre hierarchy built with ROOT node`);
     return hierarchy;
 }
 
@@ -1998,7 +2172,8 @@ function buildCostElementHierarchy(data) {
     // Build hierarchy with segment labels
     const hierarchy = buildPathHierarchyWithSegmentLabels(data, config);
     
-    console.log(`✅ Status: Cost Element hierarchy built with ${hierarchy.roots?.length || 0} root nodes`);
+    // The buildPathHierarchyWithSegmentLabels now ensures ROOT ID consistency
+    console.log(`✅ Status: Cost Element hierarchy built with ROOT node`);
     return hierarchy;
 }
 
@@ -2019,7 +2194,9 @@ function buildFilteredGmidDisplayHierarchy(data) {
     
     if (!hasPathData) {
         console.log("GMID data appears to be flat. Using flat hierarchy builder.");
-        return buildStandaloneFlatHierarchy(data, 'GMID_DISPLAY', 'GMID', 'DIM_GMID_DISPLAY');
+        const hierarchy = buildStandaloneFlatHierarchy(data, 'GMID_DISPLAY', 'GMID', 'DIM_GMID_DISPLAY');
+        // The buildStandaloneFlatHierarchy now ensures ROOT ID consistency
+        return hierarchy;
     }
     
     // Create config for path segment labels
@@ -2033,41 +2210,48 @@ function buildFilteredGmidDisplayHierarchy(data) {
     // Build hierarchy with segment labels
     const hierarchy = buildPathHierarchyWithSegmentLabels(data, config);
     
-    console.log(`✅ Status: GMID Display hierarchy built with ${hierarchy.roots?.length || 0} root nodes`);
+    // The buildPathHierarchyWithSegmentLabels now ensures ROOT ID consistency
+    console.log(`✅ Status: GMID Display hierarchy built with ROOT node`);
     return hierarchy;
 }
 
 
 function buildItemCostTypeHierarchy(data) {
-    return buildStandaloneFlatHierarchy(
+    const hierarchy = buildStandaloneFlatHierarchy(
         data, 
-        'ITEM_COST_TYPE',  // ID field
-        'ITEM_COST_TYPE',  // Value field (what we're grouping by)
-        'ITEM_COST_TYPE_DESC',  // Description field
-        'ITEM_COST_TYPE'  // Root prefix
+        'ITEM_COST_TYPE',
+        'ITEM_COST_TYPE',
+        'ITEM_COST_TYPE_DESC'
     );
+    
+    // The buildStandaloneFlatHierarchy now ensures ROOT ID consistency
+    return hierarchy;
 }
 
 
 function buildMaterialTypeHierarchy(data) {
-    return buildStandaloneFlatHierarchy(
+    const hierarchy = buildStandaloneFlatHierarchy(
         data, 
-        'MATERIAL_TYPE',  // ID field
-        'MATERIAL_TYPE',  // Value field
-        'MATERIAL_TYPE_DESC',  // Description field
-        'MATERIAL_TYPE'  // Root prefix
+        'MATERIAL_TYPE',
+        'MATERIAL_TYPE',
+        'MATERIAL_TYPE_DESC'
     );
+    
+    // The buildStandaloneFlatHierarchy now ensures ROOT ID consistency
+    return hierarchy;
 }
 
 
 function buildBusinessYearHierarchy(data) {
-    return buildStandaloneFlatHierarchy(
+    const hierarchy = buildStandaloneFlatHierarchy(
         data, 
-        'YEAR',  // ID field
-        'YEAR',  // Value field
-        'YEAR',  // Description field
-        'YEAR'  // Root prefix
+        'YEAR',
+        'YEAR',
+        'YEAR'
     );
+    
+    // The buildStandaloneFlatHierarchy now ensures ROOT ID consistency
+    return hierarchy;
 }
 
 
@@ -2391,45 +2575,12 @@ function findNodeById(nodeId) {
     if (!nodeId) return null;
     
     // Safety checks for state object
-    if (!window.state || !window.state.hierarchies) return null;
+    if (!state || !state.hierarchies) return null;
     
     try {
-        // First check if we can determine which hierarchy from the node ID
-        if (nodeId.startsWith('ROOT_') || nodeId.startsWith('SEGMENT_')) {
-            // Try to extract hierarchy name from ID
-            let hierarchyName = null;
-            
-            if (nodeId.startsWith('ROOT_LE_')) {
-                hierarchyName = 'le';
-            } else if (nodeId.startsWith('ROOT_COST_ELEMENT_')) {
-                hierarchyName = 'cost_element';
-            } else if (nodeId.startsWith('ROOT_SMARTCODE_')) {
-                hierarchyName = 'smartcode';
-            } else if (nodeId.startsWith('ROOT_GMID_')) {
-                hierarchyName = 'gmid_display';
-            } else if (nodeId.startsWith('ROOT_MATERIAL_TYPE_')) {
-                hierarchyName = 'material_type';
-            } else if (nodeId.startsWith('ROOT_ITEM_COST_TYPE_')) {
-                hierarchyName = 'item_cost_type';
-            } else if (nodeId.startsWith('ROOT_YEAR_')) {
-                hierarchyName = 'year';
-            } else if (nodeId.startsWith('ROOT_MC_')) {
-                hierarchyName = 'mc';
-            }
-            
-            // If we found a hierarchy name, check that hierarchy first
-            if (hierarchyName && window.state.hierarchies[hierarchyName]) {
-                const hierarchy = window.state.hierarchies[hierarchyName];
-                if (hierarchy.nodesMap && hierarchy.nodesMap[nodeId]) {
-                    return hierarchy.nodesMap[nodeId];
-                }
-            }
-        }
-        
-        // If we couldn't determine the hierarchy or node wasn't found, 
-        // search all hierarchies
-        for (const hierarchyName in window.state.hierarchies) {
-            const hierarchy = window.state.hierarchies[hierarchyName];
+        // Search all hierarchies for the node
+        for (const hierarchyName in state.hierarchies) {
+            const hierarchy = state.hierarchies[hierarchyName];
             if (hierarchy && hierarchy.nodesMap && hierarchy.nodesMap[nodeId]) {
                 return hierarchy.nodesMap[nodeId];
             }
@@ -3775,6 +3926,196 @@ function preFilterData(originalData) {
     return filteredData;
 }
 
+
+/**
+ * Universal node children detector
+ * Checks if a node has children in the hierarchy
+ * 
+ * @param {Object} node - The node to check
+ * @param {Object} state - Application state containing hierarchies
+ * @returns {boolean} - Whether the node has children
+ */
+function nodeHasChildren(node, state) {
+    if (!node || !node.hierarchyField) return false;
+    
+    const dimName = extractDimensionName(node.hierarchyField);
+    const hierarchy = state?.hierarchies?.[dimName];
+    
+    return !!(node.children && node.children.length > 0 && 
+             node.children.some(childId => hierarchy?.nodesMap?.[childId]));
+}
+
+
+/**
+ * Universal expansion state checker
+ * Checks if a node is currently expanded in the specified zone
+ * 
+ * @param {string} nodeId - ID of the node to check
+ * @param {string} dimensionName - Name of the dimension (e.g., 'le', 'mc', 'cost_element')
+ * @param {string} zone - Zone to check ('row' or 'column')
+ * @param {Object} state - Application state containing expansion tracking
+ * @returns {boolean} - Whether the node is expanded
+ */
+function isNodeExpanded(nodeId, dimensionName, zone, state) {
+    if (!state.expandedNodes) return false;
+    if (!state.expandedNodes[dimensionName]) return false;
+    if (!state.expandedNodes[dimensionName][zone]) return false;
+    return !!state.expandedNodes[dimensionName][zone][nodeId];
+}
+
+
+/**
+ * Universal expansion tracking initializer
+ * Initializes the expansion tracking structure for a hierarchy and zone
+ * 
+ * @param {Object} state - Application state
+ * @param {string} hierarchyName - Name of the hierarchy
+ * @param {string} zone - Zone to initialize ('row' or 'column')
+ */
+function initializeExpansionTracking(state, hierarchyName, zone) {
+    state.expandedNodes = state.expandedNodes || {};
+    state.expandedNodes[hierarchyName] = state.expandedNodes[hierarchyName] || {};
+    state.expandedNodes[hierarchyName][zone] = state.expandedNodes[hierarchyName][zone] || {};
+}
+
+
+
+// 
+// function processHierarchicalFieldsEnhanced(fields, zone) {
+//     const flatRows = [];
+//     const flatMappings = [];
+    
+//     const processNodeRecursive = (node, dimensionField, hierarchy, path, level) => {
+//         const dimensionName = extractDimensionName(dimensionField);
+//         const hasChildren = nodeHasChildren(node, this.state);
+        
+//         // Check expansion state from the current state
+//         const isExpanded = isNodeExpanded(node._id, dimensionName, zone, this.state);
+        
+//         const processedNode = {
+//             _id: node._id,
+//             label: node.label || node._id,
+//             hierarchyField: dimensionField,
+//             level: level,
+//             path: [...path, node._id],
+//             hasChildren: hasChildren,
+//             isLeaf: !hasChildren,
+//             expanded: isExpanded,
+//             dimension: dimensionField,
+//             factId: node.factId
+//         };
+        
+//         flatRows.push(processedNode);
+//         flatMappings.push({ 
+//             _id: node._id, 
+//             dimension: dimensionField, 
+//             level: level,
+//             isLeaf: !hasChildren
+//         });
+        
+//         // Process children if expanded OR if this is initial processing
+//         if (hasChildren && (isExpanded || zone === 'column')) {
+//             node.children.forEach(childId => {
+//                 const childNode = hierarchy.nodesMap[childId];
+//                 if (childNode) {
+//                     processNodeRecursive(
+//                         childNode, 
+//                         dimensionField, 
+//                         hierarchy, 
+//                         processedNode.path, 
+//                         level + 1
+//                     );
+//                 }
+//             });
+//         }
+//     };
+
+//     fields.forEach((dimensionField) => {
+//         const dimensionName = extractDimensionName(dimensionField);
+//         const hierarchy = this.state.hierarchies[dimensionName];
+        
+//         if (!hierarchy) {
+//             console.warn(`Hierarchy not found for dimension: ${dimensionName}`);
+//             return;
+//         }
+        
+//         const rootNode = hierarchy.nodesMap['ROOT'];
+//         if (rootNode) {
+//             processNodeRecursive(rootNode, dimensionField, hierarchy, [], 0);
+//         }
+//     });
+    
+//     console.log(`📊 Processed ${fields.length} ${zone} fields: ${flatRows.length} total nodes`);
+//     return { flatRows, flatMappings };
+// }
+function processHierarchicalFieldsEnhanced(fields, zone) {
+    const flatRows = [];
+    const flatMappings = [];
+    
+    const processNodeRecursive = (node, dimensionField, hierarchy, path, level) => {
+        const dimensionName = extractDimensionName(dimensionField);
+        const hasChildren = nodeHasChildren(node, state); // Now this function exists
+        
+        // Check expansion state from the current state
+        const isExpanded = isNodeExpanded(node._id, dimensionName, zone, state); // Now this function exists
+        
+        const processedNode = {
+            _id: node._id,
+            label: node.label || node._id,
+            hierarchyField: dimensionField,
+            level: level,
+            path: [...path, node._id],
+            hasChildren: hasChildren,
+            isLeaf: !hasChildren,
+            expanded: isExpanded,
+            dimension: dimensionField,
+            factId: node.factId
+        };
+        
+        flatRows.push(processedNode);
+        flatMappings.push({ 
+            _id: node._id, 
+            dimension: dimensionField, 
+            level: level,
+            isLeaf: !hasChildren
+        });
+        
+        // Process children if expanded OR if this is initial processing
+        if (hasChildren && (isExpanded || zone === 'column')) {
+            node.children.forEach(childId => {
+                const childNode = hierarchy.nodesMap[childId];
+                if (childNode) {
+                    processNodeRecursive(
+                        childNode, 
+                        dimensionField, 
+                        hierarchy, 
+                        processedNode.path, 
+                        level + 1
+                    );
+                }
+            });
+        }
+    };
+
+    fields.forEach((dimensionField) => {
+        const dimensionName = extractDimensionName(dimensionField);
+        const hierarchy = state.hierarchies[dimensionName];
+        
+        if (!hierarchy) {
+            console.warn(`Hierarchy not found for dimension: ${dimensionName}`);
+            return;
+        }
+        
+        const rootNode = hierarchy.nodesMap['ROOT'];
+        if (rootNode) {
+            processNodeRecursive(rootNode, dimensionField, hierarchy, [], 0);
+        }
+    });
+    
+    console.log(`📊 Processed ${fields.length} ${zone} fields: ${flatRows.length} total nodes`);
+    return { flatRows, flatMappings };
+}
+
   
 /**
  * Update the selectedRootGmids array in the state based on checked checkboxes
@@ -3792,6 +4133,25 @@ function updateSelectedRootGmids() {
 
     // Filter fact data based on selected ROOT_GMIDs
     filterFactDataByRootGmids();
+}
+
+
+/**
+ * Universal dimension name extractor - works with DIM_ prefixed and non-prefixed names
+ */
+function extractDimensionName(dimensionField) {
+    if (!dimensionField) {
+        return 'unknown'; // Return a safe default
+    }
+    
+    // Handle both DIM_ prefixed and direct dimension names
+    let dimName = dimensionField;
+    if (dimName.startsWith('DIM_')) {
+        dimName = dimName.replace(/^DIM_/, '');
+    }
+    
+    // Convert to lowercase for consistency
+    return dimName.toLowerCase();
 }
 
 
@@ -3836,6 +4196,7 @@ export default {
     getItemCostTypeDesc, 
     getMaterialTypeDesc,
     getDimensionDescription,
+    extractDimensionName,
     
     // Core data functions
     processDimensionHierarchies,
@@ -3887,6 +4248,9 @@ export default {
 
     // root gmid filter
     // initializeRootGmidFilter,
-    updateSelectedRootGmids
+    updateSelectedRootGmids,
+    // 
+    processHierarchicalFieldsEnhanced,
+    initializeAllDimensionsCollapsed,
 
   };

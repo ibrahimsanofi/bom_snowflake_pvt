@@ -65,6 +65,7 @@ const state = {
             row: { 'ROOT': true },
             column: { 'ROOT': true }
         }
+        
     },
     
     // Data and field configuration
