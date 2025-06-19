@@ -20,15 +20,14 @@ const state = {
     
     // Filter state
     filters: {                    // Filter state object
-        legalEntity: [],
+        le: [],
         smartcode: [],
-        costElement: [],
-        businessYear: [],
-        itemCostType: [],
-        componentMaterialType: [],
+        cost_element: [],
+        year: [],
+        item_cost_type: [],
         mc: [],
-        itemCostType: [],
-        materialType: []
+        gmid_display: [],
+        material_type: []
     },
     
     // UI expansion state for hierarchical dimensions

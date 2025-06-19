@@ -2939,7 +2939,7 @@ th.column-header {
 }
 
 .field-panel {
-  height: 700px;
+  height: 750px;
 }
 
 .fields-list {
@@ -2953,7 +2953,7 @@ th.column-header {
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: 1fr;
   gap: var(--space-4);
-  height: 700px; /* Match the height of the available fields panel */
+  height: 750px; /* Match the height of the available fields panel */
 }
 
 /* Adjust each drop zone to take full height */
@@ -2975,19 +2975,19 @@ th.column-header {
 .pivot-fields.rows {
   background-color: rgba(37, 99, 235, 0.05);
   border-color: var(--primary);
-  height: 600px;
+  height: 650px;
 }
 
 .pivot-fields.columns {
   background-color: rgba(16, 185, 129, 0.05);
   border-color: var(--success);
-  height: 600px;
+  height: 650px;
 }
 
 .pivot-fields.values {
   background-color: rgba(245, 158, 11, 0.05);
   border-color: var(--accent);
-  height: 600px;
+  height: 650px;
 }
 
 /* Responsive adjustments */

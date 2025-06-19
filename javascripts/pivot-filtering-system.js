@@ -48,12 +48,11 @@ class EnhancedFilterSystem {
       },
       rootGmid: {
         id: 'rootGmid',
-        label: 'Root DISPLAY',
+        label: 'Root GMID',
         dimensionKey: 'gmid_display',
         factField: 'ROOT_GMID',
-        displayField: 'ROOT_DISPLAY', 
-        filterField: 'ROOT_GMID',     
-        hierarchical: false
+        displayField: 'ROOT_DISPLAY',
+        hierarchical: true
       },
       smartcode: {
         id: 'smartcode',
@@ -115,32 +114,23 @@ class EnhancedFilterSystem {
   initialize() {
     console.log('✅ Status: Initializing Enhanced Filter System...');
     
-    // Make sure we have a valid state reference
     if (!this.state) {
       console.log('✅ Status: No state reference, cannot initialize filters');
       return false;
     }
     
-    // Make sure data is loaded
-    if (!this.state.factData || !this.state.dimensions) {
-      console.log('✅ Status: Data not loaded yet, cannot initialize filters');
+    if (!this.state.dimensions) {
+      console.log('✅ Status: Dimensions not loaded yet, cannot initialize filters');
       return false;
     }
     
-    // Initialize hierarchy filters
     this.initializeHierarchyFilters();
-    
     this.createFilterComponents();
     this.setupFilterEvents();
     this.setupApplyButton();
     this.populateFilters();
     
-    // Automatically apply filters on initialization
-    // This will solve the issue of showing zeros until button click
-    setTimeout(() => {
-        this.applyAllFilters();
-    }, 500);
-    
+    // Don't automatically apply filters - let user choose
     console.log('✅ Status: Enhanced Filter System initialized successfully');
     return true;
   }
@@ -152,17 +142,14 @@ class EnhancedFilterSystem {
   initializeHierarchyFilters() {
     console.log("✅ Status: Initializing hierarchical dimension filtering...");
     
-    // Create storage for original hierarchies if needed
     this.state._originalHierarchies = this.state._originalHierarchies || {};
     
-    // Store original hierarchies if not already stored
     if (this.state.hierarchies) {
       const hierarchyKeys = ['le', 'gmid_display', 'item_cost_type', 'material_type', 'year', 'mc', 'smartcode', 'cost_element'];
       
       hierarchyKeys.forEach(key => {
         if (this.state.hierarchies[key] && !this.state._originalHierarchies[key]) {
           this.state._originalHierarchies[key] = this.state.hierarchies[key];
-          console.log(`✅ Status: Stored original ${key} hierarchy`);
         }
       });
     }
@@ -175,17 +162,15 @@ class EnhancedFilterSystem {
    * Create filter components container structure
    */
   createFilterComponents() {
-    // Get the filter content container
     const filterContent = this.elements.filterContent;
     if (!filterContent) {
       console.error("❌ Alert! Filter content container not found");
       return;
     }
     
-    // Clear existing content
     filterContent.innerHTML = '';
     
-    // Create filter components container (grid layout)
+    // Create filter components container
     const filterComponentsContainer = document.createElement('div');
     filterComponentsContainer.id = 'filterComponentsContainer';
     filterComponentsContainer.className = 'filter-components-container';
@@ -195,7 +180,6 @@ class EnhancedFilterSystem {
     filterComponentsContainer.style.marginBottom = '10px';
     filterContent.appendChild(filterComponentsContainer);
     
-    // Store reference to the container
     this.elements.filterComponentsContainer = filterComponentsContainer;
     
     // Create each dimension filter
@@ -203,7 +187,7 @@ class EnhancedFilterSystem {
       this.createFilterComponent(filterComponentsContainer, dimension);
     });
     
-    // Add Apply Filters button at the bottom
+    // Add Apply Filters button
     const applyButtonContainer = document.createElement('div');
     applyButtonContainer.className = 'apply-filters-container';
     applyButtonContainer.style.display = 'flex';
@@ -228,10 +212,7 @@ class EnhancedFilterSystem {
     applyButtonContainer.appendChild(applyButton);
     filterContent.appendChild(applyButtonContainer);
     
-    // Store reference to apply button
     this.elements.applyFiltersBtn = applyButton;
-    
-    // Add data volume indicator
     this.createDataVolumeIndicator(filterContent);
   }
 
@@ -255,7 +236,7 @@ class EnhancedFilterSystem {
     const dataText = document.createElement('div');
     dataText.className = 'data-volume-text';
     dataText.id = 'dataVolumeText';
-    dataText.textContent = 'All records available for processing';
+    dataText.textContent = 'Ready to load data based on filter selection';
     
     progressContainer.appendChild(progressBar);
     dataVolumeContainer.appendChild(progressContainer);
@@ -271,13 +252,12 @@ class EnhancedFilterSystem {
    * @param {Object} dimension - Dimension configuration object
    */
   createFilterComponent(container, dimension) {
-    // Create the filter component wrapper
     const filterComponent = document.createElement('div');
     filterComponent.className = 'filter-component';
     filterComponent.id = `${dimension.id}FilterComponent`;
     filterComponent.style.marginBottom = '16px';
     
-    // Create the filter header with label above the dropdown
+    // Create header
     const filterHeader = document.createElement('div');
     filterHeader.className = 'filter-component-header';
     filterHeader.style.display = 'flex';
@@ -285,25 +265,21 @@ class EnhancedFilterSystem {
     filterHeader.style.alignItems = 'center';
     filterHeader.style.marginBottom = '8px';
     
-    // Add label and dynamic selection count (placeholder removed)
     filterHeader.innerHTML = `
       <span class="filter-component-label" style="font-weight: 600; color: #1e293b;">${dimension.label}</span>
       <span class="selection-count" id="${dimension.id}SelectionCount" 
             style="font-size: 0.75rem; color: #64748b; background-color: #f8fafc; 
                    padding: 2px 6px; border-radius: 10px;"></span>
     `;
-    // Immediately update the selection count after creating the element
-    // (This function generically computes the "selected / total" based on the filter type)
-    this.updateSelectionCount(dimension);
     
-    // Create the dropdown container
+    // Create dropdown container
     const dropdownContainer = document.createElement('div');
     dropdownContainer.className = 'multiselect-dropdown';
     dropdownContainer.id = `${dimension.id}Dropdown`;
     dropdownContainer.style.position = 'relative';
     dropdownContainer.style.width = '100%';
     
-    // Create the dropdown button
+    // Create dropdown button
     const dropdownButton = document.createElement('button');
     dropdownButton.className = 'multiselect-button';
     dropdownButton.style.display = 'flex';
@@ -317,7 +293,6 @@ class EnhancedFilterSystem {
     dropdownButton.style.cursor = 'pointer';
     dropdownButton.style.fontSize = '0.875rem';
     
-    // Customize button text based on dimension
     dropdownButton.innerHTML = `
       <span class="selection-text">All ${dimension.label}s</span>
       <i class="fas fa-chevron-down"></i>
@@ -330,12 +305,12 @@ class EnhancedFilterSystem {
     dropdownContent.style.position = 'absolute';
     dropdownContent.style.top = '100%';
     dropdownContent.style.left = '0';
-    dropdownContent.style.width = '350px'; // Increased width
-    dropdownContent.style.maxWidth = '90vw'; // Prevent going off screen
+    dropdownContent.style.width = '350px';
+    dropdownContent.style.maxWidth = '90vw';
     dropdownContent.style.backgroundColor = 'white';
     dropdownContent.style.border = '1px solid #cbd5e1';
     dropdownContent.style.borderRadius = '0.25rem';
-    dropdownContent.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05)';
+    dropdownContent.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
     dropdownContent.style.zIndex = '9999';
     dropdownContent.style.marginTop = '4px';
     
@@ -372,32 +347,25 @@ class EnhancedFilterSystem {
     // Add checkbox container
     const checkboxContainer = document.createElement('div');
     checkboxContainer.className = 'checkbox-container';
-    checkboxContainer.style.maxHeight = '50vh'; // Use viewport height instead of fixed pixels
+    checkboxContainer.style.maxHeight = '50vh';
     checkboxContainer.style.overflowY = 'auto';
     checkboxContainer.style.padding = '8px';
     checkboxContainer.style.width = '100%';
     
-    // For hierarchical filters, add special container
     if (dimension.hierarchical) {
       const treeContainer = document.createElement('div');
       treeContainer.className = 'filter-tree-container';
       treeContainer.id = `${dimension.id}TreeContainer`;
-      
-      // Add loading indicator initially
       treeContainer.innerHTML = `
         <div class="loading-tree-indicator">
           <i class="fas fa-circle-notch fa-spin"></i> Loading hierarchy...
         </div>
       `;
-      
       checkboxContainer.appendChild(treeContainer);
     } else {
-      // Add checkbox list for non-hierarchical filters
       const checkboxList = document.createElement('div');
       checkboxList.className = 'checkbox-list';
       checkboxList.id = `${dimension.id}CheckboxList`;
-      
-      // Add loading indicator initially
       checkboxList.innerHTML = `
         <div class="checkbox-option" style="padding: 6px 0;">
           <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; width: 100%; overflow: hidden;">
@@ -408,7 +376,6 @@ class EnhancedFilterSystem {
           </label>
         </div>
       `;
-      
       checkboxContainer.appendChild(checkboxList);
     }
     
@@ -423,6 +390,9 @@ class EnhancedFilterSystem {
     filterComponent.appendChild(filterHeader);
     filterComponent.appendChild(dropdownContainer);
     container.appendChild(filterComponent);
+    
+    // Immediately update selection count
+    this.updateSelectionCount(dimension);
   }
 
 
@@ -430,12 +400,11 @@ class EnhancedFilterSystem {
    * Setup event handlers for all filter components
    */
   setupFilterEvents() {
-    // Set up events for each filter dropdown
     Object.values(this.filterMeta).forEach(dimension => {
       this.setupFilterComponentEvents(dimension);
     });
     
-    // Global click handler to close dropdowns when clicking outside
+    // Global click handler to close dropdowns
     document.addEventListener('click', () => {
       Object.keys(this.openDropdowns).forEach(id => {
         if (this.openDropdowns[id]) {
@@ -463,21 +432,19 @@ class EnhancedFilterSystem {
       return;
     }
     
-    // Get elements
     const dropdownButton = dropdownContainer.querySelector('.multiselect-button');
     const dropdownContent = dropdownContainer.querySelector('.multiselect-dropdown-content');
     const searchInput = dropdownContainer.querySelector('.search-input');
     const selectAllBtn = document.getElementById(`${dimensionId}SelectAll`);
     const clearAllBtn = document.getElementById(`${dimensionId}ClearAll`);
     
-    // Store initial open state
     this.openDropdowns[dimensionId] = false;
     
     // Toggle dropdown
     dropdownButton.addEventListener('click', (e) => {
       e.stopPropagation();
       
-      // Close all other dropdowns
+      // Close other dropdowns
       Object.keys(this.openDropdowns).forEach(id => {
         if (id !== dimensionId && this.openDropdowns[id]) {
           const otherContent = document.querySelector(`#${id}Dropdown .multiselect-dropdown-content`);
@@ -506,7 +473,6 @@ class EnhancedFilterSystem {
           dropdownContent.style.left = (windowWidth - 310) + 'px';
         }
         
-        // Focus search input
         if (searchInput) {
           setTimeout(() => searchInput.focus(), 100);
         }
@@ -518,21 +484,21 @@ class EnhancedFilterSystem {
       e.stopPropagation();
     });
     
-    // Add search functionality
+    // Search functionality
     if (searchInput) {
       searchInput.addEventListener('input', (e) => {
         this.handleFilterSearch(dimension, e.target.value);
       });
     }
     
-    // Add select all functionality
+    // Select all functionality
     if (selectAllBtn) {
       selectAllBtn.addEventListener('click', () => {
         this.selectAllInFilter(dimension);
       });
     }
     
-    // Add clear all functionality
+    // Clear all functionality
     if (clearAllBtn) {
       clearAllBtn.addEventListener('click', () => {
         this.clearAllInFilter(dimension);
@@ -563,17 +529,16 @@ class EnhancedFilterSystem {
     });
   }
 
+
   /**
    * Populate all filter components with data from dimensions
    */
   populateFilters() {
     console.log('✅ Status: Populating filter components with data...');
     
-    // Get state reference if not already available
     if (!this.state) {
       this.state = window.App ? window.App.state : window.appState;
       
-      // If still not available, wait and retry
       if (!this.state) {
         console.log('⏳ Status: State not yet available, waiting...');
         setTimeout(() => this.populateFilters(), 500);
@@ -581,9 +546,8 @@ class EnhancedFilterSystem {
       }
     }
     
-    // Wait for data to be loaded
-    if (!this.state.factData || !this.state.dimensions) {
-      console.log('⏳ Status: Waiting for BOM data to be loaded...', window.App ? 'App is available' : 'No App object');
+    if (!this.state.dimensions) {
+      console.log('⏳ Status: Waiting for DIMENSION data to be loaded...');
       setTimeout(() => this.populateFilters(), 500);
       return;
     }
@@ -597,7 +561,6 @@ class EnhancedFilterSystem {
       }
     });
     
-    // Immediately update all selection counts once filters are available
     this.updateAllSelectionCounts();
   }
   
@@ -615,22 +578,18 @@ class EnhancedFilterSystem {
       return;
     }
     
-    // Get hierarchy from state
     const hierarchy = this.state.hierarchies[dimension.dimensionKey];
     if (!hierarchy || !hierarchy.root) {
       treeContainer.innerHTML = `<div class="empty-tree-message">No hierarchy data available</div>`;
       return;
     }
     
-    // Clear container
     treeContainer.innerHTML = '';
     
-    // Create tree nodes container
     const treeNodes = document.createElement('div');
     treeNodes.className = 'filter-tree-nodes';
     treeContainer.appendChild(treeNodes);
     
-    // Render root node and its children
     this.renderHierarchyNode(treeNodes, hierarchy.root, dimension, 0);
   }
 
@@ -656,7 +615,7 @@ class EnhancedFilterSystem {
       }
     });
     
-    console.log(`✅ Status: Found ${valueMap.size} unique values for flat hierarchy`);
+    // console.log(`✅ Status: Found ${valueMap.size} unique values for flat hierarchy`);
     
     // Create nodes for each value
     valueMap.forEach((description, code) => {
@@ -781,34 +740,34 @@ class EnhancedFilterSystem {
   renderHierarchyNode(container, node, dimension, level) {
     if (!node) return;
     
-    // Create node container
     const nodeContainer = document.createElement('div');
     nodeContainer.className = 'filter-tree-node';
     nodeContainer.dataset.nodeId = node.id;
     nodeContainer.dataset.level = level;
     
-    // Create node item with checkbox
     const nodeItem = document.createElement('div');
     nodeItem.className = 'filter-tree-item';
     nodeItem.style.marginLeft = `${level * 16}px`;
     
-    // Determine if node has children
     const hasChildren = node.children && node.children.length > 0;
     
-    // Create expand/collapse control for parent nodes
+    // Create expand/collapse control
     let expandControl = null;
     if (hasChildren) {
       expandControl = document.createElement('span');
       expandControl.className = `expand-collapse ${this.expandedFilterNodes[dimension.id][node.id] ? 'expanded' : 'collapsed'}`;
+      expandControl.innerHTML = this.expandedFilterNodes[dimension.id][node.id] ? '▼' : '▶';
+      expandControl.style.cursor = 'pointer';
+      expandControl.style.marginRight = '4px';
       
-      // Add event listener for expand/collapse
       expandControl.addEventListener('click', () => {
         this.toggleFilterNodeExpansion(dimension, node, nodeContainer);
       });
     } else {
-      // Leaf node indicator
       expandControl = document.createElement('span');
       expandControl.className = 'leaf-node';
+      expandControl.innerHTML = '&nbsp;&nbsp;';
+      expandControl.style.marginRight = '4px';
     }
     
     // Create checkbox
@@ -816,8 +775,8 @@ class EnhancedFilterSystem {
     checkbox.type = 'checkbox';
     checkbox.id = `${dimension.id}_node_${node.id}`;
     checkbox.checked = !this.filterSelections[dimension.id].has(node.id);
+    checkbox.style.marginRight = '8px';
     
-    // Add event listener for checkbox
     checkbox.addEventListener('change', (e) => {
       this.handleFilterNodeCheckboxChange(dimension, node, e.target.checked);
     });
@@ -827,6 +786,7 @@ class EnhancedFilterSystem {
     label.className = 'filter-tree-label';
     label.htmlFor = checkbox.id;
     label.textContent = node.label || node.id;
+    label.style.cursor = 'pointer';
     
     // Assemble node item
     nodeItem.appendChild(expandControl);
@@ -842,7 +802,6 @@ class EnhancedFilterSystem {
       
       // Render children
       node.children.forEach(childId => {
-        // Get child node
         const childNode = typeof childId === 'string' ? 
           this.state.hierarchies[dimension.dimensionKey].nodesMap[childId] : childId;
         
@@ -854,7 +813,6 @@ class EnhancedFilterSystem {
       nodeContainer.appendChild(childrenContainer);
     }
     
-    // Add to container
     container.appendChild(nodeContainer);
   }
   
@@ -866,14 +824,13 @@ class EnhancedFilterSystem {
    * @param {HTMLElement} nodeContainer - Node container element
    */
   toggleFilterNodeExpansion(dimension, node, nodeContainer) {
-    // Toggle expanded state
     const expanded = !this.expandedFilterNodes[dimension.id][node.id];
     this.expandedFilterNodes[dimension.id][node.id] = expanded;
     
     // Update UI
     const expandControl = nodeContainer.querySelector('.expand-collapse');
     if (expandControl) {
-      expandControl.className = `expand-collapse ${expanded ? 'expanded' : 'collapsed'}`;
+      expandControl.innerHTML = expanded ? '▼' : '▶';
     }
     
     // Show/hide children
@@ -893,29 +850,23 @@ class EnhancedFilterSystem {
   handleFilterNodeCheckboxChange(dimension, node, checked) {
     if (!node) return;
     
-    // Update selection set based on checked state
     if (checked) {
-      // Remove from excluded set
       this.filterSelections[dimension.id].delete(node.id);
     } else {
-      // Add to excluded set
       this.filterSelections[dimension.id].add(node.id);
     }
     
     // Update child checkboxes if any
     if (node.children && node.children.length > 0) {
-      // Get container
       const nodeContainer = document.querySelector(`.filter-tree-node[data-node-id="${node.id}"]`);
       if (nodeContainer) {
         const childCheckboxes = nodeContainer.querySelectorAll('.filter-tree-children input[type="checkbox"]');
         childCheckboxes.forEach(checkbox => {
           checkbox.checked = checked;
           
-          // Get node ID from checkbox ID
           const checkboxId = checkbox.id;
           const nodeId = checkboxId.replace(`${dimension.id}_node_`, '');
           
-          // Update selection state
           if (checked) {
             this.filterSelections[dimension.id].delete(nodeId);
           } else {
@@ -925,11 +876,7 @@ class EnhancedFilterSystem {
       }
     }
     
-    // Update the selection count
     this.updateSelectionCount(dimension);
-    
-    // Update "Select All" checkbox
-    this.updateSelectAllCheckbox(dimension);
   }
   
 
@@ -975,10 +922,8 @@ class EnhancedFilterSystem {
       return;
     }
     
-    // Clear container
     checkboxList.innerHTML = '';
     
-    // Extract unique values from dimension or fact data
     const uniqueValues = this.getUniqueValuesForDimension(dimension);
     
     if (uniqueValues.length === 0) {
@@ -986,19 +931,14 @@ class EnhancedFilterSystem {
       return;
     }
     
-    // Sort values alphabetically
     uniqueValues.sort((a, b) => {
-      const textA = a.label.toString().toLowerCase();
-      const textB = b.label.toString().toLowerCase();
-      return textA.localeCompare(textB);
+      return a.label.toString().toLowerCase().localeCompare(b.label.toString().toLowerCase());
     });
     
-    // Create checkbox for each value
     uniqueValues.forEach(item => {
       const checkboxOption = document.createElement('div');
       checkboxOption.className = 'checkbox-option';
       
-      // Sanitize ID by removing special characters
       const safeId = (item.id || item.value).toString().replace(/[^a-zA-Z0-9]/g, '_');
       
       checkboxOption.innerHTML = `
@@ -1010,7 +950,6 @@ class EnhancedFilterSystem {
         </label>
       `;
       
-      // Add event listener for checkbox
       const checkbox = checkboxOption.querySelector('input[type="checkbox"]');
       checkbox.addEventListener('change', (e) => {
         this.handleSimpleFilterCheckboxChange(dimension, item.value, e.target.checked);
@@ -1019,7 +958,6 @@ class EnhancedFilterSystem {
       checkboxList.appendChild(checkboxOption);
     });
     
-    // Initialize state
     this.filterSelections[dimension.id] = new Set();
   }
 
@@ -1035,98 +973,77 @@ class EnhancedFilterSystem {
     const result = [];
     
     switch (dimension.id) {
-        case 'rootGmid':
-            // Extract from gmid_display dimension using ROOT_DISPLAY for labels but ROOT_GMID for values
-            if (this.state.dimensions.gmid_display) {
-                this.state.dimensions.gmid_display.forEach(item => {
-                    if (item.ROOT_GMID && !valueSet.has(item.ROOT_GMID)) {
-                        valueSet.add(item.ROOT_GMID);
-                        // Use ROOT_DISPLAY as label if available, otherwise use ROOT_GMID
-                        labelMap.set(item.ROOT_GMID, item.ROOT_DISPLAY || item.ROOT_GMID);
-                    }
-                });
+      case 'rootGmid':
+        if (this.state.dimensions.gmid_display) {
+          this.state.dimensions.gmid_display.forEach(item => {
+            if (item.ROOT_GMID && !valueSet.has(item.ROOT_GMID)) {
+              valueSet.add(item.ROOT_GMID);
+              labelMap.set(item.ROOT_GMID, item.ROOT_DISPLAY || item.ROOT_GMID);
             }
-            break;
-            
-        case 'smartcode':
-            // Extract from smartcode dimension
-            if (this.state.dimensions.smartcode) {
-                this.state.dimensions.smartcode.forEach(item => {
-                    if (item.SMARTCODE && !valueSet.has(item.SMARTCODE)) {
-                        valueSet.add(item.SMARTCODE);
-                        labelMap.set(item.SMARTCODE, item.SMARTCODE);
-                    }
-                });
+          });
+        }
+        break;
+        
+      case 'smartcode':
+        if (this.state.dimensions.smartcode) {
+          this.state.dimensions.smartcode.forEach(item => {
+            if (item.SMARTCODE && !valueSet.has(item.SMARTCODE)) {
+              valueSet.add(item.SMARTCODE);
+              labelMap.set(item.SMARTCODE, item.SMARTCODE);
             }
-            break;
-            
-        case 'businessYear':
-            // Extract from year dimension
-            if (this.state.dimensions.year) {
-                this.state.dimensions.year.forEach(item => {
-                    if (item.YEAR && !valueSet.has(item.YEAR)) {
-                        valueSet.add(item.YEAR);
-                        labelMap.set(item.YEAR, item.YEAR.toString());
-                    }
-                });
+          });
+        }
+        break;
+        
+      case 'businessYear':
+        if (this.state.dimensions.year) {
+          this.state.dimensions.year.forEach(item => {
+            if (item.YEAR && !valueSet.has(item.YEAR)) {
+              valueSet.add(item.YEAR);
+              labelMap.set(item.YEAR, item.YEAR.toString());
             }
-            break;
-            
-        case 'itemCostType':
-            // Extract from item_cost_type dimension
-            if (this.state.dimensions.item_cost_type) {
-                this.state.dimensions.item_cost_type.forEach(item => {
-                    if (item.ITEM_COST_TYPE && !valueSet.has(item.ITEM_COST_TYPE)) {
-                        valueSet.add(item.ITEM_COST_TYPE);
-                        labelMap.set(item.ITEM_COST_TYPE, item.ITEM_COST_TYPE_DESC || item.ITEM_COST_TYPE);
-                    }
-                });
+          });
+        }
+        break;
+        
+      case 'itemCostType':
+        if (this.state.dimensions.item_cost_type) {
+          this.state.dimensions.item_cost_type.forEach(item => {
+            if (item.ITEM_COST_TYPE && !valueSet.has(item.ITEM_COST_TYPE)) {
+              valueSet.add(item.ITEM_COST_TYPE);
+              labelMap.set(item.ITEM_COST_TYPE, item.ITEM_COST_TYPE_DESC || item.ITEM_COST_TYPE);
             }
-            break;
-            
-        case 'materialType':
-            // Extract from material_type dimension
-            if (this.state.dimensions.material_type) {
-                this.state.dimensions.material_type.forEach(item => {
-                    if (item.MATERIAL_TYPE && !valueSet.has(item.MATERIAL_TYPE)) {
-                        valueSet.add(item.MATERIAL_TYPE);
-                        labelMap.set(item.MATERIAL_TYPE, item.MATERIAL_TYPE_DESC || item.MATERIAL_TYPE);
-                    }
-                });
+          });
+        }
+        break;
+        
+      case 'materialType':
+        if (this.state.dimensions.material_type) {
+          this.state.dimensions.material_type.forEach(item => {
+            if (item.MATERIAL_TYPE && !valueSet.has(item.MATERIAL_TYPE)) {
+              valueSet.add(item.MATERIAL_TYPE);
+              labelMap.set(item.MATERIAL_TYPE, item.MATERIAL_TYPE_DESC || item.MATERIAL_TYPE);
             }
-            break;
-            
-        default:
-            // If no dimension data is available, extract from fact data
-            if (this.state.factData && this.state.factData.length > 0 && dimension.factField) {
-                // For large datasets, limit the number of records to check
-                const sampleSize = Math.min(10000, this.state.factData.length);
-                const sampleData = this.state.factData.slice(0, sampleSize);
-                
-                sampleData.forEach(record => {
-                    if (record[dimension.factField] !== undefined && record[dimension.factField] !== null) {
-                        valueSet.add(record[dimension.factField]);
-                    }
-                });
-                
-                valueSet.forEach(value => {
-                    labelMap.set(value, value.toString());
-                });
-            }
-            break;
+          });
+        }
+        break;
+        
+      default:
+        console.warn(`No implementation for dimension: ${dimension.id}`);
+        break;
     }
     
     // Convert to array format
     valueSet.forEach(value => {
-        result.push({
-            value: value,      // This is the actual value used for filtering
-            id: value,         // This is the id used in DOM
-            label: labelMap.get(value) || value.toString() // This is the display label
-        });
+      result.push({
+        value: value,
+        id: value,
+        label: labelMap.get(value) || value.toString()
+      });
     });
     
     return result;
-}
+  }
   
 
   /**
@@ -1136,20 +1053,13 @@ class EnhancedFilterSystem {
    * @param {boolean} checked - New checkbox state
    */
   handleSimpleFilterCheckboxChange(dimension, value, checked) {
-    // Update selection set based on checked state
     if (checked) {
-      // Remove from excluded set
       this.filterSelections[dimension.id].delete(value);
     } else {
-      // Add to excluded set
       this.filterSelections[dimension.id].add(value);
     }
     
-    // Update the selection count
     this.updateSelectionCount(dimension);
-    
-    // Update "Select All" checkbox
-    this.updateSelectAllCheckbox(dimension);
   }
 
   
@@ -1184,7 +1094,8 @@ class EnhancedFilterSystem {
 
     const selectionText = document.querySelector(`#${dimension.id}Dropdown .selection-text`);
     if (selectionText) {
-      selectionText.textContent = `${selectedCount} items`;
+      selectionText.textContent = selectedCount === totalCount ? 
+        `All ${dimension.label}s` : `${selectedCount} selected`;
     }
   }
   
@@ -1240,7 +1151,6 @@ class EnhancedFilterSystem {
     const searchLower = searchTerm.toLowerCase();
     
     if (dimension.hierarchical) {
-      // For hierarchical filters, search the tree
       const treeNodes = document.querySelectorAll(`#${dimension.id}TreeContainer .filter-tree-node`);
       
       treeNodes.forEach(node => {
@@ -1248,36 +1158,10 @@ class EnhancedFilterSystem {
         if (label) {
           const text = label.textContent.toLowerCase();
           const match = text.includes(searchLower);
-          
-          // Show/hide based on match
           node.style.display = match ? '' : 'none';
-          
-          // If this is a parent node, show it and its children if it matches
-          if (match) {
-            // Expand parent nodes to show matching children
-            let parent = node.parentElement;
-            while (parent && parent.classList.contains('filter-tree-children')) {
-              parent.style.display = 'block';
-              
-              // Get parent node
-              const parentNode = parent.parentElement;
-              if (parentNode && parentNode.classList.contains('filter-tree-node')) {
-                parentNode.style.display = '';
-                
-                // Update expand/collapse control
-                const expandControl = parentNode.querySelector('.expand-collapse');
-                if (expandControl) {
-                  expandControl.className = 'expand-collapse expanded';
-                }
-              }
-              
-              parent = parent.parentElement ? parent.parentElement.parentElement : null;
-            }
-          }
         }
       });
     } else {
-      // For simple filters, search the checkbox list
       const checkboxOptions = document.querySelectorAll(`#${dimension.id}CheckboxList .checkbox-option`);
       
       checkboxOptions.forEach(option => {
@@ -1285,8 +1169,6 @@ class EnhancedFilterSystem {
         if (label) {
           const text = label.textContent.toLowerCase();
           const match = text.includes(searchLower);
-          
-          // Show/hide based on match
           option.style.display = match ? '' : 'none';
         }
       });
@@ -1299,17 +1181,27 @@ class EnhancedFilterSystem {
    * @param {Object} dimension - Dimension configuration
    */
   selectAllInFilter(dimension) {
-    Object.values(this.filterMeta).forEach(dim => {
-      this.filterSelections[dim.id].clear();
-    });
-
-    this.applyAllFilters();
-
-    this.updateSimpleFiltersAfterApply(true);
-    this.updateHierarchicalFiltersAfterApply(true);
-
+    this.filterSelections[dimension.id].clear();
+    
+    if (dimension.hierarchical) {
+      const treeContainer = document.getElementById(`${dimension.id}TreeContainer`);
+      if (treeContainer) {
+        const checkboxes = treeContainer.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+          checkbox.checked = true;
+        });
+      }
+    } else {
+      const checkboxList = document.getElementById(`${dimension.id}CheckboxList`);
+      if (checkboxList) {
+        const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+          checkbox.checked = true;
+        });
+      }
+    }
+    
     this.updateSelectionCount(dimension);
-    this.updateSelectAllCheckbox(dimension);
   }
     
 
@@ -1319,14 +1211,12 @@ class EnhancedFilterSystem {
    */
   clearAllInFilter(dimension) {
     if (dimension.hierarchical) {
-      // For hierarchical filters, deselect all in the tree
       const treeContainer = document.getElementById(`${dimension.id}TreeContainer`);
       if (treeContainer) {
         const checkboxes = treeContainer.querySelectorAll('input[type="checkbox"]');
         checkboxes.forEach(checkbox => {
           checkbox.checked = false;
           
-          // Get node ID from checkbox ID
           const checkboxId = checkbox.id;
           if (checkboxId.startsWith(`${dimension.id}_node_`)) {
             const nodeId = checkboxId.replace(`${dimension.id}_node_`, '');
@@ -1335,7 +1225,6 @@ class EnhancedFilterSystem {
         });
       }
     } else {
-      // For simple filters, deselect all in the checkbox list
       const checkboxList = document.getElementById(`${dimension.id}CheckboxList`);
       if (checkboxList) {
         const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
@@ -1346,11 +1235,7 @@ class EnhancedFilterSystem {
       }
     }
     
-    // Update the selection count
     this.updateSelectionCount(dimension);
-    
-    // Update "Select All" checkbox
-    this.updateSelectAllCheckbox(dimension);
   }
   
 
@@ -1358,79 +1243,510 @@ class EnhancedFilterSystem {
    * Apply all filters to the data
    */
   applyAllFilters() {
-      console.log('⏳ Status: Applying all filters...');
-      console.time('ApplyFilters');
+    console.log('⏳ Status: Applying filters and fetching data...');
+    console.time('ApplyFiltersWithFetch');
+    
+    // Debug: Log current filter selections
+    console.log('🔍 Current filter selections:');
+    Object.values(this.filterMeta).forEach(dimension => {
+      const selections = this.filterSelections[dimension.id];
+      const selectionCount = selections ? selections.size : 0;
+      console.log(`  - ${dimension.label}: ${selectionCount} excluded items`);
+    });
+    
+    // Build filter parameters for database query
+    const filterParams = this.buildFilterParameters();
+    
+    // Check if we have any filters to apply
+    const hasFilters = Object.keys(filterParams).length > 0;
+    
+    if (!hasFilters) {
+      console.log('⏳ Status: No specific filters selected, checking if all are excluded...');
       
-      // Store original data reference
-      const originalData = this.state.factData;
-      this.perfTracking.recordsBeforeFilter = originalData.length;
-      
-      // Store original hierarchies if not already stored
-      this.initializeHierarchyFilters();
-
-      // Reset filtered data to original fact data (if we have trouble with loading change with [...this.state.filteredData])
-      this.state.filteredData = this.state.factData;
-      
-      // Track filter reductions for logging
-      const filterReductions = {};
-      
-      // Apply each filter in sequence
+      // Check if any dimension has all items excluded
+      let allExcluded = false;
       Object.values(this.filterMeta).forEach(dimension => {
-          const beforeCount = this.state.filteredData.length;
-          
-          // Skip if no selections (all selected)
-          if (this.filterSelections[dimension.id].size === 0) {
-              filterReductions[dimension.label] = 0;
-              return;
-          }
-          
-          // Apply filter to state.filteredData
-          if (dimension.hierarchical) {
-              // Apply hierarchical filter
-              this.state.filteredData = this.applyHierarchicalFilter(this.state.filteredData, dimension);
-          } else {
-              // Apply simple filter
-              this.state.filteredData = this.state.filteredData.filter(record => {
-                  const value = record[dimension.factField];
-                  return value !== undefined && !this.filterSelections[dimension.id].has(value);
-              });
-          }
-          
-          const afterCount = this.state.filteredData.length;
-          filterReductions[dimension.label] = beforeCount - afterCount;
+        const allValues = this.getAllValuesForDimension(dimension);
+        const excludedCount = this.filterSelections[dimension.id].size;
+        
+        if (excludedCount > 0 && excludedCount >= allValues.length) {
+          allExcluded = true;
+          console.log(`All items excluded for ${dimension.label}`);
+        }
       });
       
-      // Rebuild filtered hierarchies based on current filter selections
-      this.rebuildFilteredHierarchies();
-      // to filter the filters
-      this.updateSimpleFiltersAfterApply();
-      //to filter multi hierarchical filters 
-      this.updateHierarchicalFiltersAfterApply();
-      
-      // Store record counts for UI feedback
-      const filteredCount = this.state.filteredData ? this.state.filteredData.length : 0;
-      this.perfTracking.recordsAfterFilter = filteredCount;
-      
-      // Update UI
-      this.updateDataVolumeIndicator(originalData.length, filteredCount);
-      this.updateFilteredRecordsCount(filteredCount);
-      
-      // Log filter performance details
-      console.log(`✅ Status: Filtering complete: ${originalData.length} -> ${filteredCount} records (${((filteredCount / originalData.length) * 100).toFixed(2)}%)`);
-      console.log('✅ Status: Filter reductions:', filterReductions);
-      console.timeEnd('ApplyFilters');
-      
-      // Apply filtered data to pivot table generation
-      this.refreshPivotTable();
-      if (this.state.filteredData.length === 0) {
-        Object.values(this.filterMeta).forEach(dim => {
-          this.filterSelections[dim.id].clear();
-        });
-        this.state.filteredData = [...this.state.factData];
-        this.updateSimpleFiltersAfterApply(true);
-        this.updateHierarchicalFiltersAfterApply(true);
-        this.updateAllSelectionCounts();
+      if (allExcluded) {
+        this.handleEmptyFilterResult();
+        return;
+      } else {
+        // If no filters applied, show message but don't fetch data
+        this.updateDataVolumeIndicator(0, 0);
+        this.updateFilteredRecordsCount(0);
+        
+        const dataText = document.getElementById('dataVolumeText');
+        if (dataText) {
+          dataText.textContent = 'Select filter criteria and click Apply to load data';
+        }
+        return;
+      }
     }
+    
+    console.log('📊 Filter parameters for API:', filterParams);
+    
+    // Fetch fact data with filters applied at database level
+    this.fetchFilteredFactData(filterParams)
+      .then(factData => {
+        if (!factData || factData.length === 0) {
+          console.log('⚠️ No fact data returned for current filter selection');
+          this.handleEmptyFilterResult();
+          return;
+        }
+        
+        // Store the filtered fact data
+        this.state.factData = factData;
+        this.state.filteredData = factData;
+        this.state.factDataLoaded = true;
+        
+        console.log(`✅ Status: Retrieved ${factData.length} fact records matching filters`);
+        
+        // Update UI indicators
+        this.updateDataVolumeIndicator(factData.length, factData.length);
+        this.updateFilteredRecordsCount(factData.length);
+        
+        // Initialize mappings with the new fact data
+        if (window.App && window.App.data && window.App.data.initializeMappings) {
+          window.App.data.initializeMappings();
+        }
+        
+        // Refresh pivot table with new data
+        this.refreshPivotTable();
+        
+        console.timeEnd('ApplyFiltersWithFetch');
+      })
+      .catch(error => {
+        console.error('❌ Error fetching filtered fact data:', error);
+        this.handleFilterError(error);
+      });
+  }
+
+
+  /**
+   * PHASE 2 NEW: Build filter parameters for database query
+   * @returns {Object} - Filter parameters object for API call
+   */
+  buildFilterParameters() {
+    const filterParams = {};
+    
+    Object.values(this.filterMeta).forEach(dimension => {
+      const selections = this.filterSelections[dimension.id];
+      
+      // Skip if no selections (all items selected)
+      if (!selections || selections.size === 0) {
+        return;
+      }
+      
+      const fieldName = dimension.factField;
+      
+      if (!fieldName) {
+        console.warn(`⚠️ No factField defined for dimension: ${dimension.id}`);
+        return;
+      }
+      
+      // Get all available values for this dimension
+      const allValues = this.getAllValuesForDimension(dimension);
+      
+      // Calculate selected values (inverse of excluded values)
+      const selectedValues = allValues.filter(value => !selections.has(value));
+      
+      // Only add to filter params if we have some (but not all) values selected
+      if (selectedValues.length > 0 && selectedValues.length < allValues.length) {
+        filterParams[fieldName] = selectedValues;
+        console.log(`🔍 Filter parameter: ${fieldName} = [${selectedValues.length} values]`);
+      } else if (selectedValues.length === 0) {
+        console.log(`🔍 No values selected for ${dimension.label}, filter will return no results`);
+        // Return empty object to indicate no results should be returned
+        return {};
+      }
+    });
+    
+    return filterParams;
+  }
+
+
+  /**
+   * FIXED: Get ALL possible values for a dimension (for filter parameter building)
+   */
+  getAllValuesForDimension(dimension) {
+    const allValues = [];
+    
+    switch (dimension.id) {
+      case 'rootGmid':
+        if (this.state.dimensions.gmid_display) {
+          const uniqueValues = new Set();
+          this.state.dimensions.gmid_display.forEach(item => {
+            if (item.ROOT_GMID && !uniqueValues.has(item.ROOT_GMID)) {
+              uniqueValues.add(item.ROOT_GMID);
+              allValues.push(item.ROOT_GMID);
+            }
+          });
+        }
+        break;
+        
+      case 'smartcode':
+        if (this.state.dimensions.smartcode) {
+          const uniqueValues = new Set();
+          this.state.dimensions.smartcode.forEach(item => {
+            if (item.SMARTCODE && !uniqueValues.has(item.SMARTCODE)) {
+              uniqueValues.add(item.SMARTCODE);
+              allValues.push(item.SMARTCODE);
+            }
+          });
+        }
+        break;
+        
+      case 'businessYear':
+        if (this.state.dimensions.year) {
+          const uniqueValues = new Set();
+          this.state.dimensions.year.forEach(item => {
+            if (item.YEAR && !uniqueValues.has(item.YEAR)) {
+              uniqueValues.add(item.YEAR);
+              allValues.push(item.YEAR);
+            }
+          });
+        }
+        break;
+        
+      case 'itemCostType':
+        if (this.state.dimensions.item_cost_type) {
+          const uniqueValues = new Set();
+          this.state.dimensions.item_cost_type.forEach(item => {
+            if (item.ITEM_COST_TYPE && !uniqueValues.has(item.ITEM_COST_TYPE)) {
+              uniqueValues.add(item.ITEM_COST_TYPE);
+              allValues.push(item.ITEM_COST_TYPE);
+            }
+          });
+        }
+        break;
+        
+      case 'materialType':
+        if (this.state.dimensions.material_type) {
+          const uniqueValues = new Set();
+          this.state.dimensions.material_type.forEach(item => {
+            if (item.MATERIAL_TYPE && !uniqueValues.has(item.MATERIAL_TYPE)) {
+              uniqueValues.add(item.MATERIAL_TYPE);
+              allValues.push(item.MATERIAL_TYPE);
+            }
+          });
+        }
+        break;
+        
+      // For hierarchical dimensions, collect all factIds
+      case 'legalEntity':
+        if (this.state.hierarchies.le) {
+          allValues.push(...this.collectAllFactIdsFromHierarchy(this.state.hierarchies.le));
+        }
+        break;
+        
+      case 'costElement':
+        if (this.state.hierarchies.cost_element) {
+          allValues.push(...this.collectAllFactIdsFromHierarchy(this.state.hierarchies.cost_element));
+        }
+        break;
+        
+      case 'managementCentre':
+        if (this.state.hierarchies.mc) {
+          allValues.push(...this.collectAllFactIdsFromHierarchy(this.state.hierarchies.mc));
+        }
+        break;
+        
+      default:
+        console.warn(`No implementation for getAllValuesForDimension: ${dimension.id}`);
+        break;
+    }
+    
+    return allValues;
+  }
+
+
+  /**
+   * Collect all factIds from a hierarchy
+   */
+  collectAllFactIdsFromHierarchy(hierarchy) {
+    const factIds = new Set();
+    
+    const traverseNode = (node) => {
+      if (node.factId) {
+        if (Array.isArray(node.factId)) {
+          node.factId.forEach(id => factIds.add(id));
+        } else {
+          factIds.add(node.factId);
+        }
+      }
+      
+      if (node.children && node.children.length > 0) {
+        node.children.forEach(childId => {
+          const childNode = typeof childId === 'string' ? 
+            hierarchy.nodesMap[childId] : childId;
+          if (childNode) {
+            traverseNode(childNode);
+          }
+        });
+      }
+    };
+    
+    if (hierarchy.root) {
+      traverseNode(hierarchy.root);
+    }
+    
+    return Array.from(factIds).filter(id => id !== null && id !== undefined);
+  }
+
+
+
+  /**
+   * PHASE 2 NEW: Fetch filtered fact data from database
+   * @param {Object} filterParams - Filter parameters for the query
+   * @returns {Promise<Array>} - Promise resolving to filtered fact data
+   */
+  async fetchFilteredFactData(filterParams) {
+    const API_BASE_URL = 'http://localhost:3000/api';
+    
+    try {
+      const queryParams = new URLSearchParams();
+      
+      Object.entries(filterParams).forEach(([field, values]) => {
+        queryParams.append(field, values.join(','));
+      });
+      
+      const url = `${API_BASE_URL}/data/FACT_BOM/filtered?${queryParams.toString()}`;
+      console.log(`⏳ Status: Fetching filtered fact data from: ${url}`);
+      
+      const response = await fetch(url, {
+        headers: { 'Accept': 'application/x-ndjson' }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API returned ${response.status}: ${response.statusText}`);
+      }
+
+      // Parse NDJSON response
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      const rows = [];
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+
+        lines.forEach(line => {
+          if (line.trim()) {
+            try {
+              rows.push(JSON.parse(line));
+            } catch (e) {
+              console.warn('Invalid JSON line:', e);
+            }
+          }
+        });
+      }
+
+      if (buffer.trim()) {
+        try {
+          rows.push(JSON.parse(buffer));
+        } catch (e) {
+          console.warn('Invalid final JSON line:', e);
+        }
+      }
+
+      // Filter out rows with no meaningful measure values
+      const filteredRows = rows.filter(row => {
+        const hasValidCost = row.COST_UNIT !== null && row.COST_UNIT !== undefined && row.COST_UNIT !== 0;
+        const hasValidQty = row.QTY_UNIT !== null && row.QTY_UNIT !== undefined && row.QTY_UNIT !== 0;
+        return hasValidCost || hasValidQty;
+      });
+
+      console.log(`✅ Status: Retrieved ${filteredRows.length} valid fact records`);
+      
+      return filteredRows;
+      
+    } catch (error) {
+      console.error('❌ Error fetching filtered fact data:', error);
+      throw error;
+    }
+  }
+
+
+  /**
+   * PHASE 2 NEW: Optimize dimensions based on filtered fact data
+   * @param {Array} factData - The filtered fact data
+   */
+  optimizeDimensionsWithFactData(factData) {
+      console.log("⏳ Status: Optimizing dimensions based on filtered fact data...");
+      
+      // Extract unique dimension keys from fact data
+      const dimensionKeys = {};
+      
+      Object.keys(this.state.dimensions).forEach(dimKey => {
+          const factIdField = this.getFactIdFieldForDimension(dimKey);
+          
+          if (factIdField) {
+              const uniqueValues = new Set();
+              factData.forEach(row => {
+                  if (row[factIdField] !== null && row[factIdField] !== undefined && row[factIdField] !== '') {
+                      uniqueValues.add(row[factIdField]);
+                  }
+              });
+              dimensionKeys[dimKey] = uniqueValues;
+              console.log(`✅ Status: Found ${uniqueValues.size} unique ${dimKey} keys in filtered fact data`);
+          }
+      });
+      
+      // Filter each dimension to only include records referenced in fact data
+      Object.keys(this.state.dimensions).forEach(dimKey => {
+          const originalData = this.state.dimensions[dimKey];
+          const originalCount = originalData.length;
+          
+          if (dimensionKeys[dimKey] && dimensionKeys[dimKey].size > 0) {
+              const dimIdField = this.getDimensionIdFieldForDimension(dimKey);
+              
+              if (dimIdField) {
+                  const filteredData = originalData.filter(row => 
+                      dimensionKeys[dimKey].has(row[dimIdField])
+                  );
+                  
+                  // Store both original and filtered for potential restoration
+                  if (!this.state._originalDimensions) {
+                      this.state._originalDimensions = {};
+                  }
+                  if (!this.state._originalDimensions[dimKey]) {
+                      this.state._originalDimensions[dimKey] = [...originalData];
+                  }
+                  
+                  this.state.dimensions[dimKey] = filteredData;
+                  
+                  const reduction = originalCount - filteredData.length;
+                  console.log(`✅ Status: Optimized ${dimKey}: ${originalCount} → ${filteredData.length} rows (${reduction} reduced)`);
+              }
+          }
+      });
+  }
+
+
+  /**
+   * PHASE 2 NEW: Rebuild hierarchies with filtered fact data
+   * @param {Array} factData - The filtered fact data
+   */
+  rebuildHierarchiesWithFactData(factData) {
+      console.log("⏳ Status: Rebuilding hierarchies with filtered fact data...");
+      
+      try {
+          // Use the existing hierarchy building function
+          if (window.App && window.App.data && window.App.data.processDimensionHierarchies) {
+              const hierarchies = window.App.data.processDimensionHierarchies(this.state.dimensions, factData);
+              this.state.hierarchies = hierarchies || {};
+              console.log("✅ Status: Hierarchies rebuilt with filtered data:", Object.keys(this.state.hierarchies));
+          }
+      } catch (error) {
+          console.error("❌ Error rebuilding hierarchies:", error);
+      }
+  }
+
+
+  /**
+   * PHASE 2 NEW: Handle empty filter results
+   */
+  handleEmptyFilterResult() {
+    this.updateDataVolumeIndicator(0, 0);
+    this.updateFilteredRecordsCount(0);
+    
+    const pivotTableBody = document.getElementById('pivotTableBody');
+    if (pivotTableBody) {
+      pivotTableBody.innerHTML = '<tr><td colspan="100%" style="text-align: center; padding: 20px; color: #666;">No data matches the selected filters. Try adjusting your filter criteria.</td></tr>';
+    }
+    
+    const dataText = document.getElementById('dataVolumeText');
+    if (dataText) {
+      dataText.textContent = 'No data matches current filter selection';
+    }
+    
+    console.log("⚠️ No data returned for current filter selection");
+  }
+
+
+  /**
+   * PHASE 2 NEW: Handle filter errors
+   * @param {Error} error - The error that occurred
+   */
+  handleFilterError(error) {
+    console.error('❌ Filter application failed:', error);
+    
+    this.updateDataVolumeIndicator(0, 0);
+    this.updateFilteredRecordsCount(0);
+    
+    const pivotTableBody = document.getElementById('pivotTableBody');
+    if (pivotTableBody) {
+      pivotTableBody.innerHTML = `<tr><td colspan="100%" style="text-align: center; padding: 20px; color: #dc3545;">Error loading data: ${error.message}</td></tr>`;
+    }
+    
+    const dataText = document.getElementById('dataVolumeText');
+    if (dataText) {
+      dataText.textContent = `Error: ${error.message}`;
+    }
+  }
+
+
+
+  /**
+   * PHASE 2 NEW: Get fact ID field for a dimension
+   * @param {string} dimKey - Dimension key
+   * @returns {string|null} - Fact table field name
+   */
+  getFactIdFieldForDimension(dimKey) {
+    // Find the filter meta entry for this dimension
+    const dimension = Object.values(this.filterMeta).find(d => d.dimensionKey === dimKey);
+    
+    if (dimension && dimension.factField) {
+        return dimension.factField;
+    }
+    
+    // Fallback mapping if not found in filterMeta
+    const fallbackMapping = {
+        'le': 'LE',
+        'cost_element': 'COST_ELEMENT',
+        'gmid_display': 'COMPONENT_GMID',
+        'smartcode': 'ROOT_SMARTCODE',
+        'item_cost_type': 'ITEM_COST_TYPE',
+        'material_type': 'COMPONENT_MATERIAL_TYPE',
+        'mc': 'MC',
+        'year': 'ZYEAR'
+    };
+    
+    return fallbackMapping[dimKey.toLowerCase()] || null;
+}
+
+
+  /**
+   * PHASE 2 NEW: Get dimension ID field for a dimension
+   * @param {string} dimKey - Dimension key
+   * @returns {string|null} - Dimension table field name
+   */
+  getDimensionIdFieldForDimension(dimKey) {
+      const mapping = {
+          'le': 'LE',
+          'cost_element': 'COST_ELEMENT',
+          'gmid_display': 'COMPONENT_GMID',
+          'smartcode': 'SMARTCODE',
+          'item_cost_type': 'ITEM_COST_TYPE',
+          'material_type': 'MATERIAL_TYPE',
+          'mc': 'MC',
+          'year': 'YEAR'
+      };
+      
+      return mapping[dimKey.toLowerCase()] || null;
   }
 
 
@@ -1470,13 +1786,13 @@ class EnhancedFilterSystem {
           });
       }
       
-      console.log(`✅ Status: Found ${allRootGmids.length} total ROOT_GMIDs`);
+      // console.log(`✅ Status: Found ${allRootGmids.length} total ROOT_GMIDs`);
       
       // Check if ALL items are selected (no exclusions)
       const allItemsSelected = !rootGmidFilter || rootGmidFilter.size === 0;
       
       if (allItemsSelected) {
-          console.log("✅ Status: ALL ROOT_GMIDs selected - restoring/rebuilding complete hierarchy");
+          // console.log("✅ Status: ALL ROOT_GMIDs selected - restoring/rebuilding complete hierarchy");
           
           // Always rebuild from original data when all are selected to ensure proper structure
           const originalDimData = this.state.dimensions?.gmid_display;
@@ -1837,7 +2153,7 @@ class EnhancedFilterSystem {
                                 selectedRootGmids.length > 0;
       
       if (applyRootGmidFilter) {
-          console.log(`✅ Status: Filtering GMID hierarchy to include only ${selectedRootGmids.length} selected ROOT_GMIDs`);
+          // console.log(`✅ Status: Filtering GMID hierarchy to include only ${selectedRootGmids.length} selected ROOT_GMIDs`);
           data = data.filter(item => item.ROOT_GMID && selectedRootGmids.includes(item.ROOT_GMID));
           console.log(`✅ Status: Filtered to ${data.length} GMID dimension records`);
       }
@@ -2716,11 +3032,11 @@ class EnhancedFilterSystem {
     });
     
     // Log stats
-    console.log(`PATH hierarchy processing stats for ${root.hierarchyName}:`);
-    console.log(`- Total records processed: ${data.length}`);
-    console.log(`- Empty paths skipped: ${emptyPathCount}`);
-    console.log(`- Invalid paths skipped: ${invalidPathCount}`);
-    console.log(`- Nodes created: ${Object.keys(nodesMap).length - 1}`); // -1 for root
+    // console.log(`PATH hierarchy processing stats for ${root.hierarchyName}:`);
+    // console.log(`- Total records processed: ${data.length}`);
+    // console.log(`- Empty paths skipped: ${emptyPathCount}`);
+    // console.log(`- Invalid paths skipped: ${invalidPathCount}`);
+    // console.log(`- Nodes created: ${Object.keys(nodesMap).length - 1}`); // -1 for root
     
     // Recursively sort nodes at each level
     const sortNodes = (node) => {
@@ -2783,7 +3099,7 @@ class EnhancedFilterSystem {
       try {
         // Extract unique PATH values for analysis
         const paths = data.filter(item => item.PATH).map(item => item.PATH);
-        console.log(`✅ Status: Found ${paths.length} unique PATH values for Legal Entities`);
+        // console.log(`✅ Status: Found ${paths.length} unique PATH values for Legal Entities`);
         
         // Get common delimiter (should be '//')
         const pathSeparator = '//';
@@ -2851,7 +3167,7 @@ class EnhancedFilterSystem {
       try {
         // Extract unique PATH values for analysis
         const paths = data.filter(item => item.PATH).map(item => item.PATH);
-        console.log(`✅ Status: Found ${paths.length} unique PATH values for Cost Elements`);
+        // console.log(`✅ Status: Found ${paths.length} unique PATH values for Cost Elements`);
         
         // Get common delimiter (should be '//')
         // Use // as the default path separator as specified
@@ -3222,25 +3538,25 @@ class EnhancedFilterSystem {
     const dataText = document.getElementById('dataVolumeText');
     
     if (progressBar && dataText) {
-      // Calculate percentage
       const percentage = totalCount > 0 ? (filteredCount / totalCount) * 100 : 0;
       
-      // Update progress bar
       progressBar.style.width = `${percentage}%`;
       
-      // Update color based on percentage
       if (percentage < 10) {
-        progressBar.style.backgroundColor = '#ef4444'; // Red for very small subset
+        progressBar.style.backgroundColor = '#ef4444';
       } else if (percentage < 30) {
-        progressBar.style.backgroundColor = '#f59e0b'; // Orange for small subset
+        progressBar.style.backgroundColor = '#f59e0b';
       } else if (percentage < 60) {
-        progressBar.style.backgroundColor = '#10b981'; // Green for medium subset
+        progressBar.style.backgroundColor = '#10b981';
       } else {
-        progressBar.style.backgroundColor = '#2563eb'; // Blue for large subset
+        progressBar.style.backgroundColor = '#2563eb';
       }
       
-      // Update text
-      dataText.innerHTML = `${this.formatNumber(filteredCount)} of ${this.formatNumber(totalCount)} records (${percentage.toFixed(1)}%)`;
+      if (filteredCount > 0) {
+        dataText.innerHTML = `${this.formatNumber(filteredCount)} records loaded`;
+      } else {
+        dataText.innerHTML = 'No data loaded';
+      }
     }
   }
 
@@ -3273,7 +3589,6 @@ class EnhancedFilterSystem {
   refreshPivotTable() {
     console.log('⏳ Status: Refreshing pivot table with filtered data...');
     
-    // Check if we have a pivot table generation function
     if (window.App && window.App.pivotTable && window.App.pivotTable.generatePivotTable) {
       window.App.pivotTable.generatePivotTable();
       console.log('✅ Status: Pivot table refreshed');
@@ -3416,6 +3731,7 @@ function attemptInitialization() {
     enhancedFilterSystem.initialize();
     return true;
   }
+
   
   // If we've tried too many times, stop trying
   if (initAttempts >= maxInitAttempts) {
@@ -3423,9 +3739,6 @@ function attemptInitialization() {
     return false;
   }
   
-  // Try again in 1 second
-  console.log(`⏳ Status: Waiting for BOM data to be available... (attempt ${initAttempts})`);
-  setTimeout(attemptInitialization, 1000);
   return false;
 }
 

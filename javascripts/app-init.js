@@ -13,6 +13,7 @@ import { initializeFilterSystem } from './pivot-filtering-system.js';
 
 let isConnectingToDatabase = false; // Flag global
 
+
 /**
  * This function initializes the application. It is called when the DOM is loaded
  */
@@ -40,7 +41,6 @@ function initializeApp() {
     // STEP 4: Now we can initialize expanded nodes & filter system
     try{
         core.initializeExpandedNodes();
-        // filters.initializeFilterSystem();
        
     } catch (expandError)
     {
@@ -67,7 +67,6 @@ function initializeApp() {
         state: state,
         core: core,
         data: data,
-        // filters: filters,
         ui: ui,
         pivotTable: pivotTable,
         
@@ -80,14 +79,16 @@ function initializeApp() {
     // Initialize UI
     ui.initDragAndDrop();
 
-    // Initialize filtering system
-    initializeFilterSystem();    
-
     // Set up database connection
     setupDatabaseConnection(elements);
 
-    // Fetch records from the database
-    loadDataFromDatabase(elements);    
+    // PHASE 1 CHANGE: Load only dimension data instead of all data
+    loadDimensionDataFromDatabase(elements);
+
+    // Initialize filtering system after dimension data is loaded
+    setTimeout(() => {
+        initializeFilterSystem();
+    }, 1500);    
 
     // Add console listener for row count updates
     ui.setupRowCountUpdates();
@@ -112,8 +113,15 @@ function initializeApp() {
                 
                 // If switching to pivot tab, update the pivot table
                 if (tabName === 'pivot') {
-                    // The wrapped function will automatically get the elements
-                    pivotTable.generatePivotTable();
+                    // ENHANCEMENT: Ensure hierarchy state is preserved when switching tabs
+                    setTimeout(() => {
+                        if (window.App && window.App.pivotTable) {
+                            // Only regenerate if we have data
+                            if (window.App.state.factData && window.App.state.factData.length > 0) {
+                                window.App.pivotTable.generatePivotTable();
+                            }
+                        }
+                    }, 100); // Small delay to ensure tab switch is complete
                 }
             });
         });
@@ -143,12 +151,54 @@ function initializeApp() {
             state.filteredData = filteredData;
         }
         
-        // Refresh the pivot table
+        // Refresh the pivot table (this will respect current hierarchy expansion states)
         if (pivotTable && pivotTable.generatePivotTable) {
             pivotTable.generatePivotTable(elements);
         }
         
         console.log("✅ Status: Pivot table refreshed");
+    };
+
+    // 4. Add a new function to reset hierarchies to collapsed state:
+    window.resetHierarchyToCollapsed = function() {
+        if (window.App && window.App.pivotTable) {
+            console.log("🔒 Resetting all hierarchies to collapsed state...");
+            window.App.pivotTable.initializeHierarchyCollapsedState();
+            window.App.pivotTable.generatePivotTable();
+            console.log("✅ Status: Hierarchies reset to collapsed state");
+        }
+    };
+
+    // 5. Add debugging function for hierarchy state:
+    window.debugHierarchyState = function(dimensionName) {
+        const state = window.App?.state || window.appState;
+        if (!state) {
+            console.log("❌ No state available");
+            return;
+        }
+        
+        console.log(`=== HIERARCHY DEBUG: ${dimensionName || 'ALL'} ===`);
+        
+        if (dimensionName) {
+            // Debug specific dimension
+            const hierarchy = state.hierarchies?.[dimensionName];
+            if (hierarchy && hierarchy.nodesMap) {
+                Object.entries(hierarchy.nodesMap).forEach(([nodeId, node]) => {
+                    const expandedState = state.expandedNodes?.[dimensionName]?.row?.[nodeId];
+                    console.log(`Node: ${nodeId} (${node.label}) - Expanded: ${expandedState}, HasChildren: ${!!(node.children && node.children.length > 0)}`);
+                });
+            }
+        } else {
+            // Debug all dimensions
+            const rowFields = state.rowFields || [];
+            rowFields.forEach(field => {
+                const dimName = field.replace('DIM_', '').toLowerCase();
+                console.log(`\n--- ${dimName.toUpperCase()} ---`);
+                window.debugHierarchyState(dimName);
+            });
+        }
+        
+        console.log(`=== END DEBUG ===`);
     };
 
     // STEP 10: For data refresh:
@@ -157,12 +207,12 @@ function initializeApp() {
         refreshButton.addEventListener('click', window.refreshPivotTable);
     }
     
-
     // STEP 11: Add handler for load data button
     const loadDataBtn = document.getElementById('loadDataBtn');
     if (loadDataBtn) {
         loadDataBtn.addEventListener('click', function() {
-            loadDataFromDatabase(elements);
+            // PHASE 1 CHANGE: Load fact data on demand
+            loadFactDataFromDatabase(elements);
         });
     }    
     
@@ -247,15 +297,81 @@ function setupDatabaseConnection(elements) {
 
 
 /**
+ * PHASE 1 CHANGE: Load only dimension data from the database
+ * @param {Object} elements - DOM elements
+ */
+function loadDimensionDataFromDatabase(elements) {
+    console.log("✅ Status: Starting dimension data loading from Snowflake database");
+    
+    // Load only the dimension data
+    data.ingestDimensionData(elements);
+    
+    console.log("✅ Status: Snowflake dimension data loading completed successfully");
+    
+    // CRITICAL: Initialize hierarchy collapsed state AFTER dimension data is loaded
+    // setTimeout(() => {
+    //     if (window.App && window.App.pivotTable && window.App.state.hierarchies) {
+    //         console.log("🔒 Initializing hierarchy collapsed state after dimension data load...");
+    //         window.App.pivotTable.initializeHierarchyCollapsedState();
+    //     }
+    // }, 1000); // Wait 1 second for data processing to complete
+    
+    console.log('✅ Status: Ready for fact data loading and pivot table operations.');
+}
+
+
+/**
+ * PHASE 1 ADDITION: Load fact data on demand
+ * @param {Object} elements - DOM elements
+ */
+function loadFactDataFromDatabase(elements) {
+    console.log("✅ Status: Starting fact data loading from Snowflake database");
+    
+    // Load the fact data
+    data.ingestFactData(elements);
+    
+    console.log("✅ Status: Snowflake fact data loading completed successfully");
+    
+    // Generate initial pivot table after fact data is loaded
+    setTimeout(() => {
+        if (window.App && window.App.pivotTable && window.App.state.factData && window.App.state.factData.length > 0) {
+            console.log("📊 Generating initial pivot table with fact data...");
+            
+            if (window.App.pivotTable.generatePivotTable) {
+                window.App.pivotTable.generatePivotTable();
+            }
+        }
+    }, 500); // Wait 0.5 seconds for data processing to complete
+}
+
+
+/**
  * Load data from the database
  * @param {Object} elements - DOM elements
  */
-function loadDataFromDatabase(elements) {
-    console.log("✅ Status: Starting data loading from Snowflake database");
-    data.ingestData(elements);
-    console.log("✅ Status: Snowflake data loading completed successfully");
-    console.log('✅ Status: Drag and drop tasks can start.');
-}
+// function loadDataFromDatabase(elements) {
+//     console.log("✅ Status: Starting data loading from Snowflake database");
+    
+//     // Load the data first
+//     data.ingestData(elements);
+    
+//     console.log("✅ Status: Snowflake data loading completed successfully");
+    
+//     // CRITICAL: Initialize hierarchy collapsed state AFTER data is loaded
+//     // setTimeout(() => {
+//     //     if (window.App && window.App.pivotTable && window.App.state.factData && window.App.state.factData.length > 0) {
+//     //         console.log("🔒 Initializing hierarchy collapsed state after data load...");
+//     //         window.App.pivotTable.initializeHierarchyCollapsedState();
+            
+//     //         // Generate initial pivot table with collapsed hierarchies
+//     //         if (window.App.pivotTable.generatePivotTable) {
+//     //             window.App.pivotTable.generatePivotTable();
+//     //         }
+//     //     }
+//     // }, 1000); // Wait 1 second for data processing to complete
+    
+//     console.log('✅ Status: Drag and drop tasks can start.');
+// }
 
 
 /**
@@ -272,6 +388,7 @@ function reconnectToDatabase(elements) {
     // Call setup again
     setupDatabaseConnection(elements);
 }
+
 
 
 /**

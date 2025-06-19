@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="./styles/filter-styles.css">
 
     <link rel="stylesheet" href="./styles/pivotTable.css">
+    <!-- <link rel="stylesheet" href="./styles/demo.css"> -->
     <link rel="stylesheet" href="./styles/pivot-table-animations.css">
 
     <script src="./javascripts/pivotTableUtils.js"></script>
@@ -394,9 +395,9 @@
                         <label for="valueFormat">Format:</label>
                         <select id="valueFormat" class="form-select">
                             <option value="regular">Regular</option>
-                            <option value="thousands">Thousands (K)</option>
-                            <option value="millions">Millions (M)</option>
-                            <option value="percentage">Percentage (%)</option>
+                            <option value="thousands">Thousands (k)</option>
+                            <option value="millions">Millions (m)</option>
+                            <option value="billions">Billions (b)</option>
                         </select>
                     </div>
                     <div class="control-group">
@@ -407,6 +408,10 @@
                             <option value="2" selected>2</option>
                             <option value="3">3</option>
                             <option value="4">4</option>
+                            <option value="5">5</option>
+                            <option value="6">6</option>
+                            <option value="7">7</option>
+                            <option value="8">8</option>
                         </select>
                     </div>
                     <div class="control-group">
@@ -419,7 +424,7 @@
                     </div>
                 </div>
                 
-                <div id="pivotTableContainer" class="pivot-table-container">
+                <div id="pivotTableContainer" class="pivot-table-container stacked-columns">
                     <table id="pivotTable" class="table-modern">
                         <thead id="pivotTableHeader"></thead>
                         <tbody id="pivotTableBody"></tbody>

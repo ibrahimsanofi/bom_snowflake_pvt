@@ -1,9 +1,11 @@
 /* ===========================================
-   Enhanced Pivot Table CSS - Clean Version
+   Enhanced Pivot Table CSS - Complete Updated Version
    Features:
    - Dynamic hierarchical indentation UP TO 30 LEVELS
    - Auto-fit column headers
    - Scrollable table with sticky headers
+   - Stacked column headers for cross-tabulation
+   - Enhanced corner cell styling
    - Responsive design
    =========================================== */
 
@@ -64,7 +66,6 @@ table {
     background-color: white;
     width: auto !important;
     table-layout: auto !important; /* Changed from fixed to auto for flexible widths */
-    
 }
 
 /* Clean table layout */
@@ -104,7 +105,7 @@ table td:first-child {
     max-width: 100% !important;
 }
 
-/* ---------- 4. STICKY HEADERS ---------- */
+/* ---------- 5. STICKY HEADERS ---------- */
 thead th {
     position: sticky;
     top: 0;
@@ -149,16 +150,18 @@ tbody td {
     border: 1px solid var(--border-light) !important;
 }
 
-/* Corner cell - always sticky */
+/* ---------- 6. ENHANCED CORNER CELL ---------- */
 .corner-cell {
     position: sticky;
     left: 0;
     top: 0;
     z-index: 50;
-    background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%);
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%) !important;
     font-weight: 700;
-    color: var(--dimension-text);
+    color: #15803d !important;
     text-align: center !important;
+    border: 1px solid #22c55e !important;
+    box-shadow: 0 2px 4px rgba(34, 197, 94, 0.3);
     /* Width will be inherited from first column rules above */
 }
 
@@ -191,6 +194,57 @@ tbody td {
     border-spacing: 0 !important;
 }
 
+/* ---------- 7. STACKED COLUMN HEADERS ---------- */
+/* Stacked column header rows */
+.stacked-column-header {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border: 1px solid #d97706;
+    color: #92400e;
+    font-weight: 600;
+    text-align: center;
+}
+
+/* Column dimension headers */
+.column-dimension-header {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    border: 1px solid #3b82f6;
+    color: #1e40af;
+    font-weight: 700;
+    text-align: center;
+}
+
+/* Multi-level column header alignment */
+thead tr:nth-child(1) th {
+    /* Top level - measures header */
+    vertical-align: middle;
+    text-align: center;
+}
+
+thead tr:nth-child(2) th {
+    /* Second level - value field headers */
+    vertical-align: middle;
+    text-align: center;
+}
+
+thead tr:nth-child(n+3) th {
+    /* Third level and below - dimension headers */
+    vertical-align: middle;
+    text-align: center;
+    position: relative;
+}
+
+/* Ensure proper spacing for stacked headers */
+.stacked-headers table {
+    table-layout: auto;
+}
+
+.stacked-headers thead th {
+    min-width: 80px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 /* Column headers - auto-fit width */
 .column-header,
 .dimension-header {
@@ -202,7 +256,7 @@ tbody td {
     padding: 6px 8px;
 }
 
-/* ---------- 5. ROW DIMENSION CELLS ---------- */
+/* ---------- 8. ROW DIMENSION CELLS ---------- */
 .hierarchy-cell,
 .row-dimension-cell {
     position: sticky;
@@ -238,8 +292,7 @@ tr:nth-child(odd) .row-dimension-cell {
     background-color: rgba(37, 99, 235, 0.05) !important;
 }
 
-
-/* ---------- 6. DYNAMIC HIERARCHICAL INDENTATION UP TO 30 LEVELS ---------- */
+/* ---------- 9. DYNAMIC HIERARCHICAL INDENTATION UP TO 30 LEVELS ---------- */
 /* Base styles for expand/collapse controls and labels */
 .expand-collapse,
 .leaf-node {
@@ -274,210 +327,210 @@ tr:nth-child(odd) .row-dimension-cell {
 }
 
 [data-level="1"] {
-    --indent: 24px;
+    --indent: 34px;
     --font-weight: 600;
     --font-size: 0.85rem;
     --text-color: var(--primary);
 }
 
 [data-level="2"] {
-    --indent: 44px;
+    --indent: 64px;
     --font-weight: 500;
     --font-size: 0.8rem;
     --text-color: var(--text);
 }
 
 [data-level="3"] {
-    --indent: 64px;
+    --indent: 94px;
     --font-weight: 400;
     --font-size: 0.8rem;
     --text-color: var(--text-light);
 }
 
 [data-level="4"] {
-    --indent: 84px;
-    --font-weight: 400;
-    --font-size: 0.75rem;
-    --text-color: var(--text-light);
-}
-
-[data-level="5"] {
-    --indent: 104px;
-    --font-weight: 400;
-    --font-size: 0.75rem;
-    --text-color: var(--text-light);
-}
-
-[data-level="6"] {
     --indent: 124px;
     --font-weight: 400;
     --font-size: 0.75rem;
     --text-color: var(--text-light);
 }
 
-[data-level="7"] {
-    --indent: 144px;
+[data-level="5"] {
+    --indent: 154px;
     --font-weight: 400;
     --font-size: 0.75rem;
     --text-color: var(--text-light);
 }
 
-[data-level="8"] {
-    --indent: 164px;
-    --font-weight: 400;
-    --font-size: 0.75rem;
-    --text-color: var(--text-light);
-}
-
-[data-level="9"] {
+[data-level="6"] {
     --indent: 184px;
     --font-weight: 400;
     --font-size: 0.75rem;
     --text-color: var(--text-light);
 }
 
-[data-level="10"] {
-    --indent: 204px;
+[data-level="7"] {
+    --indent: 214px;
     --font-weight: 400;
     --font-size: 0.75rem;
     --text-color: var(--text-light);
 }
 
-[data-level="11"] {
-    --indent: 224px;
-    --font-weight: 400;
-    --font-size: 0.75rem;
-    --text-color: var(--text-light);
-}
-
-[data-level="12"] {
+[data-level="8"] {
     --indent: 244px;
     --font-weight: 400;
     --font-size: 0.75rem;
     --text-color: var(--text-light);
 }
 
-[data-level="13"] {
-    --indent: 264px;
+[data-level="9"] {
+    --indent: 274px;
     --font-weight: 400;
     --font-size: 0.75rem;
     --text-color: var(--text-light);
 }
 
-[data-level="14"] {
-    --indent: 284px;
-    --font-weight: 400;
-    --font-size: 0.75rem;
-    --text-color: var(--text-light);
-}
-
-[data-level="15"] {
+[data-level="10"] {
     --indent: 304px;
     --font-weight: 400;
     --font-size: 0.75rem;
     --text-color: var(--text-light);
 }
 
-[data-level="16"] {
-    --indent: 324px;
+[data-level="11"] {
+    --indent: 334px;
     --font-weight: 400;
     --font-size: 0.75rem;
     --text-color: var(--text-light);
 }
 
-[data-level="17"] {
-    --indent: 344px;
-    --font-weight: 400;
-    --font-size: 0.75rem;
-    --text-color: var(--text-light);
-}
-
-[data-level="18"] {
+[data-level="12"] {
     --indent: 364px;
     --font-weight: 400;
     --font-size: 0.75rem;
     --text-color: var(--text-light);
 }
 
-[data-level="19"] {
-    --indent: 384px;
+[data-level="13"] {
+    --indent: 394px;
     --font-weight: 400;
     --font-size: 0.75rem;
     --text-color: var(--text-light);
 }
 
-[data-level="20"] {
-    --indent: 404px;
-    --font-weight: 400;
-    --font-size: 0.75rem;
-    --text-color: var(--text-light);
-}
-
-[data-level="21"] {
+[data-level="14"] {
     --indent: 424px;
     --font-weight: 400;
     --font-size: 0.75rem;
     --text-color: var(--text-light);
 }
 
-[data-level="22"] {
-    --indent: 444px;
+[data-level="15"] {
+    --indent: 454px;
     --font-weight: 400;
     --font-size: 0.75rem;
     --text-color: var(--text-light);
 }
 
-[data-level="23"] {
-    --indent: 464px;
-    --font-weight: 400;
-    --font-size: 0.75rem;
-    --text-color: var(--text-light);
-}
-
-[data-level="24"] {
+[data-level="16"] {
     --indent: 484px;
     --font-weight: 400;
     --font-size: 0.75rem;
     --text-color: var(--text-light);
 }
 
-[data-level="25"] {
-    --indent: 504px;
+[data-level="17"] {
+    --indent: 514px;
     --font-weight: 400;
     --font-size: 0.75rem;
     --text-color: var(--text-light);
 }
 
-[data-level="26"] {
-    --indent: 524px;
-    --font-weight: 400;
-    --font-size: 0.75rem;
-    --text-color: var(--text-light);
-}
-
-[data-level="27"] {
+[data-level="18"] {
     --indent: 544px;
     --font-weight: 400;
     --font-size: 0.75rem;
     --text-color: var(--text-light);
 }
 
+[data-level="19"] {
+    --indent: 574px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
+}
+
+[data-level="20"] {
+    --indent: 604px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
+}
+
+[data-level="21"] {
+    --indent: 634px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
+}
+
+[data-level="22"] {
+    --indent: 664px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
+}
+
+[data-level="23"] {
+    --indent: 694px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
+}
+
+[data-level="24"] {
+    --indent: 724px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
+}
+
+[data-level="25"] {
+    --indent: 754px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
+}
+
+[data-level="26"] {
+    --indent: 784px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
+}
+
+[data-level="27"] {
+    --indent: 814px;
+    --font-weight: 400;
+    --font-size: 0.75rem;
+    --text-color: var(--text-light);
+}
+
 [data-level="28"] {
-    --indent: 564px;
+    --indent: 844px;
     --font-weight: 400;
     --font-size: 0.75rem;
     --text-color: var(--text-light);
 }
 
 [data-level="29"] {
-    --indent: 584px;
+    --indent: 874px;
     --font-weight: 400;
     --font-size: 0.75rem;
     --text-color: var(--text-light);
 }
 
 [data-level="30"] {
-    --indent: 604px;
+    --indent: 904px;
     --font-weight: 400;
     --font-size: 0.75rem;
     --text-color: var(--text-light);
@@ -485,36 +538,36 @@ tr:nth-child(odd) .row-dimension-cell {
 
 /* Apply dynamic indentation - FIXED to use padding-left instead of margin-left */
 [data-level="0"] { padding-left: 4px !important; }
-[data-level="1"] { padding-left: 24px !important; }
-[data-level="2"] { padding-left: 44px !important; }
-[data-level="3"] { padding-left: 64px !important; }
-[data-level="4"] { padding-left: 84px !important; }
-[data-level="5"] { padding-left: 104px !important; }
-[data-level="6"] { padding-left: 124px !important; }
-[data-level="7"] { padding-left: 144px !important; }
-[data-level="8"] { padding-left: 164px !important; }
-[data-level="9"] { padding-left: 184px !important; }
-[data-level="10"] { padding-left: 204px !important; }
-[data-level="11"] { padding-left: 224px !important; }
-[data-level="12"] { padding-left: 244px !important; }
-[data-level="13"] { padding-left: 264px !important; }
-[data-level="14"] { padding-left: 284px !important; }
-[data-level="15"] { padding-left: 304px !important; }
-[data-level="16"] { padding-left: 324px !important; }
-[data-level="17"] { padding-left: 344px !important; }
-[data-level="18"] { padding-left: 364px !important; }
-[data-level="19"] { padding-left: 384px !important; }
-[data-level="20"] { padding-left: 404px !important; }
-[data-level="21"] { padding-left: 424px !important; }
-[data-level="22"] { padding-left: 444px !important; }
-[data-level="23"] { padding-left: 464px !important; }
-[data-level="24"] { padding-left: 484px !important; }
-[data-level="25"] { padding-left: 504px !important; }
-[data-level="26"] { padding-left: 524px !important; }
-[data-level="27"] { padding-left: 544px !important; }
-[data-level="28"] { padding-left: 564px !important; }
-[data-level="29"] { padding-left: 584px !important; }
-[data-level="30"] { padding-left: 604px !important; }
+[data-level="1"] { padding-left: 34px !important; }
+[data-level="2"] { padding-left: 64px !important; }
+[data-level="3"] { padding-left: 94px !important; }
+[data-level="4"] { padding-left: 124px !important; }
+[data-level="5"] { padding-left: 154px !important; }
+[data-level="6"] { padding-left: 184px !important; }
+[data-level="7"] { padding-left: 214px !important; }
+[data-level="8"] { padding-left: 244px !important; }
+[data-level="9"] { padding-left: 274px !important; }
+[data-level="10"] { padding-left: 304px !important; }
+[data-level="11"] { padding-left: 334px !important; }
+[data-level="12"] { padding-left: 364px !important; }
+[data-level="13"] { padding-left: 394px !important; }
+[data-level="14"] { padding-left: 424px !important; }
+[data-level="15"] { padding-left: 454px !important; }
+[data-level="16"] { padding-left: 484px !important; }
+[data-level="17"] { padding-left: 514px !important; }
+[data-level="18"] { padding-left: 544px !important; }
+[data-level="19"] { padding-left: 574px !important; }
+[data-level="20"] { padding-left: 604px !important; }
+[data-level="21"] { padding-left: 634px !important; }
+[data-level="22"] { padding-left: 664px !important; }
+[data-level="23"] { padding-left: 694px !important; }
+[data-level="24"] { padding-left: 724px !important; }
+[data-level="25"] { padding-left: 754px !important; }
+[data-level="26"] { padding-left: 784px !important; }
+[data-level="27"] { padding-left: 814px !important; }
+[data-level="28"] { padding-left: 844px !important; }
+[data-level="29"] { padding-left: 874px !important; }
+[data-level="30"] { padding-left: 904px !important; }
 
 /* Apply dynamic styling to child elements */
 [data-level] .expand-collapse,
@@ -530,10 +583,10 @@ tr:nth-child(odd) .row-dimension-cell {
 
 /* Fallback for levels beyond 30 */
 [data-level] {
-    --max-indent: calc(20px * var(--level, 0) + 4px);
+    --max-indent: calc(30px * var(--level, 0) + 4px);
 }
 
-/* ---------- 7. EXPAND/COLLAPSE CONTROLS ---------- */
+/* ---------- 10. EXPAND/COLLAPSE CONTROLS ---------- */
 .expand-collapse {
     border: 1px solid var(--border-medium);
     border-radius: 4px;
@@ -543,6 +596,29 @@ tr:nth-child(odd) .row-dimension-cell {
     font-weight: bold;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    display: inline-flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 18px !important;
+    height: 18px !important;
+    margin-right: 8px;
+    vertical-align: middle;
+    flex-shrink: 0;
+    text-align: center !important;
+    line-height: 1 !important;
+    position: relative;
+}
+
+/* Perfect centering for the + and - symbols */
+.expand-collapse:before {
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    display: block !important;
+    line-height: 1 !important;
+    font-size: 14px !important;
+    font-weight: bold !important;
 }
 
 .expand-collapse:hover {
@@ -554,6 +630,32 @@ tr:nth-child(odd) .row-dimension-cell {
 
 .expand-collapse:active {
     transform: scale(0.95);
+}
+
+/* Collapsed state */
+.expand-collapse.collapsed {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-color: #d97706;
+    color: #92400e;
+}
+
+.expand-collapse.collapsed:before {
+    content: "+";
+    font-size: 16px;
+    line-height: 1;
+}
+
+/* Expanded state */
+.expand-collapse.expanded {
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+    border-color: #16a34a;
+    color: #15803d;
+}
+
+.expand-collapse.expanded:before {
+    content: "−";
+    font-size: 18px;
+    line-height: 1;
 }
 
 .leaf-node {
@@ -569,7 +671,30 @@ tr:nth-child(odd) .row-dimension-cell {
     font-size: 16px;
 }
 
-/* ---------- 8. VALUE CELLS ---------- */
+/* Root level expand/collapse controls - special styling for any dimension */
+[data-level="0"] .expand-collapse {
+    border-color: #2563eb !important;
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+    color: #1e40af !important;
+    font-weight: 900 !important;
+    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
+    width: 18px !important;
+    height: 18px !important;
+}
+
+[data-level="0"] .expand-collapse:before {
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+}
+
+[data-level="0"] .expand-collapse:hover {
+    background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%) !important;
+    transform: scale(1.15);
+}
+
+/* ---------- 11. VALUE CELLS ---------- */
 .value-cell {
     text-align: right !important;
     font-family: var(--font-sans);
@@ -580,6 +705,21 @@ tr:nth-child(odd) .row-dimension-cell {
     transition: background-color 0.2s ease;
     min-width: fit-content;
     width: auto;
+}
+
+/* Cross-tabulation value cells */
+.cross-tab-value {
+    background: white !important;
+    text-align: right;
+    font-weight: 500;
+    border: 1px solid var(--border-light);
+}
+
+/* Highlight non-zero cross-tab values */
+.cross-tab-value[data-raw-value]:not([data-raw-value="0"]) {
+    background: #f0fdf4 !important;
+    color: #15803d;
+    font-weight: 600;
 }
 
 /* Zero values - keep white background */
@@ -618,7 +758,7 @@ tr:nth-child(odd) .row-dimension-cell {
     font-weight: 600 !important;
 }
 
-/* ---------- 9. ROW STYLING ---------- */
+/* ---------- 12. ROW STYLING ---------- */
 tr {
     transition: background-color 0.2s ease;
     background-color: white;
@@ -641,7 +781,7 @@ tr[data-level="0"] {
     font-weight: 600;
 }
 
-/* ---------- 10. MULTI-DIMENSION SUPPORT ---------- */
+/* ---------- 13. MULTI-DIMENSION SUPPORT ---------- */
 .multi-dimension-cell {
     background: white !important;
     border-right: 1px solid var(--border-light);
@@ -680,613 +820,7 @@ tr[data-level="0"] {
     flex-shrink: 0;
 }
 
-/* ---------- 11. RESPONSIVE DESIGN ---------- */
-@media (max-width: 1200px) {
-    .pivot-table-container {
-        height: 60vh;
-    }
-    
-    th, td {
-        padding: 0.4rem 0.6rem;
-        font-size: 0.8rem;
-    }
-    
-    .corner-cell {
-        min-width: 150px;
-        max-width: 300px;
-    }
-    
-    .hierarchy-cell,
-    .row-dimension-cell {
-        min-width: 150px;
-        max-width: 300px;
-    }
-}
-
-@media (max-width: 768px) {
-    .pivot-table-container {
-        height: 50vh;
-    }
-    
-    th, td {
-        padding: 0.3rem 0.5rem;
-        font-size: 0.75rem;
-    }
-    
-    .corner-cell,
-    .hierarchy-cell,
-    .row-dimension-cell {
-        width: 150px;
-        min-width: 150px;
-    }
-    
-    .expand-collapse {
-        width: 16px;
-        height: 16px;
-        margin-right: 6px;
-    }
-    
-    .dimension-label {
-        font-size: 0.7rem;
-    }
-}
-
-/* ---------- 12. UTILITY CLASSES ---------- */
-.hidden {
-    display: none;
-}
-
-.text-center {
-    text-align: center;
-}
-
-.text-right {
-    text-align: right;
-}
-
-.font-bold {
-    font-weight: 700;
-}
-
-/* Animation for expand/collapse */
-.expand-collapse {
-    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.expand-collapse.expanding:before {
-    animation: rotateFromPlusToMinus 0.3s forwards;
-}
-
-.expand-collapse.collapsing:before {
-    animation: rotateFromMinusToPlus 0.3s forwards;
-}
-
-@keyframes rotateFromPlusToMinus {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(180deg); }
-}
-
-@keyframes rotateFromMinusToPlus {
-    0% { transform: rotate(180deg); }
-    100% { transform: rotate(0deg); }
-}
-
-/* Root node styling with distinct border */
-.hierarchy-cell[data-level="0"],
-.dimension-header[data-level="0"] {
-    border: 1px solid #2563eb !important;
-    border-radius: 4px;
-    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important;
-    font-weight: 700;
-    color: #1e40af;
-}
-
-/* Root node in multi-dimension setup */
-.multi-dimension-cell .dimension-row[data-level="0"] {
-    border: 1px solid #2563eb;
-    border-radius: 4px;
-    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-    margin: 2px;
-    padding: 6px 8px !important;
-}
-
-/* Ensure expand/collapse controls are visible for all parent nodes */
-.expand-collapse {
-    display: inline-flex !important;
-    justify-content: center;
-    align-items: center;
-    width: 18px;
-    height: 18px;
-    margin-right: 8px;
-    vertical-align: middle;
-    flex-shrink: 0;
-    border: 1px solid #64748b;
-    border-radius: 2px;
-    background: linear-gradient(135deg, white 0%, #f8fafc 100%);
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: bold;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-/* Enhanced expand/collapse button states */
-.expand-collapse.collapsed {
-    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-    border-color: #d97706;
-    color: #92400e;
-}
-
-.expand-collapse.expanded {
-    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-    border-color: #16a34a;
-    color: #15803d;
-}
-
-.expand-collapse.collapsed:before {
-    content: "+";
-    font-size: 16px;
-    line-height: 1;
-}
-
-.expand-collapse.expanded:before {
-    content: "−";
-    font-size: 18px;
-    line-height: 1;
-}
-
-.expand-collapse:hover {
-    transform: scale(1.1);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-}
-
-/* Root node expand/collapse controls - special styling */
-[data-level="0"] .expand-collapse {
-    border-color: #ddd;
-    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-    color: #1e40af;
-    font-weight: 900;
-    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
-}
-
-[data-level="0"] .expand-collapse:hover {
-    background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%);
-    transform: scale(1.15);
-}
-
-/* Root node styling for column headers */
-.column-header[data-level="0"],
-.dimension-header[data-level="0"] {
-    border: 1px solid #dc2626 !important; /* Red border for column headers */
-    border-radius: 4px;
-    background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%) !important;
-    font-weight: 700;
-    color: #991b1b;
-    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
-}
-
-/* Column header expand/collapse controls */
-.column-header .expand-collapse {
-    display: inline-flex !important;
-    justify-content: center;
-    align-items: center;
-    width: 16px;
-    height: 16px;
-    margin-right: 6px;
-    vertical-align: middle;
-    border: 1px solid #ddd;
-    border-radius: 3px;
-    background: linear-gradient(135deg, white 0%, #f8fafc 100%);
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: bold;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-/* Column header expand/collapse states */
-.column-header .expand-collapse.collapsed {
-    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-    border-color: #d97706;
-    color: #92400e;
-}
-
-.column-header .expand-collapse:before {
-    font-size: 12px !important;
-    position: absolute !important;
-    top: 50% !important;
-    left: 50% !important;
-    transform: translate(-50%, -50%) !important;
-}
-
-.column-header .expand-collapse.expanded {
-    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-    border-color: #16a34a;
-    color: #15803d;
-}
-
-.column-header .expand-collapse.collapsed:before {
-    content: "+";
-    font-size: 14px;
-    line-height: 1;
-}
-
-.column-header .expand-collapse.expanded:before {
-    content: "−";
-    font-size: 16px;
-    line-height: 1;
-}
-
-.column-header .expand-collapse:hover {
-    transform: scale(1.1);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-}
-
-/* Root level column expand/collapse controls - special red styling */
-.column-header[data-level="0"] .expand-collapse {
-    border-color: #dc2626;
-    background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
-    color: #991b1b;
-    font-weight: 900;
-    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
-}
-
-.column-header[data-level="0"] .expand-collapse:hover {
-    background: linear-gradient(135deg, #fca5a5 0%, #f87171 100%);
-    transform: scale(1.15);
-}
-
-/* Ensure column headers have proper layout */
-.dimension-header-row th {
-    position: relative;
-    text-align: center;
-    vertical-align: middle;
-    padding: 8px 12px;
-    min-height: 40px;
-}
-
-/* Enhanced Column Header Expand/Collapse Controls */
-.column-header .expand-collapse {
-    display: inline-flex !important;
-    justify-content: center;
-    align-items: center;
-    width: 16px !important;
-    height: 16px !important;
-    margin-right: 6px;
-    vertical-align: middle;
-    border: 1px solid #ddd;
-    border-radius: 2px;
-    background: linear-gradient(135deg, white 0%, #f8fafc 100%);
-    cursor: pointer;
-    font-size: 12px !important;
-    font-weight: bold;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-/* Column header expand/collapse states */
-.column-header .expand-collapse.collapsed {
-    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-    border-color: #d97706;
-    color: #92400e;
-}
-
-.column-header .expand-collapse.expanded {
-    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-    border-color: #16a34a;
-    color: #15803d;
-}
-
-.column-header .expand-collapse.collapsed:before {
-    content: "+";
-    font-size: 14px !important;
-    line-height: 1;
-}
-
-.column-header .expand-collapse.expanded:before {
-    content: "−";
-    font-size: 16px !important;
-    line-height: 1;
-}
-
-.column-header .expand-collapse:hover {
-    transform: scale(1.1);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-}
-
-/* Special styling for root level column headers */
-.column-header[data-level="0"] {
-    border: 1px solid var(--border-light) !important; /* Use normal border */
-    border-radius: 0 !important; /* Remove border radius */
-    background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%) !important; /* Use normal header background */
-    font-weight: 600 !important; /* Use normal header weight */
-    color: var(--dimension-text) !important; /* Use normal text color */
-    box-shadow: none !important; /* Remove shadow */
-}
-
-.column-header[data-level="0"] .expand-collapse {
-    border-color: #dc2626 !important;
-    background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%) !important;
-    color: #991b1b !important;
-    font-weight: 900 !important;
-    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
-}
-
-.column-header[data-level="0"] .expand-collapse:hover {
-    background: linear-gradient(135deg, #fca5a5 0%, #f87171 100%) !important;
-    transform: scale(1.15);
-}
-
-/* Ensure column headers have proper layout for controls */
-.column-header {
-    position: relative;
-    text-align: center;
-    vertical-align: middle;
-    padding: 8px 12px;
-    min-height: 40px;
-    white-space: nowrap;
-}
-
-/* Column header with children should have different styling */
-.column-header.has-children {
-    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-    border: 1px solid #3b82f6;
-    font-weight: 600;
-    color: #1e40af;
-}
-
-.column-header.leaf-node {
-    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-    border: 1px solid #22c55e;
-    color: #15803d;
-}
-
-/* Ensure proper spacing for column label when expand/collapse is present */
-.column-header .column-label {
-    display: inline-block;
-    vertical-align: middle;
-    max-width: calc(100% - 25px);
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* Base styling for all measure headers - applies to any measure field */
-th[class*="value-header"],
-th[class*="measure-header"],
-th[class*="merged-measure"] {
-    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
-    font-weight: 700 !important;
-    text-align: center !important;
-    text-transform: uppercase !important;
-    letter-spacing: 1px !important;
-    color: var(--dimension-text) !important;
-    padding: 12px 8px !important;
-    border: 1px solid var(--border-medium) !important;
-    min-width: fit-content;
-    width: auto;
-}
-
-/* Dynamic column header styling based on data attributes */
-.column-header {
-    background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%);
-    text-align: center;
-    font-weight: 600;
-    color: var(--dimension-text);
-    min-width: fit-content;
-    width: auto;
-    padding: 8px 12px;
-    border: 1px solid var(--border-medium);
-    position: relative;
-    vertical-align: middle;
-    transition: all 0.2s ease;
-}
-
-/* Parent nodes with children - detected by presence of expand/collapse control */
-.column-header:has(.expand-collapse) {
-    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-    border: 1px solid #ddd;
-    font-weight: 700;
-    color: #1e40af;
-}
-
-/* Leaf nodes - detected by absence of expand/collapse control */
-.column-header:not(:has(.expand-collapse)) {
-    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-    border: 1px solid #22c55e;
-    color: #15803d;
-    font-weight: 600;
-}
-
-/* Fallback for browsers that don't support :has() selector */
-.column-header.has-children {
-    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-    border: 1px solid #3b82f6;
-    font-weight: 700;
-    color: #1e40af;
-}
-
-.column-header.leaf-node {
-    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-    border: 1px solid #22c55e;
-    color: #15803d;
-    font-weight: 600;
-}
-
-/* Dynamic expand/collapse controls - works for any dimension */
-.expand-collapse {
-    display: inline-flex !important;
-    justify-content: center;
-    align-items: center;
-    width: 18px;
-    height: 18px;
-    margin-right: 8px;
-    vertical-align: middle;
-    flex-shrink: 0;
-    border: 1px solid #64748b;
-    border-radius: 4px;
-    background: linear-gradient(135deg, white 0%, #f8fafc 100%);
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: bold;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-/* Collapsed state */
-.expand-collapse.collapsed {
-    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-    border-color: #d97706;
-    color: #92400e;
-}
-
-.expand-collapse.collapsed:before {
-    content: "+";
-    font-size: 16px;
-    line-height: 1;
-}
-
-/* Expanded state */
-.expand-collapse.expanded {
-    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-    border-color: #16a34a;
-    color: #15803d;
-}
-
-.expand-collapse.expanded:before {
-    content: "−";
-    font-size: 18px;
-    line-height: 1;
-}
-
-/* Hover effects */
-.expand-collapse:hover {
-    transform: scale(1.1);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-}
-
-/* Root level expand/collapse controls - special styling for any root dimension */
-[data-level="0"] .expand-collapse {
-    border-color: #2563eb !important;
-    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
-    color: #1e40af !important;
-    font-weight: 900 !important;
-    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
-}
-
-[data-level="0"] .expand-collapse:hover {
-    background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%) !important;
-    transform: scale(1.15);
-}
-
-/* Dynamic row hierarchy styling */
-.hierarchy-cell {
-    position: sticky;
-    left: 0;
-    margin:0;
-    z-index: 20;
-    background: white !important;
-    border-right: 1px solid var(--border-light) !important;
-    vertical-align: top;
-    word-wrap: break-word;
-    padding: 8px 12px;
-    box-sizing: border-box !important;
-    transition: background-color 0.2s ease;
-}
-
-/* Root level row styling - detected by data-level="0" */
-.hierarchy-cell[data-level="0"] {
-    border: 1px solid var(--border-light) !important; /* Use normal border */
-    border-radius: 0 !important; /* Remove border radius */
-    background: white !important; /* Use normal background */
-    font-weight: 700; /* Keep bold text */
-    color: var(--dimension-text); /* Use normal text color */
-    box-shadow: none !important; /* Remove shadow */
-}
-
-/* Hover effects for any row */
-.hierarchy-cell:hover {
-    background-color: rgba(37, 99, 235, 0.05) !important;
-}
-
-tr:hover .hierarchy-cell {
-    background-color: rgba(37, 99, 235, 0.05) !important;
-}
-
-tr:hover .dimension-label {
-    color: var(--primary) !important;
-}
-
-/* Dynamic label styling based on hierarchy level */
-.dimension-label {
-    font-weight: 500;
-    color: var(--dimension-text);
-    display: inline-block;
-    vertical-align: middle;
-    word-wrap: break-word !important;
-    overflow-wrap: break-word !important;
-    line-height: 1.4;
-    transition: color 0.2s ease;
-    max-width: calc(100% - 30px);
-}
-
-/* Auto-detect and style column labels */
-.column-label {
-    display: inline-block;
-    vertical-align: middle;
-    max-width: calc(100% - 30px);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-/* Responsive adjustments for any dimension count */
-@media (max-width: 1200px) {
-    .expand-collapse {
-        width: 16px;
-        height: 16px;
-        margin-right: 6px;
-        font-size: 12px;
-    }
-    
-    .dimension-label,
-    .column-label {
-        font-size: 0.85rem;
-        max-width: calc(100% - 25px);
-    }
-}
-
-@media (max-width: 768px) {
-    .expand-collapse {
-        width: 14px;
-        height: 14px;
-        margin-right: 4px;
-        font-size: 10px;
-    }
-    
-    .dimension-label,
-    .column-label {
-        font-size: 0.75rem;
-        max-width: calc(100% - 20px);
-    }
-}
-
-/* Universal measure header styling - works with any measure field */
-th[class*="value-header"],
-th[class*="measure-header"],
-th[class*="merged-measure"],
-.measures-header {
-    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
-    font-weight: 700 !important;
-    text-align: center !important;
-    text-transform: uppercase !important;
-    letter-spacing: 1px !important;
-    color: var(--dimension-text) !important;
-    padding: 12px 8px !important;
-    border: 1px solid var(--border-medium) !important;
-    min-width: fit-content;
-    width: auto;
-}
-
+/* ---------- 14. COLUMN HEADERS ENHANCEMENTS ---------- */
 /* Enhanced column header base styling */
 .column-header {
     background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%);
@@ -1332,20 +866,71 @@ thead th {
     vertical-align: middle;
 }
 
-/* Fix for green column headers - ensure they stay horizontal */
-thead tr:last-child th:not(.row-header):not([class*="value-header"]):not([class*="measure"]) {
-    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%) !important;
-    border: 1px solid #22c55e !important; /* Thinner border */
-    color: #15803d !important;
-    font-weight: 600 !important;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    display: table-cell !important;
+/* Parent nodes with children - detected by presence of expand/collapse control */
+.column-header:has(.expand-collapse) {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border: 1px solid #ddd;
+    font-weight: 700;
+    color: #1e40af;
+}
+
+/* Leaf nodes - detected by absence of expand/collapse control */
+.column-header:not(:has(.expand-collapse)) {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border: 1px solid #22c55e;
+    color: #15803d;
+    font-weight: 600;
+}
+
+/* Fallback for browsers that don't support :has() selector */
+.column-header.has-children {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border: 1px solid #3b82f6;
+    font-weight: 700;
+    color: #1e40af;
+}
+
+.column-header.leaf-node {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border: 1px solid #22c55e;
+    color: #15803d;
+    font-weight: 600;
+}
+
+/* Column header with expand/collapse controls */
+.column-header .expand-collapse {
+    margin-right: 4px;
+    width: 16px;
+    height: 16px;
+    font-size: 12px;
+}
+
+/* Enhanced Column Header Expand/Collapse Controls */
+.column-header .expand-collapse {
+    display: inline-flex !important;
+    justify-content: center;
+    align-items: center;
+    width: 16px !important;
+    height: 16px !important;
+    margin-right: 6px;
     vertical-align: middle;
-    text-align: center;
-    white-space: nowrap;
-    min-width: 80px;
-    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 2px;
+    background: linear-gradient(135deg, white 0%, #f8fafc 100%);
+    cursor: pointer;
+    font-size: 12px !important;
+    font-weight: bold;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Ensure proper spacing for column label when expand/collapse is present */
+.column-header .column-label {
+    display: inline-block;
+    vertical-align: middle;
+    max-width: calc(100% - 25px);
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Remove any spaicng between header rows */
@@ -1366,145 +951,38 @@ thead tr {
     border-radius: 0 !important;
 }
 
-/* Remove any special styling from root level columns that interferes */
-.column-header[data-level="0"]:not(.row-header) {
-    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%) !important;
-    border: 1px solid #22c55e !important;
-    color: #15803d !important;
-    font-weight: 600 !important;
-    box-shadow: none !important;
-    border-radius: 0 !important;
-}
-
-/* Root level styling - works for any dimension at level 0 */
-.column-header[data-level="0"],
-.column-header.root-level {
-    border: 1px solid var(--border-light) !important; /* Use normal border */
-    border-radius: 0 !important; /* Remove border radius */
-    background: linear-gradient(135deg, var(--dimension-bg-primary) 0%, var(--dimension-bg-secondary) 100%) !important; /* Use normal header background */
-    font-weight: 600 !important; /* Use normal header weight */
-    color: var(--dimension-text) !important; /* Use normal text color */
-    box-shadow: none !important; /* Remove shadow */
-}
-
-/* Parent nodes - detected by having expand/collapse controls */
-.column-header.has-children,
-.column-header:has(.expand-collapse) {
-    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-    border: 1px solid #3b82f6;
-    font-weight: 700;
-    color: #1e40af;
-}
-
-/* Leaf nodes - detected by absence of expand/collapse controls */
-.column-header.leaf-node,
-.column-header:not(:has(.expand-collapse)) {
-    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-    border: 1px solid #22c55e;
-    color: #15803d;
-    font-weight: 600;
-}
-
-/* Enhanced expand/collapse controls - universal styling */
-.expand-collapse {
-    display: inline-flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-    width: 18px !important;
-    height: 18px !important;
-    margin-right: 8px;
-    vertical-align: middle;
-    flex-shrink: 0;
-    border: 1px solid #64748b;
-    border-radius: 4px;
-    background: linear-gradient(135deg, white 0%, #f8fafc 100%);
-    cursor: pointer;
-    font-size: 14px !important;
-    font-weight: bold;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+/* ---------- 15. UNIVERSAL STYLING ---------- */
+/* Base styling for all measure headers - applies to any measure field */
+th[class*="value-header"],
+th[class*="measure-header"],
+th[class*="merged-measure"] {
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+    font-weight: 700 !important;
     text-align: center !important;
-    line-height: 1 !important;
-    position: relative;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+    color: var(--dimension-text) !important;
+    padding: 12px 8px !important;
+    border: 1px solid var(--border-medium) !important;
+    min-width: fit-content;
+    width: auto;
 }
 
-/* Perfect centering for the + and - symbols */
-.expand-collapse:before {
-    position: absolute !important;
-    top: 50% !important;
-    left: 50% !important;
-    transform: translate(-50%, -50%) !important;
-    display: block !important;
-    line-height: 1 !important;
-    font-size: 14px !important;
-    font-weight: bold !important;
-}
-
-/* Collapsed state */
-.expand-collapse.collapsed {
-    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-    border-color: #d97706;
-    color: #92400e;
-}
-
-.expand-collapse.collapsed:before {
-    content: "+";
-    font-size: 16px;
-    line-height: 1;
-}
-
-/* Expanded state */
-.expand-collapse.expanded {
-    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-    border-color: #16a34a;
-    color: #15803d;
-}
-
-.expand-collapse.expanded:before {
-    content: "−";
-    font-size: 18px;
-    line-height: 1;
-}
-
-/* Hover effects */
-.expand-collapse:hover {
-    transform: scale(1.1);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-}
-
-/* Ensure consistent sizing for all expand/collapse controls */
-.hierarchy-cell .expand-collapse,
-.column-header .expand-collapse,
-thead .expand-collapse {
-    width: 18px !important;
-    height: 18px !important;
-    display: inline-flex !important;
-    justify-content: center !important;
-    align-items: center !important;
+/* Universal measure header styling - works with any measure field */
+th[class*="value-header"],
+th[class*="measure-header"],
+th[class*="merged-measure"],
+.measures-header {
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+    font-weight: 700 !important;
     text-align: center !important;
-}
-
-/* Root level expand/collapse controls - special styling for any dimension */
-[data-level="0"] .expand-collapse {
-    border-color: #2563eb !important;
-    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
-    color: #1e40af !important;
-    font-weight: 900 !important;
-    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
-    width: 18px !important;
-    height: 18px !important;
-}
-
-[data-level="0"] .expand-collapse:before {
-    position: absolute !important;
-    top: 50% !important;
-    left: 50% !important;
-    transform: translate(-50%, -50%) !important;
-}
-
-[data-level="0"] .expand-collapse:hover {
-    background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%) !important;
-    transform: scale(1.15);
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+    color: var(--dimension-text) !important;
+    padding: 12px 8px !important;
+    border: 1px solid var(--border-medium) !important;
+    min-width: fit-content;
+    width: auto;
 }
 
 /* Enhanced row hierarchy styling */
@@ -1523,19 +1001,6 @@ thead .expand-collapse {
     transition: background-color 0.2s ease;
 }
 
-/* Enhanced hover effects */
-.hierarchy-cell:hover {
-    background-color: rgba(37, 99, 235, 0.05) !important;
-}
-
-tr:hover .hierarchy-cell {
-    background-color: rgba(37, 99, 235, 0.05) !important;
-}
-
-tr:hover .dimension-label {
-    color: var(--primary) !important;
-}
-
 /* Universal label styling */
 .dimension-label,
 .column-label {
@@ -1548,8 +1013,38 @@ tr:hover .dimension-label {
     max-width: calc(100% - 30px);
 }
 
-/* Responsive adjustments */
+/* Auto-detect and style column labels */
+.column-label {
+    display: inline-block;
+    vertical-align: middle;
+    max-width: calc(100% - 30px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ---------- 16. RESPONSIVE DESIGN ---------- */
 @media (max-width: 1200px) {
+    .pivot-table-container {
+        height: 60vh;
+    }
+    
+    th, td {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.8rem;
+    }
+    
+    .corner-cell {
+        min-width: 150px;
+        max-width: 300px;
+    }
+    
+    .hierarchy-cell,
+    .row-dimension-cell {
+        min-width: 150px;
+        max-width: 300px;
+    }
+    
     .expand-collapse {
         width: 16px;
         height: 16px;
@@ -1565,6 +1060,22 @@ tr:hover .dimension-label {
 }
 
 @media (max-width: 768px) {
+    .pivot-table-container {
+        height: 50vh;
+    }
+    
+    th, td {
+        padding: 0.3rem 0.5rem;
+        font-size: 0.75rem;
+    }
+    
+    .corner-cell,
+    .hierarchy-cell,
+    .row-dimension-cell {
+        width: 150px;
+        min-width: 150px;
+    }
+    
     .expand-collapse {
         width: 14px;
         height: 14px;
@@ -1577,6 +1088,46 @@ tr:hover .dimension-label {
         font-size: 0.75rem;
         max-width: calc(100% - 20px);
     }
+}
+
+/* ---------- 17. UTILITY CLASSES ---------- */
+.hidden {
+    display: none;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.font-bold {
+    font-weight: 700;
+}
+
+/* Animation for expand/collapse */
+.expand-collapse {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.expand-collapse.expanding:before {
+    animation: rotateFromPlusToMinus 0.3s forwards;
+}
+
+.expand-collapse.collapsing:before {
+    animation: rotateFromMinusToPlus 0.3s forwards;
+}
+
+@keyframes rotateFromPlusToMinus {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(180deg); }
+}
+
+@keyframes rotateFromMinusToPlus {
+    0% { transform: rotate(180deg); }
+    100% { transform: rotate(0deg); }
 }
 
 /* Hide red dot for leaf nodes in headers */
@@ -1592,19 +1143,6 @@ thead th:not(:last-child) {
 
 tbody td:not(:last-child) {
     border-right: 1px solid var(--border-light) !important;
-}
-
-/* Remove any transform or positioning that creates gaps */
-.expand-collapse {
-    transform: none !important;
-    position: relative !important;
-    margin-right: 8px !important;
-}
-
-/* Ensure headers align properly */
-thead th {
-    vertical-align: middle !important;
-    line-height: 1.2 !important;
 }
 
 /* Additional fix for column width consistency */
@@ -1646,4 +1184,358 @@ thead th {
 .expand-collapse * {
     line-height: 1 !important;
     text-align: center !important;
+}
+
+/* Total column header styling */
+.total-column-header {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
+    border: 2px solid #d97706 !important;
+    color: #92400e !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+    font-size: 0.9rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+}
+
+/* Total header for measures row */
+.total-header {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
+    border: 1px solid #d97706 !important;
+    color: #92400e !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+}
+
+/* Total value cells */
+.total-cell {
+    background: linear-gradient(135deg, #fef9c3 0%, #fef3c7 100%) !important;
+    border: 1px solid #d97706 !important;
+    color: #92400e !important;
+    font-weight: 700 !important;
+    text-align: right !important;
+}
+
+/* Enhanced total cell for non-zero values */
+.total-cell.non-zero-value {
+    background: linear-gradient(135deg, #fef08a 0%, #fcd34d 100%) !important;
+    color: #78350f !important;
+    font-weight: 800 !important;
+}
+
+/* Total cell hover effect */
+.total-cell:hover {
+    background: linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%) !important;
+    transform: scale(1.02);
+    transition: all 0.2s ease;
+}
+
+/* Ensure proper alignment for total headers spanning multiple rows */
+.total-column-header[rowspan] {
+    vertical-align: middle !important;
+    text-align: center !important;
+    writing-mode: horizontal-tb !important;
+}
+
+
+/* ---------- STACKED COLUMN HEADERS ---------- */
+
+/* Base styling for dimension level headers */
+.dimension-level-0,
+.dimension-level-1,
+.dimension-level-2,
+.dimension-level-3 {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border: 1px solid var(--border-medium);
+    color: var(--dimension-text);
+    font-weight: 600;
+    text-align: center;
+    vertical-align: middle;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+/* Level-specific styling */
+.dimension-level-0 {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    border: 1px solid #3b82f6;
+    color: #1e40af;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.dimension-level-1 {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border: 1px solid #22c55e;
+    color: #15803d;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.dimension-level-2 {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border: 1px solid #d97706;
+    color: #92400e;
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+.dimension-level-3 {
+    background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
+    border: 1px solid #ec4899;
+    color: #be185d;
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+/* Hover effects for dimension headers */
+.dimension-level-0:hover { background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%); }
+.dimension-level-1:hover { background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); }
+.dimension-level-2:hover { background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%); }
+.dimension-level-3:hover { background: linear-gradient(135deg, #fbcfe8 0%, #f9a8d4 100%); }
+
+/* Enhanced expand/collapse controls for column headers */
+.column-header .expand-collapse {
+    display: inline-flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 16px !important;
+    height: 16px !important;
+    margin-right: 6px !important;
+    vertical-align: middle !important;
+    border: 1px solid var(--border-medium) !important;
+    border-radius: 3px !important;
+    background: linear-gradient(135deg, white 0%, #f8fafc 100%) !important;
+    cursor: pointer !important;
+    font-size: 12px !important;
+    font-weight: bold !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+    position: relative !important;
+}
+
+/* Perfect centering for column header expand/collapse symbols */
+.column-header .expand-collapse:before {
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    display: block !important;
+    line-height: 1 !important;
+    font-size: 12px !important;
+    font-weight: bold !important;
+}
+
+/* Column header expand/collapse states */
+.column-header .expand-collapse.collapsed {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
+    border-color: #d97706 !important;
+    color: #92400e !important;
+}
+
+.column-header .expand-collapse.collapsed:before {
+    content: "+" !important;
+}
+
+.column-header .expand-collapse.expanded {
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%) !important;
+    border-color: #16a34a !important;
+    color: #15803d !important;
+}
+
+.column-header .expand-collapse.expanded:before {
+    content: "−" !important;
+}
+
+/* Column header expand/collapse hover effects */
+.column-header .expand-collapse:hover {
+    background: linear-gradient(135deg, var(--primary-light) 0%, #dbeafe 100%) !important;
+    border-color: var(--primary) !important;
+    transform: scale(1.1) !important;
+    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3) !important;
+}
+
+/* Column label styling in headers */
+.column-header .column-label {
+    display: inline-block !important;
+    vertical-align: middle !important;
+    max-width: calc(100% - 25px) !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    font-weight: inherit !important;
+    color: inherit !important;
+}
+
+/* Ensure proper spacing in stacked headers */
+.column-header[colspan] {
+    text-align: center !important;
+    vertical-align: middle !important;
+    padding: 8px 12px !important;
+    min-width: fit-content !important;
+    white-space: nowrap !important;
+}
+
+/* Multi-level header row spacing */
+thead tr {
+    margin: 0 !important;
+    padding: 0 !important;
+    border-spacing: 0 !important;
+    border-collapse: collapse !important;
+}
+
+/* Ensure consistent borders in stacked headers */
+.dimension-level-0,
+.dimension-level-1,
+.dimension-level-2,
+.dimension-level-3 {
+    border: 1px solid var(--border-light) !important;
+    border-collapse: collapse !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+}
+
+/* Remove gaps between header rows */
+thead th {
+    border-top: 1px solid var(--border-light) !important;
+    border-bottom: 1px solid var(--border-light) !important;
+    margin: 0 !important;
+    padding: 8px 12px !important;
+}
+
+/* Special styling for the first row (measures header) */
+thead tr:first-child th {
+    border-top: 1px solid var(--border-light) !important;
+}
+
+/* Special styling for the last header row */
+thead tr:last-child th {
+    border-bottom: 1px solid var(--border-medium) !important;
+}
+
+/* Responsive adjustments for stacked headers */
+@media (max-width: 1200px) {
+    .dimension-level-0,
+    .dimension-level-1,
+    .dimension-level-2,
+    .dimension-level-3 {
+        padding: 6px 8px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    .column-header .expand-collapse {
+        width: 14px !important;
+        height: 14px !important;
+        font-size: 10px !important;
+    }
+    
+    .column-header .column-label {
+        max-width: calc(100% - 20px) !important;
+        font-size: 0.75rem !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .dimension-level-0,
+    .dimension-level-1,
+    .dimension-level-2,
+    .dimension-level-3 {
+        padding: 4px 6px !important;
+        font-size: 0.7rem !important;
+    }
+    
+    .column-header .expand-collapse {
+        width: 12px !important;
+        height: 12px !important;
+        font-size: 8px !important;
+        margin-right: 4px !important;
+    }
+    
+    .column-header .column-label {
+        max-width: calc(100% - 18px) !important;
+        font-size: 0.7rem !important;
+    }
+}
+
+/* Animation for smooth expand/collapse transitions */
+.column-header .expand-collapse {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.column-header .expand-collapse.expanding:before {
+    animation: columnRotateFromPlusToMinus 0.3s forwards;
+}
+
+.column-header .expand-collapse.collapsing:before {
+    animation: columnRotateFromMinusToPlus 0.3s forwards;
+}
+
+@keyframes columnRotateFromPlusToMinus {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(180deg); }
+}
+
+@keyframes columnRotateFromMinusToPlus {
+    0% { transform: translate(-50%, -50%) rotate(180deg); }
+    100% { transform: translate(-50%, -50%) rotate(0deg); }
+}
+
+/* Ensure table layout accommodates stacked headers */
+.pivot-table-container.stacked-columns table {
+    table-layout: auto !important;
+    width: 100% !important;
+}
+
+.pivot-table-container.stacked-columns thead {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 10 !important;
+    background: white !important;
+}
+
+/* Fix for header cell spacing in stacked mode */
+.stacked-columns thead th {
+    border-right: 1px solid var(--border-light) !important;
+    border-left: 1px solid var(--border-light) !important;
+}
+
+.stacked-columns thead th:first-child {
+    border-left: 1px solid var(--border-light) !important;
+}
+
+.stacked-columns thead th:last-child {
+    border-right: 1px solid var(--border-light) !important;
+}
+
+/* Enhanced corner cell for stacked headers */
+.stacked-columns .corner-cell,
+.stacked-columns .row-header {
+    position: sticky !important;
+    left: 0 !important;
+    z-index: 50 !important;
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%) !important;
+    border: 1px solid #22c55e !important;
+    font-weight: 700 !important;
+    color: #15803d !important;
+}
+
+/* Value cells in stacked column mode */
+.stacked-columns .value-cell {
+    border: 1px solid var(--border-light) !important;
+    text-align: right !important;
+    padding: 6px 8px !important;
+    background: white !important;
+}
+
+/* Hierarchy cells in stacked column mode */
+.stacked-columns .hierarchy-cell {
+    position: sticky !important;
+    left: 0 !important;
+    z-index: 20 !important;
+    background: white !important;
+    border-right: 1px solid var(--border-medium) !important;
+    border-left: 1px solid var(--border-light) !important;
 }

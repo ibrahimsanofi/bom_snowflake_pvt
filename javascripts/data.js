@@ -1,3 +1,6 @@
+/*
+xxx
+*/
 
 import stateModule from './state.js';
 import ui from './ui.js'
@@ -191,13 +194,13 @@ async function fetchFactTableNames() {
 
 
 /**
- * Main function to ingest data from database
+ * PHASE 1 NEW FUNCTION: Ingest only dimension data from database
  * @param {Object} elements - DOM elements object
- * @param {string} selectedFact - Name of the fact table to load (default: 'FACT_BOM')
+ * @param {string} selectedFact - Name of the fact table to get dimensions for (default: 'FACT_BOM')
  * @returns {Promise<void>}
  */
-async function ingestData(elements, selectedFact = 'FACT_BOM') {
-    console.log('⏳ Status: Loading data from Snowflake database server...', 'info', elements);
+async function ingestDimensionData(elements, selectedFact = 'FACT_BOM') {
+    console.log('⏳ Status: Loading dimension data from Snowflake database server...', 'info', elements);
     
     try {        
         // 1. Get dimensions related to the selected fact table
@@ -217,7 +220,7 @@ async function ingestData(elements, selectedFact = 'FACT_BOM') {
             });
         });
         
-        // Add fact table to available files
+        // Add fact table to available files (but don't load it yet)
         state.availableFiles.push({
             id: selectedFact,
             label: selectedFact.replace(/^FACT_/, ''),
@@ -270,7 +273,123 @@ async function ingestData(elements, selectedFact = 'FACT_BOM') {
         await Promise.all(dimensionPromises);
         
 
-        // 4. Load fact data
+        // 4. Verify dimensions are loaded
+        const dimensionsLoaded = Object.keys(state.dimensions).some(key => 
+            Array.isArray(state.dimensions[key]) && state.dimensions[key].length > 0
+        );
+        
+        if (!dimensionsLoaded) {
+            throw new Error("No dimension data was properly loaded");
+        }
+        
+
+        // 5. Generate available fields
+        state.availableFields = [];
+        
+        // Add dimension fields
+        state.availableFiles.forEach(file => {
+            if (file.type === 'dimension') {
+                state.availableFields.push({
+                    id: file.id,
+                    label: file.label,
+                    category: 'Dimension',
+                    type: 'dimension',
+                    hierarchical: true, //file.hierarchical,
+                    draggableTo: ['row', 'column', 'filter']
+                });
+            }
+        });
+        
+        // Add measure fields
+        [
+            { id: 'COST_UNIT', label: 'Cost Unit' },
+            { id: 'QTY_UNIT', label: 'Quantity Unit' }
+        ].forEach(measure => {
+            state.availableFields.push({
+                id: measure.id,
+                label: measure.label,
+                category: 'Measure',
+                type: 'fact',
+                measureName: measure.id,
+                draggableTo: ['value']
+            });
+        });
+
+
+        // 6. Process dimension data to build hierarchies
+        try {
+            console.log("⏳ Status: Building Dimension hierarchies...");
+            const hierarchies = processDimensionHierarchies(state.dimensions, null); // No fact data yet
+            state.hierarchies = hierarchies || {};
+            console.log("✅ Status: Dimension hierarchies built:", Object.keys(state.hierarchies));
+            
+        } catch (hierError){
+            console.error("Error building hierarchies:", hierError);
+            // Initialize empty hierarchies
+            state.hierarchies = {};
+        }
+        
+        
+        // 7. Set up UI elements
+        ui.renderAvailableFields(elements);
+        ui.setDefaultFields();
+        ui.renderFieldContainers(elements, state);
+        
+
+        // 8. Initialize mappings (without fact data for now)
+        console.log("⏳ Status: Initializing basic mappings without fact data");
+        initializeBasicMappings();
+                
+        // 9. Initialize filter system now that dimensions are available
+        console.log("⏳ Status: Initializing filter system with dimension data");
+        setTimeout(() => {
+            // Try to initialize the filter system if it exists
+            if (window.EnhancedFilterSystem && typeof window.EnhancedFilterSystem.initialize === 'function') {
+                window.EnhancedFilterSystem.state = state;
+                window.EnhancedFilterSystem.initialize();
+            } else {
+                console.log("⏳ Status: Filter system not yet available, will initialize when loaded");
+            }
+        }, 500);
+        
+        // Show success message
+        console.log('✅ Status: Dimension data loaded successfully from Snowflake database.', 'success', elements);
+        state.dimensionsLoaded = true;
+
+        return true;
+        
+    } catch (error) {
+        console.error('Dimension Data Loading Error:', error);
+                
+        // Show app content even on error
+        const appContent = document.getElementById('appContent');
+        if (appContent) {
+            appContent.style.display = 'block';
+        }
+        
+        // Show error message
+        console.error(`❌ Dimension Data Loading Error: ${error.message}`, 'error', elements);
+        return false;
+    }
+}
+
+
+/**
+ * PHASE 1 NEW FUNCTION: Ingest fact data on demand
+ * @param {Object} elements - DOM elements object
+ * @param {string} selectedFact - Name of the fact table to load (default: 'FACT_BOM')
+ * @returns {Promise<void>}
+ */
+async function ingestFactData(elements, selectedFact = 'FACT_BOM') {
+    console.log('⏳ Status: Loading fact data from Snowflake database server...', 'info', elements);
+    
+    try {
+        // Ensure dimensions are loaded first
+        if (!state.dimensionsLoaded) {
+            throw new Error("Dimensions must be loaded before fact data");
+        }
+
+        // Load fact data
         console.log(`⏳ Status: Loading fact data from ${selectedFact}...`);
         ui.updateTableStatus(selectedFact, 'loading');
         
@@ -313,17 +432,8 @@ async function ingestData(elements, selectedFact = 'FACT_BOM') {
             throw new Error("Fact data was not properly loaded");
         }
         
-        // Verify dimensions are loaded
-        const dimensionsLoaded = Object.keys(state.dimensions).some(key => 
-            Array.isArray(state.dimensions[key]) && state.dimensions[key].length > 0
-        );
-        
-        if (!dimensionsLoaded) {
-            throw new Error("No dimension data was properly loaded");
-        }
-        
 
-        // 5. Optimize dimension data by filtering to only records used in fact data
+        // Optimize dimension data by filtering to only records used in fact data
         console.log("⏳ Status: Optimizing dimension data based on fact relationships...");
         
         // Extract unique dimension keys from fact data for filtering
@@ -374,83 +484,333 @@ async function ingestData(elements, selectedFact = 'FACT_BOM') {
             }
         });
 
-
-        // 6. Generate available fields
-        state.availableFields = [];
+        // Rebuild hierarchies with optimized dimension data
+        console.log("⏳ Status: Rebuilding hierarchies with optimized data...");
+        const hierarchies = processDimensionHierarchies(state.dimensions, state.factData);
+        state.hierarchies = hierarchies || {};
+        console.log("✅ Status: Dimension hierarchies rebuilt with fact data:", Object.keys(state.hierarchies));
         
-        // Add dimension fields
-        state.availableFiles.forEach(file => {
-            if (file.type === 'dimension') {
-                state.availableFields.push({
-                    id: file.id,
-                    label: file.label,
-                    category: 'Dimension',
-                    type: 'dimension',
-                    hierarchical: true, //file.hierarchical,
-                    draggableTo: ['row', 'column', 'filter']
-                });
-            }
-        });
-        
-        // Add measure fields
-        [
-            { id: 'COST_UNIT', label: 'Cost Unit' },
-            { id: 'QTY_UNIT', label: 'Quantity Unit' }
-        ].forEach(measure => {
-            state.availableFields.push({
-                id: measure.id,
-                label: measure.label,
-                category: 'Measure',
-                type: 'fact',
-                measureName: measure.id,
-                draggableTo: ['value']
-            });
-        });
-
-
-        // 7. Process dimension data to build hierarchies (now with optimized data)
-        try {
-            console.log("⏳ Status: Building Dimension hierarchies with optimized data...");
-            const hierarchies = processDimensionHierarchies(state.dimensions, state.factData);
-            state.hierarchies = hierarchies || {};
-            console.log("✅ Status: Dimension hierarchies built:", Object.keys(state.hierarchies));
-            
-        } catch (hierError){
-            console.error("Error building hierarchies:", hierError);
-            // Initialize empty hierarchies
-            state.hierarchies = {};
-        }
-        
-        
-        // 8. Set up UI elements
-        ui.renderAvailableFields(elements);
-        ui.setDefaultFields();
-        ui.renderFieldContainers(elements, state);
-        
-
-        // 9. Initialize mappings AFTER data loading is complete
-        console.log("⏳ Status: Initializing mappings now that data is loaded");
+        // Complete mappings initialization now that we have fact data
+        console.log("⏳ Status: Completing mappings with fact data");
         initializeMappings();
+        
+        // Enable filters now that fact data is available
+        console.log("⏳ Status: Enabling filters with fact data");
+        setTimeout(() => {
+            // Try to enable filters if the filter system exists
+            if (window.EnhancedFilterSystem && window.EnhancedFilterSystem.applyAllFilters) {
+                window.EnhancedFilterSystem.applyAllFilters();
+            }
+        }, 500);
                 
         // Show success message
-        console.log('✅ Status: Data loaded successfully from Snowflake database with performance optimizations.', 'success', elements);
-        state.loading = false;
+        console.log('✅ Status: Fact data loaded successfully from Snowflake database with performance optimizations.', 'success', elements);
+        state.factDataLoaded = true;
 
         return true;
         
     } catch (error) {
-        console.error('Data Loading Error:', error);
+        console.error('Fact Data Loading Error:', error);
                 
-        // Show app content even on error
-        const appContent = document.getElementById('appContent');
-        if (appContent) {
-            appContent.style.display = 'block';
-        }
-        
         // Show error message
-        console.error(`❌ Data Loading Error: ${error.message}`, 'error', elements);
+        console.error(`❌ Fact Data Loading Error: ${error.message}`, 'error', elements);
         return false;
     }
+}
+
+
+/**
+ * PHASE 1 NEW FUNCTION: Initialize basic mappings without fact data
+ */
+function initializeBasicMappings() {
+    console.log("⏳ Status: Starting basic dimension mappings initialization");
+    
+    // Initialize state.mappings object if it doesn't exist
+    if (!state.mappings) {
+        state.mappings = {};
+    }
+    
+    // Initialize basic mappings that don't require fact data
+    // These will be completed when fact data is loaded
+    
+    console.log("✅ Status: Basic mappings initialized successfully");
+}
+
+
+/**
+ * Main function to ingest data from database
+ * @param {Object} elements - DOM elements object
+ * @param {string} selectedFact - Name of the fact table to load (default: 'FACT_BOM')
+ * @returns {Promise<void>}
+ */
+// async function ingestData(elements, selectedFact = 'FACT_BOM') {
+//     console.log('⏳ Status: Loading data from Snowflake database server...', 'info', elements);
+    
+//     try {        
+//         // 1. Get dimensions related to the selected fact table
+//         const dimNames = await fetchDimensionNamesForFact(selectedFact);
+        
+
+//         // 2. Build available files list (used for UI)
+//         state.availableFiles = [];
+//         dimNames.forEach(dim => {
+//             state.availableFiles.push({
+//                 id: `${dim}`,
+//                 label: dim.replace(/^DIM_/, ''),
+//                 type: 'dimension',
+//                 hierarchical: ['LE', 'COST_ELEMENT', 'GMID_DISPLAY', 'SMARTCODE', 'MC', 'YEAR', 'ITEM_COST_TYPE', 'MATERIAL_TYPE'].includes(
+//                     dim.replace(/^DIM_/, '')
+//                 )
+//             });
+//         });
+        
+//         // Add fact table to available files
+//         state.availableFiles.push({
+//             id: selectedFact,
+//             label: selectedFact.replace(/^FACT_/, ''),
+//             type: 'fact'
+//         });
+        
+
+//         // 3. Load dimension data
+//         console.log("⏳ Status: Loading dimension data from database...");
+//         state.dimensions = {};
+        
+//         // Initialize dimensions to empty objects to prevent null reference issues
+//         dimNames.forEach(dim => {
+//             const dimKey = dim.replace(/^DIM_/, '').toLowerCase();
+//             state.dimensions[dimKey] = [];
+//         });
+        
+//         // Fetch all dimension data in parallel for efficiency
+//         const dimensionPromises = dimNames.map(async dim => {
+//             try {
+//                 // Update status
+//                 ui.updateTableStatus(dim, 'loading');
+                
+//                 // Fetch dimension data
+//                 const { data, error } = await fetchDatabaseData(dim);
+                
+//                 if (error || !data) {
+//                     ui.updateTableStatus(dim, 'error');
+//                     console.error(`Error loading dimension: ${dim}`, error);
+//                     return false;
+//                 }
+                
+//                 // Store in state (lowercase dimension name without DIM_ prefix)
+//                 const dimKey = dim.replace(/^DIM_/, '').toLowerCase();
+//                 state.dimensions[dimKey] = data;
+                
+//                 // Update status
+//                 ui.updateTableStatus(dim, 'loaded', data.length);
+//                 console.log(`✅ Status: Loaded dimension ${dim}: ${data.length} rows`);
+                                
+//                 return true;
+//             } catch (err) {
+//                 console.error(`Error loading dimension ${dim}:`, err);
+//                 ui.updateTableStatus(dim, 'error');
+//                 return false;
+//             }
+//         });
+        
+//         // Wait for all dimension data to load
+//         await Promise.all(dimensionPromises);
+        
+
+//         // 4. Load fact data
+//         console.log(`⏳ Status: Loading fact data from ${selectedFact}...`);
+//         ui.updateTableStatus(selectedFact, 'loading');
+        
+//         // Definition switched from const to let to allow data filtering
+//         let { data: factData, error: factError } = await fetchDatabaseData(selectedFact);
+
+//         console.log(`✅ Status: Loaded fact data ${selectedFact}: ${factData.length} rows`);
+
+//         // This step is crucial in performance enhancement. It filters out fact rows with zero/null/empty values for the measures 
+//         console.log(`⏳ Status: Filtering out null/empty/zero fact data from ${selectedFact}...`);
+
+//         factData = factData.filter(row => {
+//             // Check if COST_UNIT has a valid value (not null/undefined/empty string and not zero)
+//             const xHasValue = row.COST_UNIT !== null && row.COST_UNIT !== undefined && row.COST_UNIT !== 0 && row.COST_UNIT !== '';
+            
+//             // Check if QTY_UNIT has a valid value (not null/undefined/empty string and not zero)
+//             const yHasValue = row.QTY_UNIT !== null && row.QTY_UNIT !== undefined && row.QTY_UNIT !== 0 && row.QTY_UNIT !== '';
+            
+//             // Keep this row if either x or y has a valid value
+//             return xHasValue || yHasValue;
+//         });
+        
+//         if (factError || !factData) {
+//             ui.updateTableStatus(selectedFact, 'error');
+//             throw new Error(`Error loading fact data: ${selectedFact}`);
+//         }
+        
+//         // Store fact data
+//         state.factData = factData;
+//         ui.updateTableStatus(selectedFact, 'loaded', factData.length);
+//         console.log(`✅ Status: Loaded working fact data ${selectedFact}: ${factData.length} rows`);
+
+//         // Confirm fact data is cached before moving on
+//         if(state.factData.length > 0){
+//             console.log("✅ Status: Sample BOM data:", state.factData[0]);
+//         }
+
+//         // Verify fact data is loaded before proceeding
+//         if (!state.factData || state.factData.length === 0) {
+//             throw new Error("Fact data was not properly loaded");
+//         }
+        
+//         // Verify dimensions are loaded
+//         const dimensionsLoaded = Object.keys(state.dimensions).some(key => 
+//             Array.isArray(state.dimensions[key]) && state.dimensions[key].length > 0
+//         );
+        
+//         if (!dimensionsLoaded) {
+//             throw new Error("No dimension data was properly loaded");
+//         }
+        
+
+//         // 5. Optimize dimension data by filtering to only records used in fact data
+//         console.log("⏳ Status: Optimizing dimension data based on fact relationships...");
+        
+//         // Extract unique dimension keys from fact data for filtering
+//         const dimensionKeys = {};
+        
+//         Object.keys(state.dimensions).forEach(dimKey => {
+//             const factIdField = getFactIdField(dimKey);
+            
+//             if (factIdField) {
+//                 // Extract unique values from fact data for this dimension
+//                 const uniqueValues = new Set();
+//                 state.factData.forEach(row => {
+//                     if (row[factIdField] !== null && row[factIdField] !== undefined && row[factIdField] !== '') {
+//                         uniqueValues.add(row[factIdField]);
+//                     }
+//                 });
+//                 dimensionKeys[dimKey] = uniqueValues;
+//                 console.log(`✅ Status: Found ${uniqueValues.size} unique ${dimKey} keys in fact data`);
+//             } else {
+//                 console.warn(`⚠️ Warning: No fact field mapping found for dimension ${dimKey}`);
+//                 dimensionKeys[dimKey] = new Set(); // Empty set means no filtering
+//             }
+//         });
+        
+//         // Filter each dimension to only include records referenced in fact data
+//         Object.keys(state.dimensions).forEach(dimKey => {
+//             const originalData = state.dimensions[dimKey];
+//             const originalCount = originalData.length;
+            
+//             if (dimensionKeys[dimKey] && dimensionKeys[dimKey].size > 0) {
+//                 // Get the dimension ID field using the provided mapping function
+//                 const dimIdField = getDimensionIdField(dimKey);
+                
+//                 if (dimIdField) {
+//                     const filteredData = originalData.filter(row => 
+//                         dimensionKeys[dimKey].has(row[dimIdField])
+//                     );
+                    
+//                     state.dimensions[dimKey] = filteredData;
+                    
+//                     const filterRatio = ((originalCount - filteredData.length) / originalCount * 100).toFixed(1);
+//                     console.log(`✅ Status: Optimized ${dimKey}: ${originalCount} → ${filteredData.length} rows (${filterRatio}% reduction)`);
+//                 } else {
+//                     console.warn(`⚠️ Warning: No ID field mapping found for dimension ${dimKey}, keeping all records`);
+//                 }
+//             } else {
+//                 console.log(`📝 Status: No optimization applied to ${dimKey} (no matching fact keys found)`);
+//             }
+//         });
+
+
+//         // 6. Generate available fields
+//         state.availableFields = [];
+        
+//         // Add dimension fields
+//         state.availableFiles.forEach(file => {
+//             if (file.type === 'dimension') {
+//                 state.availableFields.push({
+//                     id: file.id,
+//                     label: file.label,
+//                     category: 'Dimension',
+//                     type: 'dimension',
+//                     hierarchical: true, //file.hierarchical,
+//                     draggableTo: ['row', 'column', 'filter']
+//                 });
+//             }
+//         });
+        
+//         // Add measure fields
+//         [
+//             { id: 'COST_UNIT', label: 'Cost Unit' },
+//             { id: 'QTY_UNIT', label: 'Quantity Unit' }
+//         ].forEach(measure => {
+//             state.availableFields.push({
+//                 id: measure.id,
+//                 label: measure.label,
+//                 category: 'Measure',
+//                 type: 'fact',
+//                 measureName: measure.id,
+//                 draggableTo: ['value']
+//             });
+//         });
+
+
+//         // 7. Process dimension data to build hierarchies (now with optimized data)
+//         try {
+//             console.log("⏳ Status: Building Dimension hierarchies with optimized data...");
+//             const hierarchies = processDimensionHierarchies(state.dimensions, state.factData);
+//             state.hierarchies = hierarchies || {};
+//             console.log("✅ Status: Dimension hierarchies built:", Object.keys(state.hierarchies));
+            
+//         } catch (hierError){
+//             console.error("Error building hierarchies:", hierError);
+//             // Initialize empty hierarchies
+//             state.hierarchies = {};
+//         }
+        
+        
+//         // 8. Set up UI elements
+//         ui.renderAvailableFields(elements);
+//         ui.setDefaultFields();
+//         ui.renderFieldContainers(elements, state);
+        
+
+//         // 9. Initialize mappings AFTER data loading is complete
+//         console.log("⏳ Status: Initializing mappings now that data is loaded");
+//         initializeMappings();
+                
+//         // Show success message
+//         console.log('✅ Status: Data loaded successfully from Snowflake database with performance optimizations.', 'success', elements);
+//         state.loading = false;
+
+//         return true;
+        
+//     } catch (error) {
+//         console.error('Data Loading Error:', error);
+                
+//         // Show app content even on error
+//         const appContent = document.getElementById('appContent');
+//         if (appContent) {
+//             appContent.style.display = 'block';
+//         }
+        
+//         // Show error message
+//         console.error(`❌ Data Loading Error: ${error.message}`, 'error', elements);
+//         return false;
+//     }
+// }
+async function ingestData(elements, selectedFact = 'FACT_BOM') {
+    console.log('⏳ Status: Using legacy ingestData - calling new phased approach...');
+    
+    // First load dimensions
+    const dimensionsSuccess = await ingestDimensionData(elements, selectedFact);
+    if (!dimensionsSuccess) {
+        return false;
+    }
+    
+    // Then load fact data
+    const factSuccess = await ingestFactData(elements, selectedFact);
+    return factSuccess;
 }
 
 
@@ -499,233 +859,6 @@ window.generatePivotTable = function() {
     
     console.log("✅ Status: PIVOT GEN COMPLETE");
 };
-
-
-// function processHierarchicalFields(fieldIds, axisType) {
-//     // console.log(`⏳ Status: Processing hierarchical fields: ${fieldIds.join(', ')} for ${axisType}`);
-    
-//     const result = {
-//         flatRows: [],
-//         flatMappings: [],
-//         hierarchyFields: []
-//     };
-    
-//     fieldIds.forEach(fieldId => {
-//         const field = state.availableFields.find(f => f.id === fieldId);
-//         if (!field) {
-//             // console.warn(`Field not found: ${fieldId}`);
-//             return;
-//         }
-        
-//         // Get dimension name (lowercase without DIM_ prefix)
-//         const dimName = field.id.replace('DIM_', '').toLowerCase();
-//         // console.log(`Processing dimension: ${dimName}`);
-        
-//         // Check if hierarchy exists
-//         if (!state.hierarchies || !state.hierarchies[dimName]) {
-//             // console.error(`No hierarchy found for ${dimName}`);
-//             return;
-//         }
-        
-//         const hierarchy = state.hierarchies[dimName];
-//         if (!hierarchy || !hierarchy.root) {
-//             // console.error(`Invalid hierarchy for ${dimName}`);
-//             return;
-//         }
-                
-//         // Store the field for reference
-//         result.hierarchyFields.push(field);
-        
-//         // Get zone-specific expanded nodes
-//         const zone = axisType;
-        
-//         // Ensure expandedNodes is initialized
-//         if (!state.expandedNodes[dimName]) {
-//             state.expandedNodes[dimName] = { row: {}, column: {} };
-//         }
-//         if (!state.expandedNodes[dimName][zone]) {
-//             state.expandedNodes[dimName][zone] = {};
-//         }
-        
-//         // Ensure ROOT is expanded
-//         const rootId = hierarchy.root.id;
-//         state.expandedNodes[dimName][zone][rootId] = true;
-        
-//         // Apply expansion state to nodes
-//         applyExpansionState(hierarchy.root, state.expandedNodes[dimName][zone]);
-        
-//         // Flatten the hierarchy
-//         let flattenedNodes = [];
-//         try {
-//             flattenedNodes = flattenHierarchy(hierarchy.root);
-//         } catch (error) {
-//             console.error(`Error flattening ${dimName} hierarchy:`, error);
-//             flattenedNodes = [hierarchy.root]; // At least include the root
-//         }
-        
-//         // Dimension-specific processing
-//         if (dimName === 'material_type') {
-//             // Add to result with special handling for material type
-//             flattenedNodes.forEach(node => {
-//                 // Ensure materialTypeCode is correctly passed to the factId
-//                 const factId = node.materialTypeCode !== undefined ? node.materialTypeCode : 
-//                             (node.factId !== undefined ? node.factId : null);
-                
-//                 result.flatRows.push({
-//                     _id: node.id,
-//                     label: node.label || node.id,
-//                     level: node.level,
-//                     hasChildren: node.hasChildren,
-//                     isLeaf: node.isLeaf,
-//                     expanded: node.expanded,
-//                     hierarchyField: field.id,
-//                     path: node.path,
-//                     factId: factId,
-//                     materialTypeCode: node.materialTypeCode
-//                 });
-                
-//                 result.flatMappings.push({
-//                     id: node.id,
-//                     dimensionName: dimName,
-//                     nodeId: node.id,
-//                     isHierarchical: true,
-//                     isLeaf: node.isLeaf,
-//                     factId: factId,
-//                     factIdField: 'COMPONENT_MATERIAL_TYPE'
-//                 });
-//             });
-//         } else if (dimName === 'item_cost_type') {
-//             // Special handling for item cost type
-//             flattenedNodes.forEach(node => {
-//                 const factId = node.factId !== undefined ? node.factId : node.itemCostTypeCode;
-                
-//                 result.flatRows.push({
-//                     _id: node.id,
-//                     label: node.label || node.id,
-//                     level: node.level,
-//                     hasChildren: node.hasChildren,
-//                     isLeaf: node.isLeaf,
-//                     expanded: node.expanded,
-//                     hierarchyField: field.id,
-//                     path: node.path,
-//                     factId: factId,
-//                     itemCostTypeCode: node.itemCostTypeCode
-//                 });
-                
-//                 result.flatMappings.push({
-//                     id: node.id,
-//                     dimensionName: dimName,
-//                     nodeId: node.id,
-//                     isHierarchical: true,
-//                     isLeaf: node.isLeaf,
-//                     factId: factId,
-//                     factIdField: 'ITEM_COST_TYPE'
-//                 });
-//             });
-//         } else if (dimName === 'material_type') {
-//             flattenedNodes.forEach(node => {
-//                 // No need for materialTypeCode or factId - we'll extract from node ID
-//                 result.flatRows.push({
-//                     _id: node.id,
-//                     label: node.label || node.id,
-//                     level: node.level,
-//                     hasChildren: node.hasChildren,
-//                     isLeaf: node.isLeaf,
-//                     expanded: node.expanded,
-//                     hierarchyField: field.id,
-//                     path: node.path
-//                 });
-                
-//                 result.flatMappings.push({
-//                     id: node.id,
-//                     dimensionName: dimName,
-//                     nodeId: node.id,
-//                     isHierarchical: true,
-//                     isLeaf: node.isLeaf,
-//                     factIdField: 'COMPONENT_MATERIAL_TYPE'
-//                 });
-//             });
-//         } else if (dimName === 'year') {
-//             // Special handling for year
-//             flattenedNodes.forEach(node => {
-//                 result.flatRows.push({
-//                     _id: node.id,
-//                     label: node.label || node.id,
-//                     level: node.level,
-//                     hasChildren: node.hasChildren,
-//                     isLeaf: node.isLeaf,
-//                     expanded: node.expanded,
-//                     hierarchyField: field.id,
-//                     path: node.path,
-//                     factId: node.factId
-//                 });
-                
-//                 result.flatMappings.push({
-//                     id: node.id,
-//                     dimensionName: dimName,
-//                     nodeId: node.id,
-//                     isHierarchical: true,
-//                     isLeaf: node.isLeaf,
-//                     factId: node.factId,
-//                     factIdField: 'ZYEAR'
-//                 });
-//             });
-//         } else if (dimName === 'mc') {
-//             // Special handling for MC
-//             flattenedNodes.forEach(node => {
-//                 result.flatRows.push({
-//                     _id: node.id,
-//                     label: node.label || node.id,
-//                     level: node.level,
-//                     hasChildren: node.hasChildren,
-//                     isLeaf: node.isLeaf,
-//                     expanded: node.expanded,
-//                     hierarchyField: field.id,
-//                     path: node.path,
-//                     factId: node.factId
-//                 });
-                
-//                 result.flatMappings.push({
-//                     id: node.id,
-//                     dimensionName: dimName,
-//                     nodeId: node.id,
-//                     isHierarchical: true,
-//                     isLeaf: node.isLeaf,
-//                     factId: node.factId,
-//                     factIdField: 'MC'
-//                 });
-//             });
-//         } else {
-//             // Default handling for other dimensions
-//             flattenedNodes.forEach(node => {
-//                 result.flatRows.push({
-//                     _id: node.id,
-//                     label: node.label || node.id,
-//                     level: node.level,
-//                     hasChildren: node.hasChildren,
-//                     isLeaf: node.isLeaf,
-//                     expanded: node.expanded,
-//                     hierarchyField: field.id,
-//                     path: node.path,
-//                     factId: node.factId
-//                 });
-                
-//                 result.flatMappings.push({
-//                     id: node.id,
-//                     dimensionName: dimName,
-//                     nodeId: node.id,
-//                     isHierarchical: true,
-//                     isLeaf: node.isLeaf,
-//                     factId: node.factId,
-//                     factIdField: getFactIdField(dimName)
-//                 });
-//             });
-//         }
-//     });
-    
-//     // console.log(`Processed ${fieldIds.length} fields. Result contains ${result.flatRows.length} rows.`);
-//     return result;
-// }
 
 
 function processHierarchicalFields(fieldIds, axisType) {
@@ -884,27 +1017,6 @@ function initializeAllDimensionsCollapsed() {
 
 
 // Helper function to apply expansion state
-// function applyExpansionState(node, expansionState) {
-//     if (!node) return;
-    
-//     // Set expansion state
-//     node.expanded = expansionState[node.id] === true;
-    
-//     // Apply to children
-//     if (node.children && node.children.length > 0) {
-//         node.children.forEach(childId => {
-//             // Handle both string IDs and direct node references
-//             const childNode = typeof childId === 'string' ? 
-//                 findNodeById(childId, node.hierarchyName) : childId;
-            
-//             if (childNode) {
-//                 applyExpansionState(childNode, expansionState);
-//             } else {
-//                 console.warn(`Child node ID ${childId} not found during expansion`);
-//             }
-//         });
-//     }
-// }
 function applyExpansionState(node, expansionState) {
     if (!node) return;
     
@@ -3980,74 +4092,6 @@ function initializeExpansionTracking(state, hierarchyName, zone) {
 
 
 
-// 
-// function processHierarchicalFieldsEnhanced(fields, zone) {
-//     const flatRows = [];
-//     const flatMappings = [];
-    
-//     const processNodeRecursive = (node, dimensionField, hierarchy, path, level) => {
-//         const dimensionName = extractDimensionName(dimensionField);
-//         const hasChildren = nodeHasChildren(node, this.state);
-        
-//         // Check expansion state from the current state
-//         const isExpanded = isNodeExpanded(node._id, dimensionName, zone, this.state);
-        
-//         const processedNode = {
-//             _id: node._id,
-//             label: node.label || node._id,
-//             hierarchyField: dimensionField,
-//             level: level,
-//             path: [...path, node._id],
-//             hasChildren: hasChildren,
-//             isLeaf: !hasChildren,
-//             expanded: isExpanded,
-//             dimension: dimensionField,
-//             factId: node.factId
-//         };
-        
-//         flatRows.push(processedNode);
-//         flatMappings.push({ 
-//             _id: node._id, 
-//             dimension: dimensionField, 
-//             level: level,
-//             isLeaf: !hasChildren
-//         });
-        
-//         // Process children if expanded OR if this is initial processing
-//         if (hasChildren && (isExpanded || zone === 'column')) {
-//             node.children.forEach(childId => {
-//                 const childNode = hierarchy.nodesMap[childId];
-//                 if (childNode) {
-//                     processNodeRecursive(
-//                         childNode, 
-//                         dimensionField, 
-//                         hierarchy, 
-//                         processedNode.path, 
-//                         level + 1
-//                     );
-//                 }
-//             });
-//         }
-//     };
-
-//     fields.forEach((dimensionField) => {
-//         const dimensionName = extractDimensionName(dimensionField);
-//         const hierarchy = this.state.hierarchies[dimensionName];
-        
-//         if (!hierarchy) {
-//             console.warn(`Hierarchy not found for dimension: ${dimensionName}`);
-//             return;
-//         }
-        
-//         const rootNode = hierarchy.nodesMap['ROOT'];
-//         if (rootNode) {
-//             processNodeRecursive(rootNode, dimensionField, hierarchy, [], 0);
-//         }
-//     });
-    
-//     console.log(`📊 Processed ${fields.length} ${zone} fields: ${flatRows.length} total nodes`);
-//     return { flatRows, flatMappings };
-// }
 function processHierarchicalFieldsEnhanced(fields, zone) {
     const flatRows = [];
     const flatMappings = [];
@@ -4192,6 +4236,11 @@ function filterFactDataByRootGmids() {
 
 // Export signature
 export default {
+    // PHASE 1 NEW EXPORTS
+    ingestDimensionData,
+    ingestFactData,
+    initializeBasicMappings,
+
     // Data processing
     getItemCostTypeDesc, 
     getMaterialTypeDesc,

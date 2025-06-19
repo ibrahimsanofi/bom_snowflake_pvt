@@ -1,13 +1,18 @@
+/*
+xxx
+*/
+
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
-const { connectToSnowflake } = require('./snowflakeClient');
+const { executeSnowflakeQuery, connectToSnowflake, closeSnowflakeConnection } = require('./snowflakeClient');
 
 const app = express();
 const PORT = 3000;
 
 app.use(cors()); 
 app.use(express.json());
+
 
 /**
  * Route générique pour récupérer toutes les lignes d'une table.
@@ -87,6 +92,66 @@ app.get('/api/get_bom_dim', async (req, res) => {
 });
 
 
+app.get('/api/data/FACT_BOM/filtered', async (req, res) => {
+    try {
+        console.log('Filtered fact data request:', req.query);
+        
+        // Build WHERE clause from query parameters
+        const whereConditions = [];
+        const params = [];
+        
+        // Process each filter parameter
+        Object.entries(req.query).forEach(([field, values]) => {
+            if (values && values.trim()) {
+                const valueArray = values.split(',').map(v => v.trim()).filter(v => v);
+                if (valueArray.length > 0) {
+                    const placeholders = valueArray.map(() => '?').join(',');
+                    whereConditions.push(`${field} IN (${placeholders})`);
+                    params.push(...valueArray);
+                }
+            }
+        });
+        
+        // Build the SQL query
+        let sql = `
+            SELECT 
+                LE, COST_ELEMENT, COMPONENT_GMID, ROOT_SMARTCODE, 
+                ITEM_COST_TYPE, COMPONENT_MATERIAL_TYPE, MC, ZYEAR,
+                COST_UNIT, QTY_UNIT
+            FROM FACT_BOM
+        `;
+        
+        if (whereConditions.length > 0) {
+            sql += ` WHERE ${whereConditions.join(' AND ')}`;
+        }
+        
+        // Add reasonable limit to prevent huge result sets
+        sql += ` LIMIT 10000`;
+        
+        console.log('Executing SQL:', sql);
+        console.log('With parameters:', params);
+        
+        // Execute query (adjust based on your database setup)
+        const results = await executeSnowflakeQuery(sql, params);
+        
+        // Set response headers for NDJSON
+        res.setHeader('Content-Type', 'application/x-ndjson');
+        res.setHeader('Cache-Control', 'no-cache');
+        
+        // Stream results as NDJSON
+        for (const row of results) {
+            res.write(JSON.stringify(row) + '\n');
+        }
+        
+        res.end();
+        
+    } catch (error) {
+        console.error('Error in filtered fact data endpoint:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
 app.listen(PORT, () => {
-  console.log(`✅ Serveur backend en écoute sur http://localhost:${PORT}`);
+  console.log(`✅ Snowflake database server listens on http://localhost:${PORT}`);
 });
