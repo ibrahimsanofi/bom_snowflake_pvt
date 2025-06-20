@@ -17,41 +17,585 @@ const API_BASE_URL = 'http://localhost:3000/api';
 const ENDPOINTS = {
     GET_DIMENSIONS: `${API_BASE_URL}/get_bom_dim`,
     GET_DATA: `${API_BASE_URL}/data/`,
-    GET_FACT_NAMES: `${API_BASE_URL}/get_fact_names`
+    GET_FACT_NAMES: `${API_BASE_URL}/get_fact_names`,
+    GET_DIMENSION_FIELDS: `${API_BASE_URL}/dimension-fields/` // NEW ENDPOINT
 };
+
+/**
+ * ENHANCED: Configuration for dimension field loading
+ * Maps each dimension to the specific fields needed for filtering
+ */
+const DIMENSION_FIELD_CONFIG = {
+    'DIM_LE': {
+        fields: ['LE', 'LE_DESC', 'PATH'],
+        displayField: 'LE_DESC',
+        valueField: 'LE',
+        filterField: 'LE' // Field name in FACT_BOM
+    },
+    'DIM_COST_ELEMENT': {
+        fields: ['COST_ELEMENT', 'COST_ELEMENT_DESC', 'PATH'],
+        displayField: 'COST_ELEMENT_DESC',
+        valueField: 'COST_ELEMENT',
+        filterField: 'COST_ELEMENT'
+    },
+    'DIM_SMARTCODE': {
+        fields: ['SMARTCODE', 'SMARTCODE_DESC', 'PATH'],
+        displayField: 'SMARTCODE_DESC',
+        valueField: 'SMARTCODE',
+        filterField: 'ROOT_SMARTCODE'
+    },
+    'DIM_GMID_DISPLAY': {
+        fields: ['ROOT_GMID'],
+        displayField: 'ROOT_GMID',
+        valueField: 'ROOT_GMID',
+        filterField: 'ROOT_GMID'
+    },
+    'DIM_ROOT_GMID_DISPLAY': {
+        fields: ['ROOT_GMID', 'ROOT_DISPLAY'],
+        displayField: 'ROOT_DISPLAY',
+        valueField: 'ROOT_GMID',
+        filterField: 'ROOT_GMID'
+    },
+    'DIM_ITEM_COST_TYPE': {
+        fields: ['ITEM_COST_TYPE', 'ITEM_COST_TYPE_DESC'],
+        displayField: 'ITEM_COST_TYPE_DESC',
+        valueField: 'ITEM_COST_TYPE',
+        filterField: 'ITEM_COST_TYPE'
+    },
+    'DIM_MATERIAL_TYPE': {
+        fields: ['MATERIAL_TYPE', 'MATERIAL_TYPE_DESC'],
+        displayField: 'MATERIAL_TYPE_DESC',
+        valueField: 'MATERIAL_TYPE',
+        filterField: 'COMPONENT_MATERIAL_TYPE'
+    },
+    'DIM_MC': {
+        fields: ['MC', 'LE_DESC', 'PATH'],
+        displayField: 'LE_DESC',
+        valueField: 'MC',
+        filterField: 'MC'
+    },
+    'DIM_YEAR': {
+        fields: ['YEAR'],
+        displayField: 'YEAR',
+        valueField: 'YEAR',
+        filterField: 'ZYEAR'
+    }
+};
+
+
+/**
+ * ENHANCED: Fetch specific fields from a dimension table
+ * @param {string} tableName - Name of the dimension table
+ * @param {Array} fields - Array of field names to fetch
+ * @returns {Promise<{data: Array, error?: any}>} - Object containing data or error
+ */
+async function fetchDimensionFields(tableName, fields) {
+    const url = `${ENDPOINTS.GET_DIMENSION_FIELDS}${tableName}`;
+    
+    try {
+        console.log(`⏳ Status: Fetching fields [${fields.join(', ')}] from ${tableName}...`);
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 
+                'Accept': 'application/x-ndjson',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ fields: fields })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Error fetching fields from ${tableName}: ${response.status}`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        const rows = [];
+        let networkError = false;
+
+        try {
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+
+                const lines = buffer.split('\n');
+                buffer = lines.pop(); 
+
+                lines.forEach(line => {
+                    if (line.trim()) {
+                        try {
+                            rows.push(JSON.parse(line));
+                        } catch (e) {
+                            console.warn(`Invalid line in ${tableName}:`, e);
+                        }
+                    }
+                });
+            }
+        } catch (err) {
+            networkError = true;
+            console.error(`❌ Network error while fetching fields from ${tableName}:`, err);
+        }
+
+        if (networkError || rows.length === 0) {
+            throw new Error(`Network error while loading fields from ${tableName}`);
+        }
+
+        if (buffer.trim()) {
+            try {
+                rows.push(JSON.parse(buffer));
+            } catch (e) {
+                console.warn(`Invalid lines in ${tableName}:`, e);
+            }
+        }
+
+        console.log(`✅ ${rows.length} rows loaded from ${tableName} (fields: ${fields.join(', ')})`);
+        return { data: rows };
+    } catch (err) {
+        console.error(`❌ Error fetching fields from ${tableName}:`, err);
+        return { data: null, error: err };
+    }
+}
+
+
+/**
+ * COMBINED FUNCTION: Load dimension data and build hierarchies
+ * This replaces the original ingestDimensionFilterData function
+ * @param {Object} elements - DOM elements object
+ * @param {string} selectedFact - Name of the fact table (default: 'FACT_BOM')
+ * @returns {Promise<boolean>} - Success status
+ */
+async function ingestDimensionFilterData(elements, selectedFact = 'FACT_BOM') {
+    console.log('⏳ Status: Starting complete dimension data ingestion and hierarchy building process...');
+    
+    try {
+        // Step 1: Load dimension filter data
+        const dataLoadSuccess = await ingestDimensionFilterDataOnly(elements, selectedFact);
+        if (!dataLoadSuccess) {
+            throw new Error("Failed to load dimension filter data");
+        }
+        
+        // Step 2: Build hierarchies from loaded data
+        const hierarchyBuildSuccess = await buildAndPersistDimensionHierarchies(elements);
+        if (!hierarchyBuildSuccess) {
+            console.warn("Hierarchy building failed, but continuing with loaded data");
+            // Don't throw error here - we can still work with flat data
+        }
+        
+        console.log('✅ Status: Complete dimension data ingestion and hierarchy building process finished successfully');
+        return true;
+        
+    } catch (error) {
+        console.error('Complete Dimension Processing Error:', error);
+        return false;
+    }
+}
+
+
+/**
+ * PART 1: Ingest dimension filter data from database
+ * This function only handles data loading and storage, no hierarchy processing
+ * @param {Object} elements - DOM elements object
+ * @param {string} selectedFact - Name of the fact table (default: 'FACT_BOM')
+ * @returns {Promise<boolean>} - Success status
+ */
+async function ingestDimensionFilterDataOnly(elements, selectedFact = 'FACT_BOM') {
+    console.log('⏳ Status: Loading dimension filter data from Snowflake database server...', 'info', elements);
+    
+    try {        
+        // 1. Get dimensions related to the selected fact table
+        const dimNames = await fetchDimensionNamesForFact(selectedFact);
+        console.log(`✅ Status: Found ${dimNames.length} dimensions for ${selectedFact}`);
+
+        // 2. Build available files list (used for UI)
+        state.availableFiles = [];
+        dimNames.forEach(dim => {
+            state.availableFiles.push({
+                id: `${dim}`,
+                label: dim.replace(/^DIM_/, ''),
+                type: 'dimension',
+                hierarchical: ['LE', 'COST_ELEMENT', 'GMID_DISPLAY', 'SMARTCODE', 'MC', 'YEAR', 'ITEM_COST_TYPE', 'MATERIAL_TYPE', 'ROOT_GMID_DISPLAY'].includes(
+                    dim.replace(/^DIM_/, '')
+                )
+            });
+        });
+        
+        // Add fact table to available files (but don't load it yet)
+        state.availableFiles.push({
+            id: selectedFact,
+            label: selectedFact.replace(/^FACT_/, ''),
+            type: 'fact'
+        });
+
+        // 3. Load dimension filter data (specific fields only)
+        console.log("⏳ Status: Loading dimension filter data from database...");
+        state.dimensionFilters = {}; // Store filter-specific data separately
+        
+        // Initialize dimension filters to empty objects
+        dimNames.forEach(dim => {
+            const dimKey = dim.replace(/^DIM_/, '').toLowerCase();
+            state.dimensionFilters[dimKey] = [];
+        });
+        
+        // Fetch dimension filter data in parallel for efficiency
+        const dimensionPromises = dimNames.map(async dim => {
+            try {
+                // Update status
+                ui.updateTableStatus(dim, 'loading');
+                
+                // Get field configuration for this dimension
+                const fieldConfig = DIMENSION_FIELD_CONFIG[dim];
+                if (!fieldConfig) {
+                    console.warn(`No field configuration found for ${dim}, skipping`);
+                    ui.updateTableStatus(dim, 'warning');
+                    return false;
+                }
+                
+                // Fetch only the required fields
+                const { data, error } = await fetchDimensionFields(dim, fieldConfig.fields);
+                
+                if (error || !data) {
+                    ui.updateTableStatus(dim, 'error');
+                    console.error(`Error loading dimension fields: ${dim}`, error);
+                    return false;
+                }
+                
+                // Store in state (lowercase dimension name without DIM_ prefix)
+                const dimKey = dim.replace(/^DIM_/, '').toLowerCase();
+                state.dimensionFilters[dimKey] = {
+                    data: data,
+                    config: fieldConfig,
+                    tableName: dim
+                };
+                
+                // Update status
+                ui.updateTableStatus(dim, 'loaded', data.length);
+                console.log(`✅ Status: Loaded dimension filter data ${dim}: ${data.length} rows`);
+                                
+                return true;
+            } catch (err) {
+                console.error(`Error loading dimension filter data ${dim}:`, err);
+                ui.updateTableStatus(dim, 'error');
+                return false;
+            }
+        });
+        
+        // Wait for all dimension filter data to load
+        await Promise.all(dimensionPromises);
+
+        // 4. Verify dimension filters are loaded
+        const filtersLoaded = Object.keys(state.dimensionFilters).some(key => 
+            state.dimensionFilters[key].data && state.dimensionFilters[key].data.length > 0
+        );
+        
+        if (!filtersLoaded) {
+            throw new Error("No dimension filter data was properly loaded");
+        }
+
+        // 5. Generate available fields for UI
+        state.availableFields = [];
+        
+        // Add dimension fields
+        state.availableFiles.forEach(file => {
+            if (file.type === 'dimension') {
+                state.availableFields.push({
+                    id: file.id,
+                    label: file.label,
+                    category: 'Dimension',
+                    type: 'dimension',
+                    hierarchical: file.hierarchical,
+                    draggableTo: ['row', 'column', 'filter']
+                });
+            }
+        });
+        
+        // Add measure fields
+        [
+            { id: 'COST_UNIT', label: 'Cost Unit' },
+            { id: 'QTY_UNIT', label: 'Quantity Unit' }
+        ].forEach(measure => {
+            state.availableFields.push({
+                id: measure.id,
+                label: measure.label,
+                category: 'Measure',
+                type: 'fact',
+                measureName: measure.id,
+                draggableTo: ['value']
+            });
+        });
+
+        // Set up UI elements - defer hierarchy building
+        ui.renderAvailableFields(elements);
+        ui.setDefaultFields();
+        ui.renderFieldContainers(elements, state);
+
+        // Show success message
+        console.log('✅ Status: Dimension filter data loaded successfully from Snowflake database.', 'success', elements);
+        state.dimensionFiltersLoaded = true;
+
+        return true;
+        
+    } catch (error) {
+        console.error('Dimension Filter Data Loading Error:', error);
+                
+        // Show app content even on error
+        const appContent = document.getElementById('appContent');
+        if (appContent) {
+            appContent.style.display = 'block';
+        }
+        
+        // Show error message
+        console.error(`❌ Dimension Filter Data Loading Error: ${error.message}`, 'error', elements);
+        return false;
+    }
+}
+
+
+/**
+ * PART 2: Build and persist hierarchies from loaded dimension data
+ * This function processes the loaded dimension data to create hierarchical structures
+ * @param {Object} elements - DOM elements object (optional, for status updates)
+ * @returns {Promise<boolean>} - Success status
+ */
+async function buildAndPersistDimensionHierarchies(elements = null) {
+    console.log('⏳ Status: Building and persisting dimension hierarchies...');
+    
+    try {
+        // Ensure dimension filter data is loaded
+        if (!state.dimensionFiltersLoaded || !state.dimensionFilters) {
+            throw new Error("Dimension filter data must be loaded before building hierarchies");
+        }
+
+        // Initialize hierarchies storage
+        state.hierarchies = state.hierarchies || {};
+        state.expandedNodes = state.expandedNodes || {};
+
+        // Track successful hierarchy builds
+        const hierarchyResults = {};
+
+        // Build hierarchies for each dimension
+        for (const [dimKey, dimensionFilter] of Object.entries(state.dimensionFilters)) {
+            if (!dimensionFilter.data || dimensionFilter.data.length === 0) {
+                console.warn(`No data available for dimension: ${dimKey}`);
+                continue;
+            }
+
+            try {
+                console.log(`⏳ Status: Building hierarchy for ${dimKey}...`);
+                
+                let hierarchy = null;
+                
+                // Build hierarchy based on dimension type
+                switch (dimKey) {
+                    case 'le':
+                        hierarchy = buildLegalEntityHierarchy(dimensionFilter.data);
+                        break;
+                    case 'cost_element':
+                        hierarchy = buildCostElementHierarchy(dimensionFilter.data);
+                        break;
+                    case 'smartcode':
+                        hierarchy = buildSmartCodeHierarchy(dimensionFilter.data);
+                        break;
+                    case 'mc':
+                        hierarchy = buildManagementCentreHierarchy(dimensionFilter.data);
+                        break;
+                    case 'gmid_display':
+                    case 'root_gmid_display':
+                        hierarchy = buildFilteredGmidDisplayHierarchy(dimensionFilter.data);
+                        break;
+                    case 'item_cost_type':
+                        hierarchy = buildItemCostTypeHierarchy(dimensionFilter.data);
+                        break;
+                    case 'material_type':
+                        hierarchy = buildMaterialTypeHierarchy(dimensionFilter.data);
+                        break;
+                    case 'year':
+                        hierarchy = buildBusinessYearHierarchy(dimensionFilter.data);
+                        break;
+                    default:
+                        // For unknown dimensions, try to build a flat hierarchy
+                        console.warn(`Unknown dimension type: ${dimKey}, building flat hierarchy`);
+                        hierarchy = buildStandaloneFlatHierarchy(
+                            dimensionFilter.data, 
+                            dimKey.toUpperCase(),
+                            dimensionFilter.config?.valueField || 'ID',
+                            dimensionFilter.config?.displayField || 'LABEL'
+                        );
+                        break;
+                }
+
+                if (hierarchy && hierarchy.root) {
+                    // Store the hierarchy
+                    state.hierarchies[dimKey] = hierarchy;
+                    
+                    // Initialize expansion state for both row and column zones
+                    state.expandedNodes[dimKey] = state.expandedNodes[dimKey] || {};
+                    state.expandedNodes[dimKey].row = state.expandedNodes[dimKey].row || {};
+                    state.expandedNodes[dimKey].column = state.expandedNodes[dimKey].column || {};
+                    
+                    // Set root node to collapsed by default
+                    state.expandedNodes[dimKey].row['ROOT'] = false;
+                    state.expandedNodes[dimKey].column['ROOT'] = false;
+                    
+                    // Precompute descendant factIds for efficient filtering
+                    const factIdField = getFactIdField(dimKey);
+                    if (factIdField) {
+                        precomputeDescendantFactIds(hierarchy, factIdField);
+                    }
+                    
+                    hierarchyResults[dimKey] = true;
+                    console.log(`✅ Status: Successfully built hierarchy for ${dimKey} with ${Object.keys(hierarchy.nodesMap).length} nodes`);
+                    
+                    // Update UI status if elements provided
+                    if (elements) {
+                        const tableName = dimensionFilter.tableName;
+                        ui.updateTableStatus(tableName, 'hierarchy_built', Object.keys(hierarchy.nodesMap).length);
+                    }
+                } else {
+                    console.error(`Failed to build hierarchy for ${dimKey}: invalid hierarchy structure`);
+                    hierarchyResults[dimKey] = false;
+                }
+                
+            } catch (error) {
+                console.error(`Error building hierarchy for ${dimKey}:`, error);
+                hierarchyResults[dimKey] = false;
+                
+                // Create fallback hierarchy to prevent crashes
+                state.hierarchies[dimKey] = createFallbackHierarchy(
+                    `${dimKey.toUpperCase()} (Fallback)`, 
+                    'ROOT'
+                );
+            }
+        }
+
+        // Validate that we have at least some hierarchies
+        const successfulHierarchies = Object.values(hierarchyResults).filter(success => success).length;
+        const totalDimensions = Object.keys(state.dimensionFilters).length;
+        
+        if (successfulHierarchies === 0) {
+            throw new Error("Failed to build any hierarchies from dimension data");
+        }
+
+        console.log(`✅ Status: Hierarchy building complete: ${successfulHierarchies}/${totalDimensions} dimensions processed successfully`);
+        
+        // Initialize filter system with dimension hierarchies
+        console.log("⏳ Status: Initializing filter system with dimension hierarchies");
+        setTimeout(() => {
+            if (window.EnhancedFilterSystem && typeof window.EnhancedFilterSystem.initialize === 'function') {
+                window.EnhancedFilterSystem.state = state;
+                window.EnhancedFilterSystem.initialize();
+            } else {
+                console.log("⏳ Status: Filter system not yet available, will initialize when loaded");
+            }
+        }, 500);
+
+        // Mark hierarchies as built
+        state.hierarchiesBuilt = true;
+        
+        return true;
+        
+    } catch (error) {
+        console.error('Hierarchy Building Error:', error);
+        
+        // Show error message if elements provided
+        if (elements) {
+            console.error(`❌ Hierarchy Building Error: ${error.message}`, 'error', elements);
+        }
+        
+        return false;
+    }
+}
+
+
+/**
+ * ENHANCED: Get filter options for a specific dimension
+ * @param {string} dimensionKey - Dimension key (e.g., 'le', 'cost_element')
+ * @returns {Array} - Array of filter options with value and label
+ */
+function getDimensionFilterOptions(dimensionKey) {
+    const dimensionFilter = state.dimensionFilters[dimensionKey];
+    if (!dimensionFilter || !dimensionFilter.data || !dimensionFilter.config) {
+        console.warn(`No filter data available for dimension: ${dimensionKey}`);
+        return [];
+    }
+    
+    const { data, config } = dimensionFilter;
+    const options = [];
+    const seenValues = new Set();
+    
+    data.forEach(row => {
+        const value = row[config.valueField];
+        const label = row[config.displayField] || value;
+        
+        if (value !== null && value !== undefined && !seenValues.has(value)) {
+            seenValues.add(value);
+            options.push({
+                value: value,
+                label: label,
+                filterField: config.filterField
+            });
+        }
+    });
+    
+    // Sort options by label
+    options.sort((a, b) => {
+        const labelA = String(a.label || '').toLowerCase();
+        const labelB = String(b.label || '').toLowerCase();
+        return labelA.localeCompare(labelB);
+    });
+    
+    console.log(`✅ Status: Generated ${options.length} filter options for ${dimensionKey}`);
+    return options;
+}
+
+
+/**
+ * ENHANCED: Get all available filter fields for building filter UI
+ * @returns {Object} - Object mapping dimension keys to their filter options
+ */
+function getAllDimensionFilterOptions() {
+    const allOptions = {};
+    
+    Object.keys(state.dimensionFilters).forEach(dimensionKey => {
+        allOptions[dimensionKey] = getDimensionFilterOptions(dimensionKey);
+    });
+    
+    return allOptions;
+}
 
 
 /**
  * Fetches the list of available dimensions via the server API
  * @returns {Promise<Array>} - Array of dimension names (e.g. ['DIM_LE', ...])
  */
-async function fetchDimensionNames() {
-    try {
-        const response = await fetch(ENDPOINTS.GET_DIMENSIONS);
-        if (!response.ok) throw new Error('Error while retrieving dimensions.');
+// async function fetchDimensionNames() {
+//     try {
+//         const response = await fetch(ENDPOINTS.GET_DIMENSIONS);
+//         if (!response.ok) throw new Error('Error while retrieving dimensions.');
         
-        const text = await response.text();
-        const dims = text
-            .split('\n')
-            .filter(Boolean)
-            .map(line => {
-                try {
-                    const obj = JSON.parse(line);
-                    const key = Object.keys(obj).find(k => typeof obj[k] === 'string');
-                    return obj[key];
-                } catch {
-                    return null;
-                }
-            })
-            .filter(Boolean);
+//         const text = await response.text();
+//         const dims = text
+//             .split('\n')
+//             .filter(Boolean)
+//             .map(line => {
+//                 try {
+//                     const obj = JSON.parse(line);
+//                     const key = Object.keys(obj).find(k => typeof obj[k] === 'string');
+//                     return obj[key];
+//                 } catch {
+//                     return null;
+//                 }
+//             })
+//             .filter(Boolean);
             
-        console.log(`✅ Status: Fetched ${dims.length} dimension names from server`);
-        return dims;
-    } catch (error) {
-        console.error('❌ Error fetching dimension names:', error);
-        throw error;
-    }
-}
+//         console.log(`✅ Status: Fetched ${dims.length} dimension names from server`);
+//         return dims;
+//     } catch (error) {
+//         console.error('❌ Error fetching dimension names:', error);
+//         throw error;
+//     }
+// }
 
 
 /**
@@ -151,7 +695,6 @@ async function fetchDimensionNamesForFact(factTable) {
             })
             .filter(Boolean);
             
-        // console.log(`Found ${dims.length} dimensions for fact table: ${factTable}`);
         return dims;
     } catch (error) {
         console.error('❌ Error fetching dimension names for fact:', error);
@@ -164,33 +707,33 @@ async function fetchDimensionNamesForFact(factTable) {
  * Fetches all available fact table names from the database
  * @returns {Promise<Array>} - Array of fact table names
  */
-async function fetchFactTableNames() {
-    try {
-        const response = await fetch(ENDPOINTS.GET_FACT_NAMES);
-        if (!response.ok) throw new Error('Error while retrieving fact table names.');
+// async function fetchFactTableNames() {
+//     try {
+//         const response = await fetch(ENDPOINTS.GET_FACT_NAMES);
+//         if (!response.ok) throw new Error('Error while retrieving fact table names.');
         
-        const text = await response.text();
-        const facts = text
-            .split('\n')
-            .filter(Boolean)
-            .map(line => {
-                try {
-                    const obj = JSON.parse(line);
-                    const key = Object.keys(obj).find(k => typeof obj[k] === 'string');
-                    return obj[key];
-                } catch {
-                    return null;
-                }
-            })
-            .filter(Boolean);
+//         const text = await response.text();
+//         const facts = text
+//             .split('\n')
+//             .filter(Boolean)
+//             .map(line => {
+//                 try {
+//                     const obj = JSON.parse(line);
+//                     const key = Object.keys(obj).find(k => typeof obj[k] === 'string');
+//                     return obj[key];
+//                 } catch {
+//                     return null;
+//                 }
+//             })
+//             .filter(Boolean);
             
-        // console.log(`Fetched ${facts.length} fact table names from server`);
-        return facts;
-    } catch (error) {
-        console.error('❌ Error fetching fact table names:', error);
-        throw error;
-    }
-}
+//         // console.log(`Fetched ${facts.length} fact table names from server`);
+//         return facts;
+//     } catch (error) {
+//         console.error('❌ Error fetching fact table names:', error);
+//         throw error;
+//     }
+// }
 
 
 /**
@@ -399,18 +942,18 @@ async function ingestFactData(elements, selectedFact = 'FACT_BOM') {
         console.log(`✅ Status: Loaded fact data ${selectedFact}: ${factData.length} rows`);
 
         // This step is crucial in performance enhancement. It filters out fact rows with zero/null/empty values for the measures 
-        console.log(`⏳ Status: Filtering out null/empty/zero fact data from ${selectedFact}...`);
+        // console.log(`⏳ Status: Filtering out null/empty/zero fact data from ${selectedFact}...`);
 
-        factData = factData.filter(row => {
-            // Check if COST_UNIT has a valid value (not null/undefined/empty string and not zero)
-            const xHasValue = row.COST_UNIT !== null && row.COST_UNIT !== undefined && row.COST_UNIT !== 0 && row.COST_UNIT !== '';
+        // factData = factData.filter(row => {
+        //     // Check if COST_UNIT has a valid value (not null/undefined/empty string and not zero)
+        //     const xHasValue = row.COST_UNIT !== null && row.COST_UNIT !== undefined && row.COST_UNIT !== 0 && row.COST_UNIT !== '';
             
-            // Check if QTY_UNIT has a valid value (not null/undefined/empty string and not zero)
-            const yHasValue = row.QTY_UNIT !== null && row.QTY_UNIT !== undefined && row.QTY_UNIT !== 0 && row.QTY_UNIT !== '';
+        //     // Check if QTY_UNIT has a valid value (not null/undefined/empty string and not zero)
+        //     const yHasValue = row.QTY_UNIT !== null && row.QTY_UNIT !== undefined && row.QTY_UNIT !== 0 && row.QTY_UNIT !== '';
             
-            // Keep this row if either x or y has a valid value
-            return xHasValue || yHasValue;
-        });
+        //     // Keep this row if either x or y has a valid value
+        //     return xHasValue || yHasValue;
+        // });
         
         if (factError || !factData) {
             ui.updateTableStatus(selectedFact, 'error');
@@ -430,8 +973,7 @@ async function ingestFactData(elements, selectedFact = 'FACT_BOM') {
         // Verify fact data is loaded before proceeding
         if (!state.factData || state.factData.length === 0) {
             throw new Error("Fact data was not properly loaded");
-        }
-        
+        }        
 
         // Optimize dimension data by filtering to only records used in fact data
         console.log("⏳ Status: Optimizing dimension data based on fact relationships...");
@@ -2426,10 +2968,10 @@ function sortHierarchyNodes(node) {
  * @param {Array} factData - Object containing arrays of fact table data
  * @returns {Object} - Object containing processed hierarchies for each dimension
  */
-function processDimensionHierarchies(dimensions, factData) {
-    console.log("processDimensionHierarchies called with:", 
-                "dimensions:", dimensions ? Object.keys(dimensions) : "none", 
-                "factData:", factData ? factData.length : "none");
+function processDimensionHierarchies(dimensions){ //, factData) {
+    // console.log("processDimensionHierarchies called with:", 
+    //             "dimensions:", dimensions ? Object.keys(dimensions) : "none", 
+    //             "factData:", factData ? factData.length : "none");
     
     const hierarchies = {};
     
@@ -4236,6 +4778,12 @@ function filterFactDataByRootGmids() {
 
 // Export signature
 export default {
+    // ENHANCED EXPORTS
+    ingestDimensionFilterData,
+    getDimensionFilterOptions,
+    getAllDimensionFilterOptions,
+    fetchDimensionFields,
+
     // PHASE 1 NEW EXPORTS
     ingestDimensionData,
     ingestFactData,
@@ -4291,15 +4839,23 @@ export default {
     getVisibleLeafNodes,
     regenerateColumnHierarchies,
     filterRecordsByLeHierarchy,
-    ingestData,
     processHierarchicalFields,
     preFilterData,
-
+    
     // root gmid filter
     // initializeRootGmidFilter,
     updateSelectedRootGmids,
     // 
     processHierarchicalFieldsEnhanced,
     initializeAllDimensionsCollapsed,
+
+    ingestData,
+    ingestDimensionFilterDataOnly,
+    ingestDimensionData,
+    ingestDimensionFilterData,
+    ingestFactData,
+
+    //
+    buildAndPersistDimensionHierarchies,
 
   };

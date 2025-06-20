@@ -44,57 +44,72 @@ class EnhancedFilterSystem {
         label: 'Legal Entity',
         dimensionKey: 'le',
         factField: 'LE',
-        hierarchical: true
+        hierarchical: false, // CHANGED: Treat as simple filter for now
+        valueField: 'LE',
+        displayField: 'LE_DESC'
       },
       rootGmid: {
         id: 'rootGmid',
         label: 'Root GMID',
-        dimensionKey: 'gmid_display',
+        dimensionKey: 'root_gmid_display',
         factField: 'ROOT_GMID',
-        displayField: 'ROOT_DISPLAY',
-        hierarchical: true
+        hierarchical: false, // CHANGED: Treat as simple filter for now
+        valueField: 'ROOT_GMID',
+        displayField: 'ROOT_DISPLAY'
       },
       smartcode: {
         id: 'smartcode',
         label: 'Smartcode',
         dimensionKey: 'smartcode',
         factField: 'ROOT_SMARTCODE',
-        hierarchical: false
+        hierarchical: false,
+        valueField: 'SMARTCODE',
+        displayField: 'SMARTCODE_DESC'
       },
       costElement: {
         id: 'costElement',
         label: 'Cost Element',
         dimensionKey: 'cost_element',
         factField: 'COST_ELEMENT',
-        hierarchical: true
+        hierarchical: false, // CHANGED: Treat as simple filter for now
+        valueField: 'COST_ELEMENT',
+        displayField: 'COST_ELEMENT_DESC'
       },
       businessYear: {
         id: 'businessYear',
         label: 'Business Year',
         dimensionKey: 'year',
         factField: 'ZYEAR',
-        hierarchical: false
+        hierarchical: false,
+        valueField: 'YEAR',
+        displayField: 'YEAR'
       },
       itemCostType: {
         id: 'itemCostType',
         label: 'Item Cost Type',
         dimensionKey: 'item_cost_type',
         factField: 'ITEM_COST_TYPE',
-        hierarchical: false
+        hierarchical: false,
+        valueField: 'ITEM_COST_TYPE',
+        displayField: 'ITEM_COST_TYPE_DESC'
       },
       materialType: {
         id: 'materialType',
         label: 'Material Type',
         dimensionKey: 'material_type',
         factField: 'COMPONENT_MATERIAL_TYPE',
-        hierarchical: false
+        hierarchical: false,
+        valueField: 'MATERIAL_TYPE',
+        displayField: 'MATERIAL_TYPE_DESC'
       },
       managementCentre: {
         id: 'managementCentre',
         label: 'MGT Centre',
         dimensionKey: 'mc',
         factField: 'MC',
-        hierarchical: true
+        hierarchical: false, // CHANGED: Treat as simple filter for now
+        valueField: 'MC',
+        displayField: 'LE_DESC'
       }
     };
 
@@ -112,27 +127,158 @@ class EnhancedFilterSystem {
    * Initialize the filter system
    */
   initialize() {
-    console.log('✅ Status: Initializing Enhanced Filter System...');
+    console.log('✅ Status: Initializing Enhanced Filter System with field-specific data...');
     
     if (!this.state) {
       console.log('✅ Status: No state reference, cannot initialize filters');
       return false;
     }
     
-    if (!this.state.dimensions) {
-      console.log('✅ Status: Dimensions not loaded yet, cannot initialize filters');
+    // CHANGED: Check for dimensionFilters instead of dimensions
+    if (!this.state.dimensionFilters) {
+      console.log('✅ Status: Dimension filter data not loaded yet, cannot initialize filters');
       return false;
     }
     
-    this.initializeHierarchyFilters();
     this.createFilterComponents();
     this.setupFilterEvents();
     this.setupApplyButton();
-    this.populateFilters();
+    this.populateFiltersFromFieldData(); // CHANGED: Use new population method
     
-    // Don't automatically apply filters - let user choose
-    console.log('✅ Status: Enhanced Filter System initialized successfully');
+    console.log('✅ Status: Enhanced Filter System initialized successfully with field-specific data');
     return true;
+  }
+
+
+   /**
+   * ENHANCED: Populate all filter components with field-specific dimension data
+   */
+  populateFiltersFromFieldData() {
+    console.log('✅ Status: Populating filter components with field-specific data...');
+    
+    if (!this.state) {
+      this.state = window.App ? window.App.state : window.appState;
+      
+      if (!this.state) {
+        console.log('⏳ Status: State not yet available, waiting...');
+        setTimeout(() => this.populateFiltersFromFieldData(), 500);
+        return;
+      }
+    }
+    
+    if (!this.state.dimensionFilters) {
+      console.log('⏳ Status: Waiting for DIMENSION FILTER data to be loaded...');
+      setTimeout(() => this.populateFiltersFromFieldData(), 500);
+      return;
+    }
+    
+    // Populate each filter using field-specific data
+    Object.values(this.filterMeta).forEach(dimension => {
+      this.populateSimpleFilterFromFieldData(dimension);
+    });
+    
+    this.updateAllSelectionCounts();
+  }
+
+
+   /**
+   * ENHANCED: Populate a filter with field-specific dimension data
+   * @param {Object} dimension - Dimension configuration
+   */
+   populateSimpleFilterFromFieldData(dimension) {
+    console.log(`⏳ Status: Populating filter for ${dimension.label} with field-specific data...`);
+    
+    const checkboxList = document.getElementById(`${dimension.id}CheckboxList`);
+    if (!checkboxList) {
+      console.warn(`Checkbox list for ${dimension.id} not found`);
+      return;
+    }
+    
+    checkboxList.innerHTML = '';
+    
+    // ENHANCED: Get filter options from field-specific data
+    const uniqueValues = this.getUniqueValuesFromFieldData(dimension);
+    
+    if (uniqueValues.length === 0) {
+      checkboxList.innerHTML = `<div class="no-values-message">No values available for ${dimension.label}</div>`;
+      return;
+    }
+    
+    // Sort values alphabetically by label
+    uniqueValues.sort((a, b) => {
+      return a.label.toString().toLowerCase().localeCompare(b.label.toString().toLowerCase());
+    });
+    
+    // CHANGED: Initialize filter selections to contain ALL values (making them all unselected)
+    this.filterSelections[dimension.id] = new Set(uniqueValues.map(item => item.value));
+    
+    // Create checkbox for each value
+    uniqueValues.forEach(item => {
+      const checkboxOption = document.createElement('div');
+      checkboxOption.className = 'checkbox-option';
+      
+      const safeId = (item.value || '').toString().replace(/[^a-zA-Z0-9]/g, '_');
+      
+      // CHANGED: Set checkboxes to unchecked by default
+      checkboxOption.innerHTML = `
+        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; width: 100%; overflow: hidden;">
+          <input type="checkbox" id="${dimension.id}_${safeId}" value="${item.value}">
+          <span style="white-space: normal; overflow: hidden; text-overflow: ellipsis; font-size: 0.9rem;">
+            ${item.label}
+          </span>
+        </label>
+      `;
+      
+      const checkbox = checkboxOption.querySelector('input[type="checkbox"]');
+      checkbox.addEventListener('change', (e) => {
+        this.handleSimpleFilterCheckboxChange(dimension, item.value, e.target.checked);
+      });
+      
+      checkboxList.appendChild(checkboxOption);
+    });
+    
+    console.log(`✅ Status: Populated ${dimension.label} filter with ${uniqueValues.length} options (all unselected by default)`);
+  }
+
+
+   /**
+   * ENHANCED: Get unique values for a dimension from field-specific data
+   * @param {Object} dimension - Dimension configuration
+   * @returns {Array} - Array of unique values with label and value properties
+   */
+  getUniqueValuesFromFieldData(dimension) {
+    const dimensionFilter = this.state.dimensionFilters[dimension.dimensionKey];
+    
+    if (!dimensionFilter || !dimensionFilter.data) {
+      console.warn(`No field data available for dimension: ${dimension.dimensionKey}`);
+      return [];
+    }
+    
+    const { data, config } = dimensionFilter;
+    const valueMap = new Map();
+    
+    // Process dimension data to extract unique values
+    data.forEach(item => {
+      if (item && item[dimension.valueField] !== undefined && item[dimension.valueField] !== null) {
+        const value = item[dimension.valueField];
+        const label = item[dimension.displayField] || value;
+        
+        // Use Map to automatically handle duplicates
+        if (!valueMap.has(value)) {
+          valueMap.set(value, {
+            value: value,
+            label: label,
+            id: value
+          });
+        }
+      }
+    });
+    
+    // Convert Map to Array
+    const result = Array.from(valueMap.values());
+    
+    console.log(`✅ Status: Found ${result.length} unique values for ${dimension.label}`);
+    return result;
   }
 
   
@@ -145,7 +291,7 @@ class EnhancedFilterSystem {
     this.state._originalHierarchies = this.state._originalHierarchies || {};
     
     if (this.state.hierarchies) {
-      const hierarchyKeys = ['le', 'gmid_display', 'item_cost_type', 'material_type', 'year', 'mc', 'smartcode', 'cost_element'];
+      const hierarchyKeys = ['le', 'gmid_display', 'root_gmid_display', 'item_cost_type', 'material_type', 'year', 'mc', 'smartcode', 'cost_element'];
       
       hierarchyKeys.forEach(key => {
         if (this.state.hierarchies[key] && !this.state._originalHierarchies[key]) {
@@ -182,7 +328,7 @@ class EnhancedFilterSystem {
     
     this.elements.filterComponentsContainer = filterComponentsContainer;
     
-    // Create each dimension filter
+    // Create each dimension filter (all as simple filters for now)
     Object.values(this.filterMeta).forEach(dimension => {
       this.createFilterComponent(filterComponentsContainer, dimension);
     });
@@ -251,7 +397,7 @@ class EnhancedFilterSystem {
    * @param {HTMLElement} container - Container to append the filter to
    * @param {Object} dimension - Dimension configuration object
    */
-  createFilterComponent(container, dimension) {
+   createFilterComponent(container, dimension) {
     const filterComponent = document.createElement('div');
     filterComponent.className = 'filter-component';
     filterComponent.id = `${dimension.id}FilterComponent`;
@@ -352,32 +498,21 @@ class EnhancedFilterSystem {
     checkboxContainer.style.padding = '8px';
     checkboxContainer.style.width = '100%';
     
-    if (dimension.hierarchical) {
-      const treeContainer = document.createElement('div');
-      treeContainer.className = 'filter-tree-container';
-      treeContainer.id = `${dimension.id}TreeContainer`;
-      treeContainer.innerHTML = `
-        <div class="loading-tree-indicator">
-          <i class="fas fa-circle-notch fa-spin"></i> Loading hierarchy...
-        </div>
-      `;
-      checkboxContainer.appendChild(treeContainer);
-    } else {
-      const checkboxList = document.createElement('div');
-      checkboxList.className = 'checkbox-list';
-      checkboxList.id = `${dimension.id}CheckboxList`;
-      checkboxList.innerHTML = `
-        <div class="checkbox-option" style="padding: 6px 0;">
-          <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; width: 100%; overflow: hidden;">
-            <input type="checkbox" disabled>
-            <span style="white-space: normal; overflow: hidden; text-overflow: ellipsis; font-size: 0.9rem;">
-              Loading options...
-            </span>
-          </label>
-        </div>
-      `;
-      checkboxContainer.appendChild(checkboxList);
-    }
+    // Always create simple checkbox list (no hierarchical for now)
+    const checkboxList = document.createElement('div');
+    checkboxList.className = 'checkbox-list';
+    checkboxList.id = `${dimension.id}CheckboxList`;
+    checkboxList.innerHTML = `
+      <div class="checkbox-option" style="padding: 6px 0;">
+        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; width: 100%; overflow: hidden;">
+          <input type="checkbox" disabled>
+          <span style="white-space: normal; overflow: hidden; text-overflow: ellipsis; font-size: 0.9rem;">
+            Loading options...
+          </span>
+        </label>
+      </div>
+    `;
+    checkboxContainer.appendChild(checkboxList);
     
     // Assemble dropdown
     dropdownContent.appendChild(searchContainer);
@@ -1074,28 +1209,27 @@ class EnhancedFilterSystem {
     let selectedCount = 0;
     let totalCount = 0;
 
-    if (dimension.hierarchical) {
-      const treeContainer = document.getElementById(`${dimension.id}TreeContainer`);
-      if (treeContainer) {
-        const checkboxes = treeContainer.querySelectorAll('input[type="checkbox"]');
-        totalCount = checkboxes.length;
-        selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
-      }
-    } else {
-      const checkboxList = document.getElementById(`${dimension.id}CheckboxList`);
-      if (checkboxList) {
-        const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
-        totalCount = checkboxes.length;
-        selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
-      }
+    const checkboxList = document.getElementById(`${dimension.id}CheckboxList`);
+
+    if (checkboxList) {
+      const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
+      totalCount = checkboxes.length;
+      selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
     }
 
     countElement.textContent = `${selectedCount} / ${totalCount}`;
 
     const selectionText = document.querySelector(`#${dimension.id}Dropdown .selection-text`);
+    
     if (selectionText) {
-      selectionText.textContent = selectedCount === totalCount ? 
-        `All ${dimension.label}s` : `${selectedCount} selected`;
+      // CHANGED: Updated text logic for unselected-by-default behavior
+      if (selectedCount === 0) {
+        selectionText.textContent = `No ${dimension.label}s selected`;
+      } else if (selectedCount === totalCount) {
+        selectionText.textContent = `All ${dimension.label}s selected`;
+      } else {
+        selectionText.textContent = `${selectedCount} selected`;
+      }
     }
   }
   
@@ -1149,30 +1283,16 @@ class EnhancedFilterSystem {
    */
   handleFilterSearch(dimension, searchTerm) {
     const searchLower = searchTerm.toLowerCase();
+    const checkboxOptions = document.querySelectorAll(`#${dimension.id}CheckboxList .checkbox-option`);
     
-    if (dimension.hierarchical) {
-      const treeNodes = document.querySelectorAll(`#${dimension.id}TreeContainer .filter-tree-node`);
-      
-      treeNodes.forEach(node => {
-        const label = node.querySelector('.filter-tree-label');
-        if (label) {
-          const text = label.textContent.toLowerCase();
-          const match = text.includes(searchLower);
-          node.style.display = match ? '' : 'none';
-        }
-      });
-    } else {
-      const checkboxOptions = document.querySelectorAll(`#${dimension.id}CheckboxList .checkbox-option`);
-      
-      checkboxOptions.forEach(option => {
-        const label = option.querySelector('label');
-        if (label) {
-          const text = label.textContent.toLowerCase();
-          const match = text.includes(searchLower);
-          option.style.display = match ? '' : 'none';
-        }
-      });
-    }
+    checkboxOptions.forEach(option => {
+      const label = option.querySelector('label');
+      if (label) {
+        const text = label.textContent.toLowerCase();
+        const match = text.includes(searchLower);
+        option.style.display = match ? '' : 'none';
+      }
+    });
   }
 
   
@@ -1183,22 +1303,12 @@ class EnhancedFilterSystem {
   selectAllInFilter(dimension) {
     this.filterSelections[dimension.id].clear();
     
-    if (dimension.hierarchical) {
-      const treeContainer = document.getElementById(`${dimension.id}TreeContainer`);
-      if (treeContainer) {
-        const checkboxes = treeContainer.querySelectorAll('input[type="checkbox"]');
-        checkboxes.forEach(checkbox => {
-          checkbox.checked = true;
-        });
-      }
-    } else {
-      const checkboxList = document.getElementById(`${dimension.id}CheckboxList`);
-      if (checkboxList) {
-        const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
-        checkboxes.forEach(checkbox => {
-          checkbox.checked = true;
-        });
-      }
+    const checkboxList = document.getElementById(`${dimension.id}CheckboxList`);
+    if (checkboxList) {
+      const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = true;
+      });
     }
     
     this.updateSelectionCount(dimension);
@@ -1210,29 +1320,13 @@ class EnhancedFilterSystem {
    * @param {Object} dimension - Dimension configuration
    */
   clearAllInFilter(dimension) {
-    if (dimension.hierarchical) {
-      const treeContainer = document.getElementById(`${dimension.id}TreeContainer`);
-      if (treeContainer) {
-        const checkboxes = treeContainer.querySelectorAll('input[type="checkbox"]');
-        checkboxes.forEach(checkbox => {
-          checkbox.checked = false;
-          
-          const checkboxId = checkbox.id;
-          if (checkboxId.startsWith(`${dimension.id}_node_`)) {
-            const nodeId = checkboxId.replace(`${dimension.id}_node_`, '');
-            this.filterSelections[dimension.id].add(nodeId);
-          }
-        });
-      }
-    } else {
-      const checkboxList = document.getElementById(`${dimension.id}CheckboxList`);
-      if (checkboxList) {
-        const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
-        checkboxes.forEach(checkbox => {
-          checkbox.checked = false;
-          this.filterSelections[dimension.id].add(checkbox.value);
-        });
-      }
+    const checkboxList = document.getElementById(`${dimension.id}CheckboxList`);
+    if (checkboxList) {
+      const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+        this.filterSelections[dimension.id].add(checkbox.value);
+      });
     }
     
     this.updateSelectionCount(dimension);
@@ -1266,7 +1360,7 @@ class EnhancedFilterSystem {
       // Check if any dimension has all items excluded
       let allExcluded = false;
       Object.values(this.filterMeta).forEach(dimension => {
-        const allValues = this.getAllValuesForDimension(dimension);
+        const allValues = this.getAllValuesFromFieldData(dimension);
         const excludedCount = this.filterSelections[dimension.id].size;
         
         if (excludedCount > 0 && excludedCount >= allValues.length) {
@@ -1313,11 +1407,6 @@ class EnhancedFilterSystem {
         this.updateDataVolumeIndicator(factData.length, factData.length);
         this.updateFilteredRecordsCount(factData.length);
         
-        // Initialize mappings with the new fact data
-        if (window.App && window.App.data && window.App.data.initializeMappings) {
-          window.App.data.initializeMappings();
-        }
-        
         // Refresh pivot table with new data
         this.refreshPivotTable();
         
@@ -1331,7 +1420,7 @@ class EnhancedFilterSystem {
 
 
   /**
-   * PHASE 2 NEW: Build filter parameters for database query
+   * Build filter parameters for database query
    * @returns {Object} - Filter parameters object for API call
    */
   buildFilterParameters() {
@@ -1352,8 +1441,8 @@ class EnhancedFilterSystem {
         return;
       }
       
-      // Get all available values for this dimension
-      const allValues = this.getAllValuesForDimension(dimension);
+      // Get all available values for this dimension from field-specific data
+      const allValues = this.getAllValuesFromFieldData(dimension);
       
       // Calculate selected values (inverse of excluded values)
       const selectedValues = allValues.filter(value => !selections.has(value));
@@ -1374,7 +1463,32 @@ class EnhancedFilterSystem {
 
 
   /**
-   * FIXED: Get ALL possible values for a dimension (for filter parameter building)
+   * Get all possible values for a dimension from field-specific data
+   * @param {Object} dimension - Dimension configuration
+   * @returns {Array} - Array of all possible values
+   */
+  getAllValuesFromFieldData(dimension) {
+    const dimensionFilter = this.state.dimensionFilters[dimension.dimensionKey];
+    
+    if (!dimensionFilter || !dimensionFilter.data) {
+      console.warn(`No field data available for dimension: ${dimension.dimensionKey}`);
+      return [];
+    }
+    
+    const uniqueValues = new Set();
+    
+    dimensionFilter.data.forEach(item => {
+      if (item && item[dimension.valueField] !== undefined && item[dimension.valueField] !== null) {
+        uniqueValues.add(item[dimension.valueField]);
+      }
+    });
+    
+    return Array.from(uniqueValues);
+  }
+
+
+  /**
+   * Get ALL possible values for a dimension (for filter parameter building)
    */
   getAllValuesForDimension(dimension) {
     const allValues = [];
@@ -1504,7 +1618,7 @@ class EnhancedFilterSystem {
 
 
   /**
-   * PHASE 2 NEW: Fetch filtered fact data from database
+   * Fetch filtered fact data from database
    * @param {Object} filterParams - Filter parameters for the query
    * @returns {Promise<Array>} - Promise resolving to filtered fact data
    */
@@ -1581,7 +1695,7 @@ class EnhancedFilterSystem {
 
 
   /**
-   * PHASE 2 NEW: Optimize dimensions based on filtered fact data
+   * Optimize dimensions based on filtered fact data
    * @param {Array} factData - The filtered fact data
    */
   optimizeDimensionsWithFactData(factData) {
@@ -1637,7 +1751,7 @@ class EnhancedFilterSystem {
 
 
   /**
-   * PHASE 2 NEW: Rebuild hierarchies with filtered fact data
+   * Rebuild hierarchies with filtered fact data
    * @param {Array} factData - The filtered fact data
    */
   rebuildHierarchiesWithFactData(factData) {
@@ -1657,7 +1771,7 @@ class EnhancedFilterSystem {
 
 
   /**
-   * PHASE 2 NEW: Handle empty filter results
+   * Handle empty filter results
    */
   handleEmptyFilterResult() {
     this.updateDataVolumeIndicator(0, 0);
@@ -1678,7 +1792,7 @@ class EnhancedFilterSystem {
 
 
   /**
-   * PHASE 2 NEW: Handle filter errors
+   * Handle filter errors
    * @param {Error} error - The error that occurred
    */
   handleFilterError(error) {
@@ -1701,7 +1815,7 @@ class EnhancedFilterSystem {
 
 
   /**
-   * PHASE 2 NEW: Get fact ID field for a dimension
+   * Get fact ID field for a dimension
    * @param {string} dimKey - Dimension key
    * @returns {string|null} - Fact table field name
    */
@@ -1730,7 +1844,7 @@ class EnhancedFilterSystem {
 
 
   /**
-   * PHASE 2 NEW: Get dimension ID field for a dimension
+   * Get dimension ID field for a dimension
    * @param {string} dimKey - Dimension key
    * @returns {string|null} - Dimension table field name
    */
@@ -3371,33 +3485,33 @@ class EnhancedFilterSystem {
    * @param {Object} dimension - Dimension configuration
    * @returns {Array} - Filtered data
    */
-  applyFilter(data, dimension) {
-    // Skip if no selections (all selected)
-    if (this.filterSelections[dimension.id].size === 0) {
-      return data;
-    }
+  // applyFilter(data, dimension) {
+  //   // Skip if no selections (all selected)
+  //   if (this.filterSelections[dimension.id].size === 0) {
+  //     return data;
+  //   }
     
-    console.log(`✅ Status: Applying ${dimension.label} filter (${this.filterSelections[dimension.id].size} excluded)...`);
+  //   console.log(`✅ Status: Applying ${dimension.label} filter (${this.filterSelections[dimension.id].size} excluded)...`);
     
-    const startTime = performance.now();
-    let filteredData;
+  //   const startTime = performance.now();
+  //   let filteredData;
     
-    if (dimension.hierarchical) {
-      // For hierarchical dimensions, use hierarchy-aware filtering
-      filteredData = this.applyHierarchicalFilter(data, dimension);
-    } else {
-      // For simple dimensions like SMARTCODE, filter directly by field value
-      filteredData = data.filter(record => {
-        const value = record[dimension.factField];
-        return value !== undefined && !this.filterSelections[dimension.id].has(value);
-      });
-    }
+  //   if (dimension.hierarchical) {
+  //     // For hierarchical dimensions, use hierarchy-aware filtering
+  //     filteredData = this.applyHierarchicalFilter(data, dimension);
+  //   } else {
+  //     // For simple dimensions like SMARTCODE, filter directly by field value
+  //     filteredData = data.filter(record => {
+  //       const value = record[dimension.factField];
+  //       return value !== undefined && !this.filterSelections[dimension.id].has(value);
+  //     });
+  //   }
     
-    const endTime = performance.now();
-    console.log(`✅ Status: ${dimension.label} filter applied in ${(endTime - startTime).toFixed(2)}ms: ${data.length} -> ${filteredData.length} records`);
+  //   const endTime = performance.now();
+  //   console.log(`✅ Status: ${dimension.label} filter applied in ${(endTime - startTime).toFixed(2)}ms: ${data.length} -> ${filteredData.length} records`);
     
-    return filteredData;
-  }
+  //   return filteredData;
+  // }
 
   
   /**

@@ -44,6 +44,10 @@ const state = {
             row: { 'ROOT': true },
             column: { 'ROOT': true }
         },
+        root_gmid_display: {
+            row: { 'ROOT': true },
+            column: { 'ROOT': true }
+        },
         smartcode: {
             row: { 'ROOT': true },
             column: { 'ROOT': true }
@@ -103,6 +107,10 @@ function initializeExpandedNodes() {
             column: { 'ROOT': true }
         },
         gmid_display: {
+            row: { 'ROOT': true },
+            column: { 'ROOT': true }
+        },
+        root_gmid_display: {
             row: { 'ROOT': true },
             column: { 'ROOT': true }
         },
