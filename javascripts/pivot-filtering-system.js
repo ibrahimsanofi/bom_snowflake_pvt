@@ -291,7 +291,8 @@ class EnhancedFilterSystem {
     this.state._originalHierarchies = this.state._originalHierarchies || {};
     
     if (this.state.hierarchies) {
-      const hierarchyKeys = ['le', 'gmid_display', 'root_gmid_display', 'item_cost_type', 'material_type', 'year', 'mc', 'smartcode', 'cost_element'];
+      // const hierarchyKeys = ['le', 'gmid_display', 'item_cost_type', 'material_type', 'year', 'mc', 'smartcode', 'cost_element'];
+      const hierarchyKeys = ['le', 'item_cost_type', 'material_type', 'year', 'mc', 'smartcode', 'cost_element'];
       
       hierarchyKeys.forEach(key => {
         if (this.state.hierarchies[key] && !this.state._originalHierarchies[key]) {
@@ -1832,6 +1833,7 @@ class EnhancedFilterSystem {
         'le': 'LE',
         'cost_element': 'COST_ELEMENT',
         'gmid_display': 'COMPONENT_GMID',
+        'root_gmid_display': 'ROOT_GMID',
         'smartcode': 'ROOT_SMARTCODE',
         'item_cost_type': 'ITEM_COST_TYPE',
         'material_type': 'COMPONENT_MATERIAL_TYPE',
@@ -1853,6 +1855,7 @@ class EnhancedFilterSystem {
           'le': 'LE',
           'cost_element': 'COST_ELEMENT',
           'gmid_display': 'COMPONENT_GMID',
+          'root_gmid_display': 'ROOT_GMID',
           'smartcode': 'SMARTCODE',
           'item_cost_type': 'ITEM_COST_TYPE',
           'material_type': 'MATERIAL_TYPE',

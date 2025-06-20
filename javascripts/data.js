@@ -30,7 +30,7 @@ const DIMENSION_FIELD_CONFIG = {
         fields: ['LE', 'LE_DESC', 'PATH'],
         displayField: 'LE_DESC',
         valueField: 'LE',
-        filterField: 'LE' // Field name in FACT_BOM
+        filterField: 'LE'
     },
     'DIM_COST_ELEMENT': {
         fields: ['COST_ELEMENT', 'COST_ELEMENT_DESC', 'PATH'],
@@ -44,12 +44,12 @@ const DIMENSION_FIELD_CONFIG = {
         valueField: 'SMARTCODE',
         filterField: 'ROOT_SMARTCODE'
     },
-    'DIM_GMID_DISPLAY': {
-        fields: ['ROOT_GMID'],
-        displayField: 'ROOT_GMID',
-        valueField: 'ROOT_GMID',
-        filterField: 'ROOT_GMID'
-    },
+    // 'DIM_GMID_DISPLAY': {
+    //     fields: ['ROOT_GMID', 'PATH_GMID', 'COMPONENT_GMID', 'DISPLAY'],
+    //     displayField: 'COMPONENT_GMID',
+    //     valueField: 'COMPONENT_GMID',
+    //     filterField: 'COMPONENT_GMID'
+    // },
     'DIM_ROOT_GMID_DISPLAY': {
         fields: ['ROOT_GMID', 'ROOT_DISPLAY'],
         displayField: 'ROOT_DISPLAY',
@@ -93,7 +93,7 @@ async function fetchDimensionFields(tableName, fields) {
     const url = `${ENDPOINTS.GET_DIMENSION_FIELDS}${tableName}`;
     
     try {
-        console.log(`⏳ Status: Fetching fields [${fields.join(', ')}] from ${tableName}...`);
+        console.log(`⏳ Status: Fetching optimized fields [${fields.join(', ')}] from ${tableName}...`);
         
         const response = await fetch(url, {
             method: 'POST',
@@ -101,18 +101,44 @@ async function fetchDimensionFields(tableName, fields) {
                 'Accept': 'application/x-ndjson',
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ fields: fields })
+            body: JSON.stringify({ 
+                fields: fields,
+                options: {
+                    limit: 10000,
+                    distinct: true
+                }
+            })
         });
         
         if (!response.ok) {
-            throw new Error(`Error fetching fields from ${tableName}: ${response.status}`);
+            const errorData = await response.json().catch(() => ({}));
+            
+            if (response.status === 400 && errorData.availableFields) {
+                console.warn(`⚠️ Some fields don't exist in ${tableName}:`, errorData.invalidFields);
+                console.log(`📋 Available fields: ${errorData.availableFields.slice(0, 10).join(', ')}...`);
+            }
+            
+            // Try the optimized GET endpoint as fallback
+            console.log(`🔄 Trying optimized GET endpoint for ${tableName}...`);
+            return await fetchOptimizedData(tableName, fields);
         }
 
+        // Check headers for field validation results
+        const selectedFields = response.headers.get('X-Selected-Fields');
+        const invalidFields = response.headers.get('X-Invalid-Fields');
+        
+        if (invalidFields) {
+            console.warn(`⚠️ Invalid fields ignored: ${invalidFields}`);
+        }
+        if (selectedFields) {
+            console.log(`✅ Using validated fields: ${selectedFields}`);
+        }
+
+        // Process the streaming response
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
         const rows = [];
-        let networkError = false;
 
         try {
             while (true) {
@@ -128,33 +154,142 @@ async function fetchDimensionFields(tableName, fields) {
                         try {
                             rows.push(JSON.parse(line));
                         } catch (e) {
-                            console.warn(`Invalid line in ${tableName}:`, e);
+                            console.warn(`Invalid JSON line in ${tableName}:`, e);
                         }
                     }
                 });
             }
         } catch (err) {
-            networkError = true;
-            console.error(`❌ Network error while fetching fields from ${tableName}:`, err);
-        }
-
-        if (networkError || rows.length === 0) {
-            throw new Error(`Network error while loading fields from ${tableName}`);
+            console.error(`❌ Network error while fetching ${tableName}:`, err);
+            return await fetchOptimizedData(tableName, fields);
         }
 
         if (buffer.trim()) {
             try {
                 rows.push(JSON.parse(buffer));
             } catch (e) {
-                console.warn(`Invalid lines in ${tableName}:`, e);
+                console.warn(`Invalid final JSON in ${tableName}:`, e);
             }
         }
 
-        console.log(`✅ ${rows.length} rows loaded from ${tableName} (fields: ${fields.join(', ')})`);
+        console.log(`✅ Optimized fetch: ${rows.length} rows from ${tableName} (${fields.length} columns)`);
         return { data: rows };
+        
     } catch (err) {
-        console.error(`❌ Error fetching fields from ${tableName}:`, err);
-        return { data: null, error: err };
+        console.error(`❌ Error in optimized fetch for ${tableName}:`, err.message);
+        console.log(`🔄 Falling back to standard approach...`);
+        return await fetchOptimizedData(tableName, fields);
+    }
+}
+
+
+/**
+ * Optimized data fetching using GET endpoint with query parameters
+ */
+async function fetchOptimizedData(tableName, fields = null) {
+    let url = `${API_BASE_URL}/data/${tableName}`;
+    
+    if (fields && fields.length > 0) {
+        const fieldsParam = fields.join(',');
+        url += `?fields=${encodeURIComponent(fieldsParam)}&limit=10000&distinct=true`;
+    } else {
+        url += '?limit=10000';
+    }
+    
+    try {
+        console.log(`⏳ Status: Fetching optimized data from ${tableName}...`);
+        
+        const response = await fetch(url, {
+            headers: { 'Accept': 'application/x-ndjson' }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        const rows = [];
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+
+            const lines = buffer.split('\n');
+            buffer = lines.pop(); 
+
+            lines.forEach(line => {
+                if (line.trim()) {
+                    try {
+                        rows.push(JSON.parse(line));
+                    } catch (e) {
+                        console.warn(`Invalid JSON line in ${tableName}:`, e);
+                    }
+                }
+            });
+        }
+
+        if (buffer.trim()) {
+            try {
+                rows.push(JSON.parse(buffer));
+            } catch (e) {
+                console.warn(`Invalid final JSON in ${tableName}:`, e);
+            }
+        }
+
+        console.log(`✅ Optimized GET: ${rows.length} rows from ${tableName}`);
+        return { data: rows };
+        
+    } catch (err) {
+        console.error(`❌ Error in optimized GET for ${tableName}:`, err.message);
+        // Final fallback to original approach
+        return await fetchDatabaseData(tableName);
+    }
+}
+
+
+/**
+ * Batch field validation before data loading
+ */
+async function validateAllDimensionFields() {
+    const validationRequest = {};
+    
+    // Build validation request for all dimensions
+    Object.entries(DIMENSION_FIELD_CONFIG).forEach(([dimTable, config]) => {
+        validationRequest[dimTable] = config.fields;
+    });
+    
+    try {
+        console.log('⏳ Status: Validating all dimension fields...');
+        
+        const response = await fetch(`${API_BASE_URL}/validate-fields`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tables: validationRequest })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Validation failed: ${response.status}`);
+        }
+        
+        const validation = await response.json();
+        console.log('✅ Field validation results:', validation.summary);
+        
+        // Log any issues
+        Object.entries(validation.validation).forEach(([table, result]) => {
+            if (result.invalidFields && result.invalidFields.length > 0) {
+                console.warn(`⚠️ ${table}: Invalid fields: ${result.invalidFields.join(', ')}`);
+                console.log(`📋 ${table}: Available fields: ${result.availableFields?.slice(0, 5).join(', ')}...`);
+            }
+        });
+        
+        return validation;
+        
+    } catch (error) {
+        console.error('❌ Field validation error:', error);
+        return null;
     }
 }
 
@@ -201,67 +336,69 @@ async function ingestDimensionFilterData(elements, selectedFact = 'FACT_BOM') {
  * @returns {Promise<boolean>} - Success status
  */
 async function ingestDimensionFilterDataOnly(elements, selectedFact = 'FACT_BOM') {
-    console.log('⏳ Status: Loading dimension filter data from Snowflake database server...', 'info', elements);
+    console.log('⏳ Status: Loading optimized dimension filter data from Snowflake database server...');
     
-    try {        
-        // 1. Get dimensions related to the selected fact table
+    try {
+        // Step 1: Validate all fields before starting
+        const validation = await validateAllDimensionFields();
+        if (validation) {
+            console.log(`📊 Field validation: ${validation.summary.tablesValidated}/${validation.summary.totalTables} tables validated`);
+        }
+        
+        // Step 2: Get dimensions related to the selected fact table
         const dimNames = await fetchDimensionNamesForFact(selectedFact);
         console.log(`✅ Status: Found ${dimNames.length} dimensions for ${selectedFact}`);
 
-        // 2. Build available files list (used for UI)
+        // Step 3: Build available files list
         state.availableFiles = [];
         dimNames.forEach(dim => {
             state.availableFiles.push({
                 id: `${dim}`,
                 label: dim.replace(/^DIM_/, ''),
                 type: 'dimension',
-                hierarchical: ['LE', 'COST_ELEMENT', 'GMID_DISPLAY', 'SMARTCODE', 'MC', 'YEAR', 'ITEM_COST_TYPE', 'MATERIAL_TYPE', 'ROOT_GMID_DISPLAY'].includes(
+                // hierarchical: ['LE', 'COST_ELEMENT', 'GMID_DISPLAY', 'SMARTCODE', 'MC', 'YEAR', 'ITEM_COST_TYPE', 'MATERIAL_TYPE', 'ROOT_GMID_DISPLAY'].includes(
+                hierarchical: ['LE', 'COST_ELEMENT', 'SMARTCODE', 'MC', 'YEAR', 'ITEM_COST_TYPE', 'MATERIAL_TYPE', 'ROOT_GMID_DISPLAY'].includes(
                     dim.replace(/^DIM_/, '')
                 )
             });
         });
         
-        // Add fact table to available files (but don't load it yet)
         state.availableFiles.push({
             id: selectedFact,
             label: selectedFact.replace(/^FACT_/, ''),
             type: 'fact'
         });
 
-        // 3. Load dimension filter data (specific fields only)
-        console.log("⏳ Status: Loading dimension filter data from database...");
-        state.dimensionFilters = {}; // Store filter-specific data separately
+        // Step 4: Load dimension filter data with optimized fetching
+        console.log("⏳ Status: Loading optimized dimension filter data...");
+        state.dimensionFilters = {};
         
-        // Initialize dimension filters to empty objects
         dimNames.forEach(dim => {
             const dimKey = dim.replace(/^DIM_/, '').toLowerCase();
             state.dimensionFilters[dimKey] = [];
         });
         
-        // Fetch dimension filter data in parallel for efficiency
+        // Fetch dimension filter data in parallel with optimization
         const dimensionPromises = dimNames.map(async dim => {
             try {
-                // Update status
                 ui.updateTableStatus(dim, 'loading');
                 
-                // Get field configuration for this dimension
                 const fieldConfig = DIMENSION_FIELD_CONFIG[dim];
                 if (!fieldConfig) {
-                    console.warn(`No field configuration found for ${dim}, skipping`);
+                    console.warn(`No field configuration found for ${dim}, using fallback`);
                     ui.updateTableStatus(dim, 'warning');
                     return false;
                 }
                 
-                // Fetch only the required fields
+                // Use optimized field fetching
                 const { data, error } = await fetchDimensionFields(dim, fieldConfig.fields);
                 
                 if (error || !data) {
                     ui.updateTableStatus(dim, 'error');
-                    console.error(`Error loading dimension fields: ${dim}`, error);
+                    console.error(`Error loading optimized dimension fields: ${dim}`, error);
                     return false;
                 }
                 
-                // Store in state (lowercase dimension name without DIM_ prefix)
                 const dimKey = dim.replace(/^DIM_/, '').toLowerCase();
                 state.dimensionFilters[dimKey] = {
                     data: data,
@@ -269,22 +406,28 @@ async function ingestDimensionFilterDataOnly(elements, selectedFact = 'FACT_BOM'
                     tableName: dim
                 };
                 
-                // Update status
                 ui.updateTableStatus(dim, 'loaded', data.length);
-                console.log(`✅ Status: Loaded dimension filter data ${dim}: ${data.length} rows`);
-                                
+                console.log(`✅ Status: Optimized load ${dim}: ${data.length} rows with ${fieldConfig.fields.length} columns`);
+                
+                // Calculate performance improvement
+                if (validation && validation.validation[dim]) {
+                    const totalCols = validation.validation[dim].availableFields?.length || fieldConfig.fields.length;
+                    const selectedCols = fieldConfig.fields.length;
+                    const reduction = Math.round((1 - selectedCols/totalCols) * 100);
+                    console.log(`📊 ${dim}: ${reduction}% column reduction (${selectedCols}/${totalCols} columns)`);
+                }
+                
                 return true;
             } catch (err) {
-                console.error(`Error loading dimension filter data ${dim}:`, err);
+                console.error(`Error loading optimized dimension filter data ${dim}:`, err);
                 ui.updateTableStatus(dim, 'error');
                 return false;
             }
         });
         
-        // Wait for all dimension filter data to load
         await Promise.all(dimensionPromises);
 
-        // 4. Verify dimension filters are loaded
+        // Step 5: Verify and finalize
         const filtersLoaded = Object.keys(state.dimensionFilters).some(key => 
             state.dimensionFilters[key].data && state.dimensionFilters[key].data.length > 0
         );
@@ -293,10 +436,9 @@ async function ingestDimensionFilterDataOnly(elements, selectedFact = 'FACT_BOM'
             throw new Error("No dimension filter data was properly loaded");
         }
 
-        // 5. Generate available fields for UI
+        // Step 6: Generate available fields for UI
         state.availableFields = [];
         
-        // Add dimension fields
         state.availableFiles.forEach(file => {
             if (file.type === 'dimension') {
                 state.availableFields.push({
@@ -310,7 +452,6 @@ async function ingestDimensionFilterDataOnly(elements, selectedFact = 'FACT_BOM'
             }
         });
         
-        // Add measure fields
         [
             { id: 'COST_UNIT', label: 'Cost Unit' },
             { id: 'QTY_UNIT', label: 'Quantity Unit' }
@@ -325,28 +466,48 @@ async function ingestDimensionFilterDataOnly(elements, selectedFact = 'FACT_BOM'
             });
         });
 
-        // Set up UI elements - defer hierarchy building
         ui.renderAvailableFields(elements);
         ui.setDefaultFields();
         ui.renderFieldContainers(elements, state);
 
-        // Show success message
-        console.log('✅ Status: Dimension filter data loaded successfully from Snowflake database.', 'success', elements);
+        console.log('✅ Status: Optimized dimension filter data loaded successfully!');
         state.dimensionFiltersLoaded = true;
 
         return true;
         
     } catch (error) {
-        console.error('Dimension Filter Data Loading Error:', error);
-                
-        // Show app content even on error
+        console.error('Optimized Dimension Filter Data Loading Error:', error);
+        
         const appContent = document.getElementById('appContent');
         if (appContent) {
             appContent.style.display = 'block';
         }
         
-        // Show error message
-        console.error(`❌ Dimension Filter Data Loading Error: ${error.message}`, 'error', elements);
+        console.error(`❌ Optimized Loading Error: ${error.message}`, 'error', elements);
+        return false;
+    }
+}
+
+
+/**
+ * Clear server-side cache
+ */
+async function clearServerCache() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/clear-cache`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            console.log('✅ Server cache cleared:', result);
+            return true;
+        } else {
+            console.warn('⚠️ Failed to clear server cache');
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ Error clearing server cache:', error);
         return false;
     }
 }
@@ -400,10 +561,9 @@ async function buildAndPersistDimensionHierarchies(elements = null) {
                     case 'mc':
                         hierarchy = buildManagementCentreHierarchy(dimensionFilter.data);
                         break;
-                    case 'gmid_display':
-                    case 'root_gmid_display':
-                        hierarchy = buildFilteredGmidDisplayHierarchy(dimensionFilter.data);
-                        break;
+                    // case 'gmid_display':
+                    //     hierarchy = buildFilteredGmidDisplayHierarchy(dimensionFilter.data);
+                    //     break;
                     case 'item_cost_type':
                         hierarchy = buildItemCostTypeHierarchy(dimensionFilter.data);
                         break;
@@ -566,39 +726,6 @@ function getAllDimensionFilterOptions() {
 
 
 /**
- * Fetches the list of available dimensions via the server API
- * @returns {Promise<Array>} - Array of dimension names (e.g. ['DIM_LE', ...])
- */
-// async function fetchDimensionNames() {
-//     try {
-//         const response = await fetch(ENDPOINTS.GET_DIMENSIONS);
-//         if (!response.ok) throw new Error('Error while retrieving dimensions.');
-        
-//         const text = await response.text();
-//         const dims = text
-//             .split('\n')
-//             .filter(Boolean)
-//             .map(line => {
-//                 try {
-//                     const obj = JSON.parse(line);
-//                     const key = Object.keys(obj).find(k => typeof obj[k] === 'string');
-//                     return obj[key];
-//                 } catch {
-//                     return null;
-//                 }
-//             })
-//             .filter(Boolean);
-            
-//         console.log(`✅ Status: Fetched ${dims.length} dimension names from server`);
-//         return dims;
-//     } catch (error) {
-//         console.error('❌ Error fetching dimension names:', error);
-//         throw error;
-//     }
-// }
-
-
-/**
  * Fetches a table (dimension or fact) via the API NDJSON endpoint
  * @param {string} tableName - Name of the table to fetch
  * @returns {Promise<{data: Array, error?: any}>} - Object containing data or error
@@ -704,40 +831,7 @@ async function fetchDimensionNamesForFact(factTable) {
 
 
 /**
- * Fetches all available fact table names from the database
- * @returns {Promise<Array>} - Array of fact table names
- */
-// async function fetchFactTableNames() {
-//     try {
-//         const response = await fetch(ENDPOINTS.GET_FACT_NAMES);
-//         if (!response.ok) throw new Error('Error while retrieving fact table names.');
-        
-//         const text = await response.text();
-//         const facts = text
-//             .split('\n')
-//             .filter(Boolean)
-//             .map(line => {
-//                 try {
-//                     const obj = JSON.parse(line);
-//                     const key = Object.keys(obj).find(k => typeof obj[k] === 'string');
-//                     return obj[key];
-//                 } catch {
-//                     return null;
-//                 }
-//             })
-//             .filter(Boolean);
-            
-//         // console.log(`Fetched ${facts.length} fact table names from server`);
-//         return facts;
-//     } catch (error) {
-//         console.error('❌ Error fetching fact table names:', error);
-//         throw error;
-//     }
-// }
-
-
-/**
- * PHASE 1 NEW FUNCTION: Ingest only dimension data from database
+ * PHASE 1: Ingest only dimension data from database
  * @param {Object} elements - DOM elements object
  * @param {string} selectedFact - Name of the fact table to get dimensions for (default: 'FACT_BOM')
  * @returns {Promise<void>}
@@ -918,7 +1012,7 @@ async function ingestDimensionData(elements, selectedFact = 'FACT_BOM') {
 
 
 /**
- * PHASE 1 NEW FUNCTION: Ingest fact data on demand
+ * PHASE 1: Ingest fact data on demand
  * @param {Object} elements - DOM elements object
  * @param {string} selectedFact - Name of the fact table to load (default: 'FACT_BOM')
  * @returns {Promise<void>}
@@ -1085,262 +1179,6 @@ function initializeBasicMappings() {
  * @param {string} selectedFact - Name of the fact table to load (default: 'FACT_BOM')
  * @returns {Promise<void>}
  */
-// async function ingestData(elements, selectedFact = 'FACT_BOM') {
-//     console.log('⏳ Status: Loading data from Snowflake database server...', 'info', elements);
-    
-//     try {        
-//         // 1. Get dimensions related to the selected fact table
-//         const dimNames = await fetchDimensionNamesForFact(selectedFact);
-        
-
-//         // 2. Build available files list (used for UI)
-//         state.availableFiles = [];
-//         dimNames.forEach(dim => {
-//             state.availableFiles.push({
-//                 id: `${dim}`,
-//                 label: dim.replace(/^DIM_/, ''),
-//                 type: 'dimension',
-//                 hierarchical: ['LE', 'COST_ELEMENT', 'GMID_DISPLAY', 'SMARTCODE', 'MC', 'YEAR', 'ITEM_COST_TYPE', 'MATERIAL_TYPE'].includes(
-//                     dim.replace(/^DIM_/, '')
-//                 )
-//             });
-//         });
-        
-//         // Add fact table to available files
-//         state.availableFiles.push({
-//             id: selectedFact,
-//             label: selectedFact.replace(/^FACT_/, ''),
-//             type: 'fact'
-//         });
-        
-
-//         // 3. Load dimension data
-//         console.log("⏳ Status: Loading dimension data from database...");
-//         state.dimensions = {};
-        
-//         // Initialize dimensions to empty objects to prevent null reference issues
-//         dimNames.forEach(dim => {
-//             const dimKey = dim.replace(/^DIM_/, '').toLowerCase();
-//             state.dimensions[dimKey] = [];
-//         });
-        
-//         // Fetch all dimension data in parallel for efficiency
-//         const dimensionPromises = dimNames.map(async dim => {
-//             try {
-//                 // Update status
-//                 ui.updateTableStatus(dim, 'loading');
-                
-//                 // Fetch dimension data
-//                 const { data, error } = await fetchDatabaseData(dim);
-                
-//                 if (error || !data) {
-//                     ui.updateTableStatus(dim, 'error');
-//                     console.error(`Error loading dimension: ${dim}`, error);
-//                     return false;
-//                 }
-                
-//                 // Store in state (lowercase dimension name without DIM_ prefix)
-//                 const dimKey = dim.replace(/^DIM_/, '').toLowerCase();
-//                 state.dimensions[dimKey] = data;
-                
-//                 // Update status
-//                 ui.updateTableStatus(dim, 'loaded', data.length);
-//                 console.log(`✅ Status: Loaded dimension ${dim}: ${data.length} rows`);
-                                
-//                 return true;
-//             } catch (err) {
-//                 console.error(`Error loading dimension ${dim}:`, err);
-//                 ui.updateTableStatus(dim, 'error');
-//                 return false;
-//             }
-//         });
-        
-//         // Wait for all dimension data to load
-//         await Promise.all(dimensionPromises);
-        
-
-//         // 4. Load fact data
-//         console.log(`⏳ Status: Loading fact data from ${selectedFact}...`);
-//         ui.updateTableStatus(selectedFact, 'loading');
-        
-//         // Definition switched from const to let to allow data filtering
-//         let { data: factData, error: factError } = await fetchDatabaseData(selectedFact);
-
-//         console.log(`✅ Status: Loaded fact data ${selectedFact}: ${factData.length} rows`);
-
-//         // This step is crucial in performance enhancement. It filters out fact rows with zero/null/empty values for the measures 
-//         console.log(`⏳ Status: Filtering out null/empty/zero fact data from ${selectedFact}...`);
-
-//         factData = factData.filter(row => {
-//             // Check if COST_UNIT has a valid value (not null/undefined/empty string and not zero)
-//             const xHasValue = row.COST_UNIT !== null && row.COST_UNIT !== undefined && row.COST_UNIT !== 0 && row.COST_UNIT !== '';
-            
-//             // Check if QTY_UNIT has a valid value (not null/undefined/empty string and not zero)
-//             const yHasValue = row.QTY_UNIT !== null && row.QTY_UNIT !== undefined && row.QTY_UNIT !== 0 && row.QTY_UNIT !== '';
-            
-//             // Keep this row if either x or y has a valid value
-//             return xHasValue || yHasValue;
-//         });
-        
-//         if (factError || !factData) {
-//             ui.updateTableStatus(selectedFact, 'error');
-//             throw new Error(`Error loading fact data: ${selectedFact}`);
-//         }
-        
-//         // Store fact data
-//         state.factData = factData;
-//         ui.updateTableStatus(selectedFact, 'loaded', factData.length);
-//         console.log(`✅ Status: Loaded working fact data ${selectedFact}: ${factData.length} rows`);
-
-//         // Confirm fact data is cached before moving on
-//         if(state.factData.length > 0){
-//             console.log("✅ Status: Sample BOM data:", state.factData[0]);
-//         }
-
-//         // Verify fact data is loaded before proceeding
-//         if (!state.factData || state.factData.length === 0) {
-//             throw new Error("Fact data was not properly loaded");
-//         }
-        
-//         // Verify dimensions are loaded
-//         const dimensionsLoaded = Object.keys(state.dimensions).some(key => 
-//             Array.isArray(state.dimensions[key]) && state.dimensions[key].length > 0
-//         );
-        
-//         if (!dimensionsLoaded) {
-//             throw new Error("No dimension data was properly loaded");
-//         }
-        
-
-//         // 5. Optimize dimension data by filtering to only records used in fact data
-//         console.log("⏳ Status: Optimizing dimension data based on fact relationships...");
-        
-//         // Extract unique dimension keys from fact data for filtering
-//         const dimensionKeys = {};
-        
-//         Object.keys(state.dimensions).forEach(dimKey => {
-//             const factIdField = getFactIdField(dimKey);
-            
-//             if (factIdField) {
-//                 // Extract unique values from fact data for this dimension
-//                 const uniqueValues = new Set();
-//                 state.factData.forEach(row => {
-//                     if (row[factIdField] !== null && row[factIdField] !== undefined && row[factIdField] !== '') {
-//                         uniqueValues.add(row[factIdField]);
-//                     }
-//                 });
-//                 dimensionKeys[dimKey] = uniqueValues;
-//                 console.log(`✅ Status: Found ${uniqueValues.size} unique ${dimKey} keys in fact data`);
-//             } else {
-//                 console.warn(`⚠️ Warning: No fact field mapping found for dimension ${dimKey}`);
-//                 dimensionKeys[dimKey] = new Set(); // Empty set means no filtering
-//             }
-//         });
-        
-//         // Filter each dimension to only include records referenced in fact data
-//         Object.keys(state.dimensions).forEach(dimKey => {
-//             const originalData = state.dimensions[dimKey];
-//             const originalCount = originalData.length;
-            
-//             if (dimensionKeys[dimKey] && dimensionKeys[dimKey].size > 0) {
-//                 // Get the dimension ID field using the provided mapping function
-//                 const dimIdField = getDimensionIdField(dimKey);
-                
-//                 if (dimIdField) {
-//                     const filteredData = originalData.filter(row => 
-//                         dimensionKeys[dimKey].has(row[dimIdField])
-//                     );
-                    
-//                     state.dimensions[dimKey] = filteredData;
-                    
-//                     const filterRatio = ((originalCount - filteredData.length) / originalCount * 100).toFixed(1);
-//                     console.log(`✅ Status: Optimized ${dimKey}: ${originalCount} → ${filteredData.length} rows (${filterRatio}% reduction)`);
-//                 } else {
-//                     console.warn(`⚠️ Warning: No ID field mapping found for dimension ${dimKey}, keeping all records`);
-//                 }
-//             } else {
-//                 console.log(`📝 Status: No optimization applied to ${dimKey} (no matching fact keys found)`);
-//             }
-//         });
-
-
-//         // 6. Generate available fields
-//         state.availableFields = [];
-        
-//         // Add dimension fields
-//         state.availableFiles.forEach(file => {
-//             if (file.type === 'dimension') {
-//                 state.availableFields.push({
-//                     id: file.id,
-//                     label: file.label,
-//                     category: 'Dimension',
-//                     type: 'dimension',
-//                     hierarchical: true, //file.hierarchical,
-//                     draggableTo: ['row', 'column', 'filter']
-//                 });
-//             }
-//         });
-        
-//         // Add measure fields
-//         [
-//             { id: 'COST_UNIT', label: 'Cost Unit' },
-//             { id: 'QTY_UNIT', label: 'Quantity Unit' }
-//         ].forEach(measure => {
-//             state.availableFields.push({
-//                 id: measure.id,
-//                 label: measure.label,
-//                 category: 'Measure',
-//                 type: 'fact',
-//                 measureName: measure.id,
-//                 draggableTo: ['value']
-//             });
-//         });
-
-
-//         // 7. Process dimension data to build hierarchies (now with optimized data)
-//         try {
-//             console.log("⏳ Status: Building Dimension hierarchies with optimized data...");
-//             const hierarchies = processDimensionHierarchies(state.dimensions, state.factData);
-//             state.hierarchies = hierarchies || {};
-//             console.log("✅ Status: Dimension hierarchies built:", Object.keys(state.hierarchies));
-            
-//         } catch (hierError){
-//             console.error("Error building hierarchies:", hierError);
-//             // Initialize empty hierarchies
-//             state.hierarchies = {};
-//         }
-        
-        
-//         // 8. Set up UI elements
-//         ui.renderAvailableFields(elements);
-//         ui.setDefaultFields();
-//         ui.renderFieldContainers(elements, state);
-        
-
-//         // 9. Initialize mappings AFTER data loading is complete
-//         console.log("⏳ Status: Initializing mappings now that data is loaded");
-//         initializeMappings();
-                
-//         // Show success message
-//         console.log('✅ Status: Data loaded successfully from Snowflake database with performance optimizations.', 'success', elements);
-//         state.loading = false;
-
-//         return true;
-        
-//     } catch (error) {
-//         console.error('Data Loading Error:', error);
-                
-//         // Show app content even on error
-//         const appContent = document.getElementById('appContent');
-//         if (appContent) {
-//             appContent.style.display = 'block';
-//         }
-        
-//         // Show error message
-//         console.error(`❌ Data Loading Error: ${error.message}`, 'error', elements);
-//         return false;
-//     }
-// }
 async function ingestData(elements, selectedFact = 'FACT_BOM') {
     console.log('⏳ Status: Using legacy ingestData - calling new phased approach...');
     
@@ -1362,6 +1200,7 @@ function getDimensionIdField(dimName) {
         'le': 'LE',
         'cost_element': 'COST_ELEMENT',
         'gmid_display': 'COMPONENT_GMID',
+        'root_gmid_display': 'ROOT_GMID',
         'smartcode': 'SMARTCODE',
         'item_cost_type': 'ITEM_COST_TYPE',
         'material_type': 'MATERIAL_TYPE',
@@ -1526,7 +1365,8 @@ function initializeAllDimensionsCollapsed() {
     }
     
     // Get all available dimensions
-    const allDimensions = ['le', 'cost_element', 'smartcode', 'gmid_display', 'item_cost_type', 'material_type', 'mc', 'year'];
+    // const allDimensions = ['le', 'cost_element', 'smartcode', 'gmid_display', 'root_gmid_display', 'item_cost_type', 'material_type', 'mc', 'year'];
+    const allDimensions = ['le', 'cost_element', 'smartcode', 'root_gmid_display', 'item_cost_type', 'material_type', 'mc', 'year'];
     
     allDimensions.forEach(dimName => {
         if (!state.expandedNodes[dimName]) {
@@ -1610,6 +1450,7 @@ function getFactIdField(dimName) {
         'le': 'LE',
         'cost_element': 'COST_ELEMENT',
         'gmid_display': 'COMPONENT_GMID',
+        'root_gmid_display': 'ROOT_GMID',
         'smartcode': 'ROOT_SMARTCODE',
         'item_cost_type': 'ITEM_COST_TYPE',
         'material_type': 'COMPONENT_MATERIAL_TYPE',
@@ -4857,5 +4698,10 @@ export default {
 
     //
     buildAndPersistDimensionHierarchies,
+    fetchDimensionFields,
+    fetchOptimizedData,
+    validateAllDimensionFields,
+    ingestDimensionFilterDataOnly,
+    clearServerCache,
 
   };

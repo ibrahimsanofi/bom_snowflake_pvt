@@ -1,6 +1,6 @@
 // Enhanced UI module with improved drag/drop restrictions and reset functionality
 
-import core from './core.js';
+import core from './core-old.js';
 import stateModule from './state.js';
 
 const state = stateModule.state;

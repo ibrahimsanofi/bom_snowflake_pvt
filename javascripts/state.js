@@ -40,10 +40,10 @@ const state = {
             row: { 'ROOT': true },
             column: { 'ROOT': true }
         },
-        gmid_display: {
-            row: { 'ROOT': true },
-            column: { 'ROOT': true }
-        },
+        // gmid_display: {
+        //     row: { 'ROOT': true },
+        //     column: { 'ROOT': true }
+        // },
         root_gmid_display: {
             row: { 'ROOT': true },
             column: { 'ROOT': true }
@@ -106,10 +106,10 @@ function initializeExpandedNodes() {
             row: { 'ROOT': true },
             column: { 'ROOT': true }
         },
-        gmid_display: {
-            row: { 'ROOT': true },
-            column: { 'ROOT': true }
-        },
+        // gmid_display: {
+        //     row: { 'ROOT': true },
+        //     column: { 'ROOT': true }
+        // },
         root_gmid_display: {
             row: { 'ROOT': true },
             column: { 'ROOT': true }
