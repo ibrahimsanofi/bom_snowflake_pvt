@@ -2266,14 +2266,14 @@ class EnhancedFilterSystem {
       const rows = await this.parseNDJSONStream(response);
       
       // Filter out rows with no meaningful data
-      const filteredRows = rows.filter(row => {
-        const hasValidCost = row.COST_UNIT !== null && row.COST_UNIT !== undefined && row.COST_UNIT !== 0;
-        const hasValidQty = row.QTY_UNIT !== null && row.QTY_UNIT !== undefined && row.QTY_UNIT !== 0;
-        return hasValidCost || hasValidQty;
-      });
+      // const filteredRows = rows.filter(row => {
+      //   const hasValidCost = row.COST_UNIT !== null && row.COST_UNIT !== undefined && row.COST_UNIT !== 0;
+      //   const hasValidQty = row.QTY_UNIT !== null && row.QTY_UNIT !== undefined && row.QTY_UNIT !== 0;
+      //   return hasValidCost || hasValidQty;
+      // });
       
-      console.log(`✅ Retrieved ${filteredRows.length} FACT_BOM records with valid data`);
-      return filteredRows;
+      console.log(`✅ Retrieved ${rows.length} FACT_BOM matching records.`);
+      return rows;
       
     } catch (error) {
       console.error('❌ Error fetching FACT_BOM data:', error);

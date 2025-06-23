@@ -106,7 +106,8 @@ app.post('/api/dimension-fields/:table', async (req, res) => {
     if (!fields || !Array.isArray(fields) || fields.length === 0) {
         return res.status(400).json({ 
             error: 'Missing or invalid fields array in request body',
-            example: { fields: ["FIELD1", "FIELD2"], options: { limit: 1000, distinct: true } }
+            // example: { fields: ["FIELD1", "FIELD2"], options: { limit: 1000, distinct: true } }
+            example: { fields: ["FIELD1", "FIELD2"], options: { distinct: true } }
         });
     }
 
@@ -589,7 +590,8 @@ app.use((req, res) => {
     res.status(404).json({ 
         error: `Endpoint not found: ${req.method} ${req.path}`,
         availableEndpoints: [
-            'GET /api/data/:table?fields=FIELD1,FIELD2&limit=1000',
+            // 'GET /api/data/:table?fields=FIELD1,FIELD2&limit=1000',
+            'GET /api/data/:table?fields=FIELD1,FIELD2',
             'POST /api/dimension-fields/:table',
             'POST /api/validate-fields',
             'POST /api/clear-cache',
@@ -621,7 +623,7 @@ app.listen(PORT, () => {
     console.log(`   🎯 Smart column selection with validation`);
     console.log(`   💾 Schema caching (${CACHE_TTL/1000/60}min TTL)`);
     console.log(`   🔍 Automatic field validation`);
-    console.log(`   ⚡ Optimized queries with DISTINCT and LIMIT`);
+    console.log(`   ⚡ Optimized queries with DISTINCT`);
     console.log(`📊 Available endpoints:`);
     console.log(`   GET  /api/data/:table?fields=FIELD1,FIELD2 - Smart column selection`);
     console.log(`   POST /api/dimension-fields/:table - Validated field fetching`);
