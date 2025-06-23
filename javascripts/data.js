@@ -356,7 +356,6 @@ async function ingestDimensionFilterDataOnly(elements, selectedFact = 'FACT_BOM'
                 id: `${dim}`,
                 label: dim.replace(/^DIM_/, ''),
                 type: 'dimension',
-                // hierarchical: ['LE', 'COST_ELEMENT', 'GMID_DISPLAY', 'SMARTCODE', 'MC', 'YEAR', 'ITEM_COST_TYPE', 'MATERIAL_TYPE', 'ROOT_GMID_DISPLAY'].includes(
                 hierarchical: ['LE', 'COST_ELEMENT', 'SMARTCODE', 'MC', 'YEAR', 'ITEM_COST_TYPE', 'MATERIAL_TYPE', 'ROOT_GMID_DISPLAY'].includes(
                     dim.replace(/^DIM_/, '')
                 )
@@ -519,6 +518,153 @@ async function clearServerCache() {
  * @param {Object} elements - DOM elements object (optional, for status updates)
  * @returns {Promise<boolean>} - Success status
  */
+// async function buildAndPersistDimensionHierarchies(elements = null) {
+//     console.log('⏳ Status: Building and persisting dimension hierarchies...');
+    
+//     try {
+//         // Ensure dimension filter data is loaded
+//         if (!state.dimensionFiltersLoaded || !state.dimensionFilters) {
+//             throw new Error("Dimension filter data must be loaded before building hierarchies");
+//         }
+
+//         // Initialize hierarchies storage
+//         state.hierarchies = state.hierarchies || {};
+//         state.expandedNodes = state.expandedNodes || {};
+
+//         // Track successful hierarchy builds
+//         const hierarchyResults = {};
+
+//         // Build hierarchies for each dimension
+//         for (const [dimKey, dimensionFilter] of Object.entries(state.dimensionFilters)) {
+//             if (!dimensionFilter.data || dimensionFilter.data.length === 0) {
+//                 console.warn(`No data available for dimension: ${dimKey}`);
+//                 continue;
+//             }
+
+//             try {
+//                 console.log(`⏳ Status: Building hierarchy for ${dimKey}...`);
+                
+//                 let hierarchy = null;
+                
+//                 // Build hierarchy based on dimension type
+//                 switch (dimKey) {
+//                     case 'le':
+//                         hierarchy = buildLegalEntityHierarchy(dimensionFilter.data);
+//                         break;
+//                     case 'cost_element':
+//                         hierarchy = buildCostElementHierarchy(dimensionFilter.data);
+//                         break;
+//                     case 'smartcode':
+//                         hierarchy = buildSmartCodeHierarchy(dimensionFilter.data);
+//                         break;
+//                     case 'mc':
+//                         hierarchy = buildManagementCentreHierarchy(dimensionFilter.data);
+//                         break;
+//                     // case 'gmid_display':
+//                     //     hierarchy = buildFilteredGmidDisplayHierarchy(dimensionFilter.data);
+//                     //     break;
+//                     case 'item_cost_type':
+//                         hierarchy = buildItemCostTypeHierarchy(dimensionFilter.data);
+//                         break;
+//                     case 'material_type':
+//                         hierarchy = buildMaterialTypeHierarchy(dimensionFilter.data);
+//                         break;
+//                     case 'year':
+//                         hierarchy = buildBusinessYearHierarchy(dimensionFilter.data);
+//                         break;
+//                     default:
+//                         // For unknown dimensions, try to build a flat hierarchy
+//                         console.warn(`Unknown dimension type: ${dimKey}, building flat hierarchy`);
+//                         hierarchy = buildStandaloneFlatHierarchy(
+//                             dimensionFilter.data, 
+//                             dimKey.toUpperCase(),
+//                             dimensionFilter.config?.valueField || 'ID',
+//                             dimensionFilter.config?.displayField || 'LABEL'
+//                         );
+//                         break;
+//                 }
+
+//                 if (hierarchy && hierarchy.root) {
+//                     // Store the hierarchy
+//                     state.hierarchies[dimKey] = hierarchy;
+                    
+//                     // Initialize expansion state for both row and column zones
+//                     state.expandedNodes[dimKey] = state.expandedNodes[dimKey] || {};
+//                     state.expandedNodes[dimKey].row = state.expandedNodes[dimKey].row || {};
+//                     state.expandedNodes[dimKey].column = state.expandedNodes[dimKey].column || {};
+                    
+//                     // Set root node to collapsed by default
+//                     state.expandedNodes[dimKey].row['ROOT'] = false;
+//                     state.expandedNodes[dimKey].column['ROOT'] = false;
+                    
+//                     // Precompute descendant factIds for efficient filtering
+//                     const factIdField = getFactIdField(dimKey);
+//                     if (factIdField) {
+//                         precomputeDescendantFactIds(hierarchy, factIdField);
+//                     }
+                    
+//                     hierarchyResults[dimKey] = true;
+//                     console.log(`✅ Status: Successfully built hierarchy for ${dimKey} with ${Object.keys(hierarchy.nodesMap).length} nodes`);
+                    
+//                     // Update UI status if elements provided
+//                     if (elements) {
+//                         const tableName = dimensionFilter.tableName;
+//                         ui.updateTableStatus(tableName, 'hierarchy_built', Object.keys(hierarchy.nodesMap).length);
+//                     }
+//                 } else {
+//                     console.error(`Failed to build hierarchy for ${dimKey}: invalid hierarchy structure`);
+//                     hierarchyResults[dimKey] = false;
+//                 }
+                
+//             } catch (error) {
+//                 console.error(`Error building hierarchy for ${dimKey}:`, error);
+//                 hierarchyResults[dimKey] = false;
+                
+//                 // Create fallback hierarchy to prevent crashes
+//                 state.hierarchies[dimKey] = createFallbackHierarchy(
+//                     `${dimKey.toUpperCase()} (Fallback)`, 
+//                     'ROOT'
+//                 );
+//             }
+//         }
+
+//         // Validate that we have at least some hierarchies
+//         const successfulHierarchies = Object.values(hierarchyResults).filter(success => success).length;
+//         const totalDimensions = Object.keys(state.dimensionFilters).length;
+        
+//         if (successfulHierarchies === 0) {
+//             throw new Error("Failed to build any hierarchies from dimension data");
+//         }
+
+//         console.log(`✅ Status: Hierarchy building complete: ${successfulHierarchies}/${totalDimensions} dimensions processed successfully`);
+        
+//         // Initialize filter system with dimension hierarchies
+//         console.log("⏳ Status: Initializing filter system with dimension hierarchies");
+//         setTimeout(() => {
+//             if (window.EnhancedFilterSystem && typeof window.EnhancedFilterSystem.initialize === 'function') {
+//                 window.EnhancedFilterSystem.state = state;
+//                 window.EnhancedFilterSystem.initialize();
+//             } else {
+//                 console.log("⏳ Status: Filter system not yet available, will initialize when loaded");
+//             }
+//         }, 500);
+
+//         // Mark hierarchies as built
+//         state.hierarchiesBuilt = true;
+        
+//         return true;
+        
+//     } catch (error) {
+//         console.error('Hierarchy Building Error:', error);
+        
+//         // Show error message if elements provided
+//         if (elements) {
+//             console.error(`❌ Hierarchy Building Error: ${error.message}`, 'error', elements);
+//         }
+        
+//         return false;
+//     }
+// }
 async function buildAndPersistDimensionHierarchies(elements = null) {
     console.log('⏳ Status: Building and persisting dimension hierarchies...');
     
@@ -561,9 +707,19 @@ async function buildAndPersistDimensionHierarchies(elements = null) {
                     case 'mc':
                         hierarchy = buildManagementCentreHierarchy(dimensionFilter.data);
                         break;
-                    // case 'gmid_display':
-                    //     hierarchy = buildFilteredGmidDisplayHierarchy(dimensionFilter.data);
-                    //     break;
+                    case 'gmid_display':
+                        // Note: This will be populated later via extractGMIDDisplayData
+                        hierarchy = createFallbackHierarchy('GMID Display (Filtered)', 'GMID_DISPLAY_ROOT');
+                        break;
+                    case 'root_gmid_display':
+                        // NEW: Handle root_gmid_display as a flat hierarchy
+                        hierarchy = buildStandaloneFlatHierarchy(
+                            dimensionFilter.data,
+                            'ROOT_GMID_DISPLAY',
+                            'ROOT_GMID',
+                            'ROOT_DISPLAY'
+                        );
+                        break;
                     case 'item_cost_type':
                         hierarchy = buildItemCostTypeHierarchy(dimensionFilter.data);
                         break;
@@ -628,6 +784,9 @@ async function buildAndPersistDimensionHierarchies(elements = null) {
                 );
             }
         }
+
+        // NOTE: gmid_display hierarchy will be built later via extractGMIDDisplayData
+        console.log('📝 Status: GMID Display hierarchy will be built on-demand when ROOT_GMID filter is applied');
 
         // Validate that we have at least some hierarchies
         const successfulHierarchies = Object.values(hierarchyResults).filter(success => success).length;
@@ -851,7 +1010,7 @@ async function ingestDimensionData(elements, selectedFact = 'FACT_BOM') {
                 id: `${dim}`,
                 label: dim.replace(/^DIM_/, ''),
                 type: 'dimension',
-                hierarchical: ['LE', 'COST_ELEMENT', 'GMID_DISPLAY', 'SMARTCODE', 'MC', 'YEAR', 'ITEM_COST_TYPE', 'MATERIAL_TYPE'].includes(
+                hierarchical: ['LE', 'COST_ELEMENT', 'ROOT_GMID_DISPLAY', 'SMARTCODE', 'MC', 'YEAR', 'ITEM_COST_TYPE', 'MATERIAL_TYPE'].includes(
                     dim.replace(/^DIM_/, '')
                 )
             });
@@ -2678,7 +2837,7 @@ function buildCostElementHierarchy(data) {
  * @param {Array} data - GMID display dimension data
  * @returns {Object} - Complete hierarchy object
  */
-function buildFilteredGmidDisplayHierarchy(data) {
+function buildGmidDisplayHierarchy(data) {
     console.log(`⏳ Status: Building GMID Display hierarchy from ${data?.length || 0} records...`);
     
     // Check if data has PATH_GMID structure
@@ -2913,7 +3072,7 @@ function processDimensionHierarchies(dimensions){ //, factData) {
         if (dimensions && dimensions.gmid_display && dimensions.gmid_display.length > 0) {
             try {
                 // Build GMID hierarchy with the original function signature
-                hierarchies.gmid_display = buildFilteredGmidDisplayHierarchy(dimensions.gmid_display);
+                hierarchies.gmid_display = buildGmidDisplayHierarchy(dimensions.gmid_display);
                 // Precompute descendant factIds for GMID hierarchy
                 precomputeDescendantFactIds(hierarchies.gmid_display, 'COMPONENT_GMID');
             } catch (error) {
@@ -4651,7 +4810,7 @@ export default {
     buildLegalEntityHierarchy,
     buildSmartCodeHierarchy,
     buildCostElementHierarchy,
-    buildFilteredGmidDisplayHierarchy,
+    buildGmidDisplayHierarchy,
     buildMaterialTypeHierarchy,
     buildManagementCentreHierarchy,
     buildItemCostTypeHierarchy,
@@ -4701,7 +4860,6 @@ export default {
     fetchDimensionFields,
     fetchOptimizedData,
     validateAllDimensionFields,
-    ingestDimensionFilterDataOnly,
     clearServerCache,
 
   };

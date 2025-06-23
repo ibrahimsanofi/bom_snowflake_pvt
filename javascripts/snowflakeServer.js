@@ -144,18 +144,25 @@ app.post('/api/dimension-fields/:table', async (req, res) => {
         // Build optimized SQL query
         const fieldsString = validation.validFields.join(', ');
         const distinct = options.distinct !== false ? 'DISTINCT' : '';
-        const limit = Math.min(options.limit || 10000, 50000); // Cap at 50k for safety
+        // const limit = Math.min(options.limit || 5000, 10000); // Cap at 50k for safety
         const orderBy = validation.validFields[0]; // Order by first field
         
         // Add WHERE clause to filter out nulls for better performance
         const whereClause = `WHERE ${validation.validFields[0]} IS NOT NULL`;
         
+        // const sqlQuery = `
+        //     SELECT ${distinct} ${fieldsString} 
+        //     FROM ONEMNS_PROD.DMT_BOM.${tableName} 
+        //     ${whereClause}
+        //     ORDER BY ${orderBy} 
+        //     LIMIT ${limit}
+        // `.trim();
+
         const sqlQuery = `
             SELECT ${distinct} ${fieldsString} 
             FROM ONEMNS_PROD.DMT_BOM.${tableName} 
             ${whereClause}
-            ORDER BY ${orderBy} 
-            LIMIT ${limit}
+            ORDER BY ${orderBy}
         `.trim();
         
         console.log(`📊 Executing optimized SQL: ${sqlQuery}`);
@@ -246,23 +253,31 @@ app.get('/api/data/:table', async (req, res) => {
             // Build optimized query with specific fields
             const fieldsString = validation.validFields.join(', ');
             const distinctClause = distinct === 'true' ? 'DISTINCT' : '';
-            const limitClause = Math.min(parseInt(limit) || 10000, 50000);
+            // const limitClause = Math.min(parseInt(limit) || 5000, 10000);
             const orderByClause = orderBy || validation.validFields[0];
             
+            // sqlQuery = `
+            //     SELECT ${distinctClause} ${fieldsString} 
+            //     FROM ONEMNS_PROD.DMT_BOM.${tableName}
+            //     WHERE ${validation.validFields[0]} IS NOT NULL
+            //     ORDER BY ${orderByClause}
+            //     LIMIT ${limitClause}
+            // `.trim();
+
             sqlQuery = `
                 SELECT ${distinctClause} ${fieldsString} 
                 FROM ONEMNS_PROD.DMT_BOM.${tableName}
                 WHERE ${validation.validFields[0]} IS NOT NULL
                 ORDER BY ${orderByClause}
-                LIMIT ${limitClause}
             `.trim();
             
             console.log(`📊 Optimized query (${validation.validFields.length} columns): ${sqlQuery}`);
             
         } else {
             // Fallback to all columns with limit
-            const limitClause = Math.min(parseInt(limit) || 10000, 50000);
-            sqlQuery = `SELECT * FROM ONEMNS_PROD.DMT_BOM.${tableName} LIMIT ${limitClause}`;
+            // const limitClause = Math.min(parseInt(limit) || 5000, 10000);
+            // sqlQuery = `SELECT * FROM ONEMNS_PROD.DMT_BOM.${tableName} LIMIT ${limitClause}`;
+            sqlQuery = `SELECT * FROM ONEMNS_PROD.DMT_BOM.${tableName}`;
             console.log(`📊 Full table query: ${sqlQuery}`);
         }
         
@@ -453,9 +468,9 @@ app.get('/api/data/FACT_BOM/filtered', async (req, res) => {
             sql += ` WHERE ${whereConditions.join(' AND ')}`;
         }
         
-        sql += whereConditions.length > 0 ? ' AND ' : ' WHERE ';
-        sql += `(COST_UNIT IS NOT NULL AND COST_UNIT != 0) OR (QTY_UNIT IS NOT NULL AND QTY_UNIT != 0)`;
-        sql += ` LIMIT 50000`;
+        // sql += whereConditions.length > 0 ? ' AND ' : ' WHERE ';
+        // sql += `((COST_UNIT IS NOT NULL AND COST_UNIT != 0) OR (QTY_UNIT IS NOT NULL AND QTY_UNIT != 0))`;
+        // sql += ` LIMIT 5000`;
         
         console.log('📊 Executing optimized SQL:', sql);
         

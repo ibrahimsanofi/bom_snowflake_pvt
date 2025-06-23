@@ -66,10 +66,10 @@ const core = {
                 row: { 'ROOT': true },
                 column: { 'ROOT': true }
             },
-            // gmid_display: {
-            //     row: { 'ROOT': true },
-            //     column: { 'ROOT': true }
-            // },
+            gmid_display: {
+                row: { 'ROOT': true },
+                column: { 'ROOT': true }
+            },
             root_gmid_display: {
                 row: { 'ROOT': true },
                 column: { 'ROOT': true }

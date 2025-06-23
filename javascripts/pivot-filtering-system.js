@@ -44,75 +44,59 @@ class EnhancedFilterSystem {
         label: 'Legal Entity',
         dimensionKey: 'le',
         factField: 'LE',
-        hierarchical: false, // CHANGED: Treat as simple filter for now
-        valueField: 'LE',
-        displayField: 'LE_DESC'
+        hierarchical: true
       },
       rootGmid: {
         id: 'rootGmid',
         label: 'Root GMID',
         dimensionKey: 'root_gmid_display',
         factField: 'ROOT_GMID',
-        hierarchical: false, // CHANGED: Treat as simple filter for now
-        valueField: 'ROOT_GMID',
-        displayField: 'ROOT_DISPLAY'
+        displayField: 'ROOT_DISPLAY',
+        hierarchical: false
       },
       smartcode: {
         id: 'smartcode',
         label: 'Smartcode',
         dimensionKey: 'smartcode',
         factField: 'ROOT_SMARTCODE',
-        hierarchical: false,
-        valueField: 'SMARTCODE',
-        displayField: 'SMARTCODE_DESC'
+        hierarchical: false
       },
       costElement: {
         id: 'costElement',
         label: 'Cost Element',
         dimensionKey: 'cost_element',
         factField: 'COST_ELEMENT',
-        hierarchical: false, // CHANGED: Treat as simple filter for now
-        valueField: 'COST_ELEMENT',
-        displayField: 'COST_ELEMENT_DESC'
+        hierarchical: true
       },
       businessYear: {
         id: 'businessYear',
         label: 'Business Year',
         dimensionKey: 'year',
         factField: 'ZYEAR',
-        hierarchical: false,
-        valueField: 'YEAR',
-        displayField: 'YEAR'
+        hierarchical: false
       },
       itemCostType: {
         id: 'itemCostType',
         label: 'Item Cost Type',
         dimensionKey: 'item_cost_type',
         factField: 'ITEM_COST_TYPE',
-        hierarchical: false,
-        valueField: 'ITEM_COST_TYPE',
-        displayField: 'ITEM_COST_TYPE_DESC'
+        hierarchical: false
       },
       materialType: {
         id: 'materialType',
         label: 'Material Type',
         dimensionKey: 'material_type',
         factField: 'COMPONENT_MATERIAL_TYPE',
-        hierarchical: false,
-        valueField: 'MATERIAL_TYPE',
-        displayField: 'MATERIAL_TYPE_DESC'
+        hierarchical: false
       },
       managementCentre: {
         id: 'managementCentre',
         label: 'MGT Centre',
         dimensionKey: 'mc',
         factField: 'MC',
-        hierarchical: false, // CHANGED: Treat as simple filter for now
-        valueField: 'MC',
-        displayField: 'LE_DESC'
+        hierarchical: true
       }
     };
-
     
     // Performance tracking
     this.perfTracking = {
@@ -120,6 +104,19 @@ class EnhancedFilterSystem {
       recordsBeforeFilter: 0,
       recordsAfterFilter: 0
     };
+
+    this.API_CONFIG = {
+      BASE_URL: 'http://localhost:3000/api',
+      ENDPOINTS: {
+        DIMENSION_FIELDS: '/dimension-fields',  // POST /api/dimension-fields/:table
+        DATA_GENERIC: '/data',                  // GET /api/data/:table  
+        FACT_BOM_FILTERED: '/data/FACT_BOM/filtered', // GET /api/data/FACT_BOM/filtered (exists)
+        VALIDATE_FIELDS: '/validate-fields'    // POST /api/validate-fields
+      }
+    };
+    
+    // Track available tables/endpoints
+    this.availableEndpoints = new Set();
   }
 
   
@@ -127,158 +124,27 @@ class EnhancedFilterSystem {
    * Initialize the filter system
    */
   initialize() {
-    console.log('✅ Status: Initializing Enhanced Filter System with field-specific data...');
+    console.log('✅ Status: Initializing Enhanced Filter System...');
     
     if (!this.state) {
       console.log('✅ Status: No state reference, cannot initialize filters');
       return false;
     }
     
-    // CHANGED: Check for dimensionFilters instead of dimensions
-    if (!this.state.dimensionFilters) {
-      console.log('✅ Status: Dimension filter data not loaded yet, cannot initialize filters');
+    if (!this.state.dimensions) {
+      console.log('✅ Status: Dimensions not loaded yet, cannot initialize filters');
       return false;
     }
     
+    this.initializeHierarchyFilters();
     this.createFilterComponents();
     this.setupFilterEvents();
     this.setupApplyButton();
-    this.populateFiltersFromFieldData(); // CHANGED: Use new population method
+    this.populateFilters();
     
-    console.log('✅ Status: Enhanced Filter System initialized successfully with field-specific data');
+    // Don't automatically apply filters - let user choose
+    console.log('✅ Status: Enhanced Filter System initialized successfully');
     return true;
-  }
-
-
-   /**
-   * ENHANCED: Populate all filter components with field-specific dimension data
-   */
-  populateFiltersFromFieldData() {
-    console.log('✅ Status: Populating filter components with field-specific data...');
-    
-    if (!this.state) {
-      this.state = window.App ? window.App.state : window.appState;
-      
-      if (!this.state) {
-        console.log('⏳ Status: State not yet available, waiting...');
-        setTimeout(() => this.populateFiltersFromFieldData(), 500);
-        return;
-      }
-    }
-    
-    if (!this.state.dimensionFilters) {
-      console.log('⏳ Status: Waiting for DIMENSION FILTER data to be loaded...');
-      setTimeout(() => this.populateFiltersFromFieldData(), 500);
-      return;
-    }
-    
-    // Populate each filter using field-specific data
-    Object.values(this.filterMeta).forEach(dimension => {
-      this.populateSimpleFilterFromFieldData(dimension);
-    });
-    
-    this.updateAllSelectionCounts();
-  }
-
-
-   /**
-   * ENHANCED: Populate a filter with field-specific dimension data
-   * @param {Object} dimension - Dimension configuration
-   */
-   populateSimpleFilterFromFieldData(dimension) {
-    console.log(`⏳ Status: Populating filter for ${dimension.label} with field-specific data...`);
-    
-    const checkboxList = document.getElementById(`${dimension.id}CheckboxList`);
-    if (!checkboxList) {
-      console.warn(`Checkbox list for ${dimension.id} not found`);
-      return;
-    }
-    
-    checkboxList.innerHTML = '';
-    
-    // ENHANCED: Get filter options from field-specific data
-    const uniqueValues = this.getUniqueValuesFromFieldData(dimension);
-    
-    if (uniqueValues.length === 0) {
-      checkboxList.innerHTML = `<div class="no-values-message">No values available for ${dimension.label}</div>`;
-      return;
-    }
-    
-    // Sort values alphabetically by label
-    uniqueValues.sort((a, b) => {
-      return a.label.toString().toLowerCase().localeCompare(b.label.toString().toLowerCase());
-    });
-    
-    // CHANGED: Initialize filter selections to contain ALL values (making them all unselected)
-    this.filterSelections[dimension.id] = new Set(uniqueValues.map(item => item.value));
-    
-    // Create checkbox for each value
-    uniqueValues.forEach(item => {
-      const checkboxOption = document.createElement('div');
-      checkboxOption.className = 'checkbox-option';
-      
-      const safeId = (item.value || '').toString().replace(/[^a-zA-Z0-9]/g, '_');
-      
-      // CHANGED: Set checkboxes to unchecked by default
-      checkboxOption.innerHTML = `
-        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; width: 100%; overflow: hidden;">
-          <input type="checkbox" id="${dimension.id}_${safeId}" value="${item.value}">
-          <span style="white-space: normal; overflow: hidden; text-overflow: ellipsis; font-size: 0.9rem;">
-            ${item.label}
-          </span>
-        </label>
-      `;
-      
-      const checkbox = checkboxOption.querySelector('input[type="checkbox"]');
-      checkbox.addEventListener('change', (e) => {
-        this.handleSimpleFilterCheckboxChange(dimension, item.value, e.target.checked);
-      });
-      
-      checkboxList.appendChild(checkboxOption);
-    });
-    
-    console.log(`✅ Status: Populated ${dimension.label} filter with ${uniqueValues.length} options (all unselected by default)`);
-  }
-
-
-   /**
-   * ENHANCED: Get unique values for a dimension from field-specific data
-   * @param {Object} dimension - Dimension configuration
-   * @returns {Array} - Array of unique values with label and value properties
-   */
-  getUniqueValuesFromFieldData(dimension) {
-    const dimensionFilter = this.state.dimensionFilters[dimension.dimensionKey];
-    
-    if (!dimensionFilter || !dimensionFilter.data) {
-      console.warn(`No field data available for dimension: ${dimension.dimensionKey}`);
-      return [];
-    }
-    
-    const { data, config } = dimensionFilter;
-    const valueMap = new Map();
-    
-    // Process dimension data to extract unique values
-    data.forEach(item => {
-      if (item && item[dimension.valueField] !== undefined && item[dimension.valueField] !== null) {
-        const value = item[dimension.valueField];
-        const label = item[dimension.displayField] || value;
-        
-        // Use Map to automatically handle duplicates
-        if (!valueMap.has(value)) {
-          valueMap.set(value, {
-            value: value,
-            label: label,
-            id: value
-          });
-        }
-      }
-    });
-    
-    // Convert Map to Array
-    const result = Array.from(valueMap.values());
-    
-    console.log(`✅ Status: Found ${result.length} unique values for ${dimension.label}`);
-    return result;
   }
 
   
@@ -291,8 +157,7 @@ class EnhancedFilterSystem {
     this.state._originalHierarchies = this.state._originalHierarchies || {};
     
     if (this.state.hierarchies) {
-      // const hierarchyKeys = ['le', 'gmid_display', 'item_cost_type', 'material_type', 'year', 'mc', 'smartcode', 'cost_element'];
-      const hierarchyKeys = ['le', 'item_cost_type', 'material_type', 'year', 'mc', 'smartcode', 'cost_element'];
+      const hierarchyKeys = ['le', 'gmid_display', 'item_cost_type', 'material_type', 'year', 'mc', 'smartcode', 'cost_element'];
       
       hierarchyKeys.forEach(key => {
         if (this.state.hierarchies[key] && !this.state._originalHierarchies[key]) {
@@ -329,7 +194,7 @@ class EnhancedFilterSystem {
     
     this.elements.filterComponentsContainer = filterComponentsContainer;
     
-    // Create each dimension filter (all as simple filters for now)
+    // Create each dimension filter
     Object.values(this.filterMeta).forEach(dimension => {
       this.createFilterComponent(filterComponentsContainer, dimension);
     });
@@ -398,7 +263,7 @@ class EnhancedFilterSystem {
    * @param {HTMLElement} container - Container to append the filter to
    * @param {Object} dimension - Dimension configuration object
    */
-   createFilterComponent(container, dimension) {
+  createFilterComponent(container, dimension) {
     const filterComponent = document.createElement('div');
     filterComponent.className = 'filter-component';
     filterComponent.id = `${dimension.id}FilterComponent`;
@@ -499,21 +364,32 @@ class EnhancedFilterSystem {
     checkboxContainer.style.padding = '8px';
     checkboxContainer.style.width = '100%';
     
-    // Always create simple checkbox list (no hierarchical for now)
-    const checkboxList = document.createElement('div');
-    checkboxList.className = 'checkbox-list';
-    checkboxList.id = `${dimension.id}CheckboxList`;
-    checkboxList.innerHTML = `
-      <div class="checkbox-option" style="padding: 6px 0;">
-        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; width: 100%; overflow: hidden;">
-          <input type="checkbox" disabled>
-          <span style="white-space: normal; overflow: hidden; text-overflow: ellipsis; font-size: 0.9rem;">
-            Loading options...
-          </span>
-        </label>
-      </div>
-    `;
-    checkboxContainer.appendChild(checkboxList);
+    if (dimension.hierarchical) {
+      const treeContainer = document.createElement('div');
+      treeContainer.className = 'filter-tree-container';
+      treeContainer.id = `${dimension.id}TreeContainer`;
+      treeContainer.innerHTML = `
+        <div class="loading-tree-indicator">
+          <i class="fas fa-circle-notch fa-spin"></i> Loading hierarchy...
+        </div>
+      `;
+      checkboxContainer.appendChild(treeContainer);
+    } else {
+      const checkboxList = document.createElement('div');
+      checkboxList.className = 'checkbox-list';
+      checkboxList.id = `${dimension.id}CheckboxList`;
+      checkboxList.innerHTML = `
+        <div class="checkbox-option" style="padding: 6px 0;">
+          <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; width: 100%; overflow: hidden;">
+            <input type="checkbox" disabled>
+            <span style="white-space: normal; overflow: hidden; text-overflow: ellipsis; font-size: 0.9rem;">
+              Loading options...
+            </span>
+          </label>
+        </div>
+      `;
+      checkboxContainer.appendChild(checkboxList);
+    }
     
     // Assemble dropdown
     dropdownContent.appendChild(searchContainer);
@@ -649,9 +525,170 @@ class EnhancedFilterSystem {
   setupApplyButton() {
     const applyBtn = this.elements.applyFiltersBtn;
     if (applyBtn) {
-      applyBtn.addEventListener('click', () => {
-        this.applyAllFilters();
+        applyBtn.addEventListener('click', () => {
+            this.applyAllFilters();
+        });
+    }
+  }
+
+
+  /**
+   * ENHANCED: Handle empty filter results with helpful user guidance
+   */
+  handleEmptyFilterResult(dimension = null) {
+      console.log(`⚠️ No records match the current filter selection`);
+      
+      // Set flag to indicate empty result
+      this.state._emptyFilterResult = true;
+      this.state._emptyFilterDimension = dimension?.id;
+      
+      // Update UI indicators
+      this.updateDataVolumeIndicator(this.perfTracking.recordsBeforeFilter || 0, 0);
+      this.updateFilteredRecordsCount(0);
+      
+      // Create helpful empty state message
+      const emptyStateContainer = this.createEmptyStateMessage(dimension);
+      
+      // Clear any existing content in pivot table
+      const pivotContainer = document.getElementById('pivotTableContainer');
+      if (pivotContainer) {
+          pivotContainer.innerHTML = '';
+          pivotContainer.appendChild(emptyStateContainer);
+      }
+      
+      // Update data text
+      const dataText = document.getElementById('dataVolumeText');
+      if (dataText) {
+          dataText.innerHTML = `<span style="color: #dc3545;">No data matches current filters</span>`;
+      }
+  }
+
+
+  /**
+   * Get current filter summary for display
+   */
+  getCurrentFilterSummary() {
+      const summaryItems = [];
+      
+      Object.values(this.filterMeta).forEach(dimension => {
+          const selections = this.filterSelections[dimension.id];
+          const allValues = this.getAllValuesForDimension(dimension);
+          const selectedCount = allValues.filter(value => !selections.has(value)).length;
+          const totalCount = allValues.length;
+          
+          if (selectedCount === 0) {
+              summaryItems.push(`<span style="color: #dc3545;"><strong>${dimension.label}:</strong> None selected (${totalCount} available)</span>`);
+          } else if (selectedCount === totalCount) {
+              summaryItems.push(`<span style="color: #28a745;"><strong>${dimension.label}:</strong> All selected (${totalCount})</span>`);
+          } else {
+              summaryItems.push(`<span style="color: #007bff;"><strong>${dimension.label}:</strong> ${selectedCount}/${totalCount} selected</span>`);
+          }
       });
+      
+      return summaryItems.join('<br>');
+  }
+
+
+  /**
+   * Broaden filters by selecting more items in each dimension
+   */
+  broadenFilters() {
+      console.log('🔧 Broadening filter selections...');
+      
+      let changesMade = false;
+      
+      Object.values(this.filterMeta).forEach(dimension => {
+          const selections = this.filterSelections[dimension.id];
+          const allValues = this.getAllValuesForDimension(dimension);
+          const selectedCount = allValues.filter(value => !selections.has(value)).length;
+          
+          // If less than 50% selected, try to select up to 75%
+          if (selectedCount < allValues.length * 0.5) {
+              const targetCount = Math.ceil(allValues.length * 0.75);
+              const additionalNeeded = targetCount - selectedCount;
+              
+              if (additionalNeeded > 0) {
+                  // Remove some exclusions to include more items
+                  const exclusionsArray = Array.from(selections);
+                  const toInclude = exclusionsArray.slice(0, additionalNeeded);
+                  
+                  toInclude.forEach(value => {
+                      selections.delete(value);
+                  });
+                  
+                  changesMade = true;
+                  console.log(`✅ Broadened ${dimension.label}: now ${selectedCount + additionalNeeded}/${allValues.length} selected`);
+              }
+          }
+      });
+      
+      if (changesMade) {
+          // Update UI
+          this.populateFilters();
+          this.updateAllSelectionCounts();
+          
+          // Show success message
+          this.showSuccessMessage('Filters Broadened', 'Filter selections have been expanded. Click "Apply Filters" to see results.');
+      } else {
+          this.showInfoMessage('No Changes Made', 'Filters are already broad enough or cannot be expanded further.');
+      }
+  }
+
+
+  /**
+   * ENHANCED: Validate Root GMID selections against available fact data
+   */
+  async validateRootGmidSelection(selectedRootGmids) {
+    if (!selectedRootGmids || selectedRootGmids.length === 0) {
+        return { isValid: true };
+    }
+    
+    try {
+        // Check if selected ROOT_GMIDs exist in fact data
+        const API_BASE_URL = 'http://localhost:3000/api';
+        const checkQuery = new URLSearchParams();
+        checkQuery.append('ROOT_GMID', selectedRootGmids.slice(0, 5).join(',')); // Check first 5
+        checkQuery.append('fields', 'ROOT_GMID');
+        checkQuery.append('limit', '1');
+        
+        const url = `${API_BASE_URL}/data/FACT_BOM/filtered?${checkQuery.toString()}`;
+        const response = await fetch(url, {
+            headers: { 'Accept': 'application/x-ndjson' }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Validation query failed: ${response.status}`);
+        }
+        
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let hasData = false;
+        
+        try {
+            const { done, value } = await reader.read();
+            if (!done && value.length > 0) {
+                const text = decoder.decode(value);
+                if (text.trim()) {
+                    hasData = true;
+                }
+            }
+        } finally {
+            reader.releaseLock();
+        }
+        
+        if (!hasData) {
+            return {
+                isValid: false,
+                message: `Selected ROOT_GMID values (${selectedRootGmids.slice(0, 3).join(', ')}${selectedRootGmids.length > 3 ? '...' : ''}) do not exist in the fact data`,
+                suggestion: 'Try selecting different ROOT_GMID values or check if the data has been loaded correctly'
+            };
+        }
+        
+        return { isValid: true };
+        
+    } catch (error) {
+        console.warn('⚠️ Could not validate ROOT_GMID selection:', error);
+        return { isValid: true }; // Don't block if validation fails
     }
   }
   
@@ -661,8 +698,11 @@ class EnhancedFilterSystem {
    */
   updateAllSelectionCounts() {
     Object.values(this.filterMeta).forEach(dimension => {
-      this.updateSelectionCount(dimension);
+        this.updateSelectionCount(dimension);
     });
+    
+    // Update apply button text in case ROOT_GMID selections changed
+    this.updateApplyButtonText();
   }
 
 
@@ -706,27 +746,43 @@ class EnhancedFilterSystem {
    * @param {Object} dimension - Dimension configuration
    */
   populateHierarchicalFilter(dimension) {
-    console.log(`⏳ Status: Populating hierarchical filter for ${dimension.label}...`);
-    
-    const treeContainer = document.getElementById(`${dimension.id}TreeContainer`);
-    if (!treeContainer) {
-      console.warn(`Tree container for ${dimension.id} not found`);
-      return;
-    }
-    
-    const hierarchy = this.state.hierarchies[dimension.dimensionKey];
-    if (!hierarchy || !hierarchy.root) {
-      treeContainer.innerHTML = `<div class="empty-tree-message">No hierarchy data available</div>`;
-      return;
-    }
-    
-    treeContainer.innerHTML = '';
-    
-    const treeNodes = document.createElement('div');
-    treeNodes.className = 'filter-tree-nodes';
-    treeContainer.appendChild(treeNodes);
-    
-    this.renderHierarchyNode(treeNodes, hierarchy.root, dimension, 0);
+      console.log(`⏳ Status: Populating hierarchical filter for ${dimension.label}...`);
+      
+      const treeContainer = document.getElementById(`${dimension.id}TreeContainer`);
+      if (!treeContainer) {
+          console.warn(`Tree container for ${dimension.id} not found`);
+          return;
+      }
+      
+      const hierarchy = this.state.hierarchies[dimension.dimensionKey];
+      if (!hierarchy || !hierarchy.root) {
+          treeContainer.innerHTML = `<div class="empty-tree-message">No hierarchy data available</div>`;
+          return;
+      }
+      
+      treeContainer.innerHTML = '';
+      
+      const treeNodes = document.createElement('div');
+      treeNodes.className = 'filter-tree-nodes';
+      treeContainer.appendChild(treeNodes);
+      
+      // Start with all nodes excluded (unchecked)
+      this.initializeAllNodesAsExcluded(hierarchy, dimension);
+      
+      this.renderHierarchyNode(treeNodes, hierarchy.root, dimension, 0);
+  }
+
+
+  /**
+   * Initialize all nodes in a hierarchy as excluded (unchecked)
+   * @param {Object} hierarchy - The hierarchy object
+   * @param {Object} dimension - Dimension configuration
+   */
+  initializeAllNodesAsExcluded(hierarchy, dimension) {
+      // Collect all node IDs and add them to the excluded set
+      Object.keys(hierarchy.nodesMap).forEach(nodeId => {
+          this.filterSelections[dimension.id].add(nodeId);
+      });
   }
 
   
@@ -840,10 +896,10 @@ class EnhancedFilterSystem {
    */
   createEmptyHierarchy(dimension) {
   const dimName = dimension.dimensionKey;
-  
+
   // If original hierarchy doesn't exist, we can't do anything
   if (!this.state.hierarchies[dimName]) return;
-  
+
   // Create an empty hierarchy with just a root node
   const emptyHierarchy = {
     root: {
@@ -860,10 +916,10 @@ class EnhancedFilterSystem {
     nodesMap: { [`${dimName.toUpperCase()}_ROOT`]: this.state.hierarchies[dimName].root },
     flatData: []
   };
-  
+
   // Store the empty hierarchy
   this.state.hierarchies[dimName] = emptyHierarchy;
-}
+  }
 
   
   /**
@@ -890,31 +946,31 @@ class EnhancedFilterSystem {
     // Create expand/collapse control
     let expandControl = null;
     if (hasChildren) {
-      expandControl = document.createElement('span');
-      expandControl.className = `expand-collapse ${this.expandedFilterNodes[dimension.id][node.id] ? 'expanded' : 'collapsed'}`;
-      expandControl.innerHTML = this.expandedFilterNodes[dimension.id][node.id] ? '▼' : '▶';
-      expandControl.style.cursor = 'pointer';
-      expandControl.style.marginRight = '4px';
-      
-      expandControl.addEventListener('click', () => {
-        this.toggleFilterNodeExpansion(dimension, node, nodeContainer);
-      });
+        expandControl = document.createElement('span');
+        expandControl.className = `expand-collapse ${this.expandedFilterNodes[dimension.id][node.id] ? 'expanded' : 'collapsed'}`;
+        expandControl.innerHTML = this.expandedFilterNodes[dimension.id][node.id] ? '▼' : '▶';
+        expandControl.style.cursor = 'pointer';
+        expandControl.style.marginRight = '4px';
+        
+        expandControl.addEventListener('click', () => {
+            this.toggleFilterNodeExpansion(dimension, node, nodeContainer);
+        });
     } else {
-      expandControl = document.createElement('span');
-      expandControl.className = 'leaf-node';
-      expandControl.innerHTML = '&nbsp;&nbsp;';
-      expandControl.style.marginRight = '4px';
+        expandControl = document.createElement('span');
+        expandControl.className = 'leaf-node';
+        expandControl.innerHTML = '&nbsp;&nbsp;';
+        expandControl.style.marginRight = '4px';
     }
     
-    // Create checkbox
+    // Create checkbox - UNCHECKED by default
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.id = `${dimension.id}_node_${node.id}`;
-    checkbox.checked = !this.filterSelections[dimension.id].has(node.id);
+    checkbox.checked = false; // Start unchecked
     checkbox.style.marginRight = '8px';
     
     checkbox.addEventListener('change', (e) => {
-      this.handleFilterNodeCheckboxChange(dimension, node, e.target.checked);
+        this.handleFilterNodeCheckboxChange(dimension, node, e.target.checked);
     });
     
     // Create label
@@ -932,21 +988,21 @@ class EnhancedFilterSystem {
     
     // Create children container if needed
     if (hasChildren) {
-      const childrenContainer = document.createElement('div');
-      childrenContainer.className = 'filter-tree-children';
-      childrenContainer.style.display = this.expandedFilterNodes[dimension.id][node.id] ? 'block' : 'none';
-      
-      // Render children
-      node.children.forEach(childId => {
-        const childNode = typeof childId === 'string' ? 
-          this.state.hierarchies[dimension.dimensionKey].nodesMap[childId] : childId;
+        const childrenContainer = document.createElement('div');
+        childrenContainer.className = 'filter-tree-children';
+        childrenContainer.style.display = this.expandedFilterNodes[dimension.id][node.id] ? 'block' : 'none';
         
-        if (childNode) {
-          this.renderHierarchyNode(childrenContainer, childNode, dimension, level + 1);
-        }
-      });
-      
-      nodeContainer.appendChild(childrenContainer);
+        // Render children
+        node.children.forEach(childId => {
+            const childNode = typeof childId === 'string' ? 
+                this.state.hierarchies[dimension.dimensionKey].nodesMap[childId] : childId;
+            
+            if (childNode) {
+                this.renderHierarchyNode(childrenContainer, childNode, dimension, level + 1);
+            }
+        });
+        
+        nodeContainer.appendChild(childrenContainer);
     }
     
     container.appendChild(nodeContainer);
@@ -1043,58 +1099,72 @@ class EnhancedFilterSystem {
     
     return ids;
   }
-  
+
 
   /**
-   * Populate a simple (non-hierarchical) filter with unique values
+   * Populate a simple (non-hierarchical) filter with all items unchecked by default
    * @param {Object} dimension - Dimension configuration
    */
   populateSimpleFilter(dimension) {
-    console.log(`⏳ Status: Populating simple filter for ${dimension.label}...`);
+    console.log(`⏳ Status: Populating simple filter for ${dimension.label} (all unchecked by default)...`);
     
     const checkboxList = document.getElementById(`${dimension.id}CheckboxList`);
     if (!checkboxList) {
-      console.warn(`Checkbox list for ${dimension.id} not found`);
-      return;
+        console.warn(`Checkbox list for ${dimension.id} not found`);
+        return;
     }
     
     checkboxList.innerHTML = '';
     
+    // Use the enhanced dimension filter data instead of getUniqueValuesForDimension
     const uniqueValues = this.getUniqueValuesForDimension(dimension);
     
     if (uniqueValues.length === 0) {
-      checkboxList.innerHTML = `<div class="no-values-message">No values available</div>`;
-      return;
+        checkboxList.innerHTML = `<div class="no-values-message">No values available</div>`;
+        console.warn(`⚠️ No values found for dimension: ${dimension.id}`);
+        return;
     }
     
+    console.log(`✅ Status: Found ${uniqueValues.length} values for ${dimension.label}`);
+    
+    // Sort the values alphabetically
     uniqueValues.sort((a, b) => {
-      return a.label.toString().toLowerCase().localeCompare(b.label.toString().toLowerCase());
+        return a.label.toString().toLowerCase().localeCompare(b.label.toString().toLowerCase());
     });
     
+    // Create checkboxes - all UNCHECKED by default
     uniqueValues.forEach(item => {
-      const checkboxOption = document.createElement('div');
-      checkboxOption.className = 'checkbox-option';
-      
-      const safeId = (item.id || item.value).toString().replace(/[^a-zA-Z0-9]/g, '_');
-      
-      checkboxOption.innerHTML = `
-        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; width: 100%; overflow: hidden;">
-          <input type="checkbox" id="${dimension.id}_${safeId}" value="${item.value}" checked>
-          <span style="white-space: normal; overflow: hidden; text-overflow: ellipsis; font-size: 0.9rem;">
-            ${item.label}
-          </span>
-        </label>
-      `;
-      
-      const checkbox = checkboxOption.querySelector('input[type="checkbox"]');
-      checkbox.addEventListener('change', (e) => {
-        this.handleSimpleFilterCheckboxChange(dimension, item.value, e.target.checked);
-      });
-      
-      checkboxList.appendChild(checkboxOption);
+        const checkboxOption = document.createElement('div');
+        checkboxOption.className = 'checkbox-option';
+        
+        const safeId = (item.id || item.value).toString().replace(/[^a-zA-Z0-9]/g, '_');
+        
+        checkboxOption.innerHTML = `
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; width: 100%; overflow: hidden;">
+                <input type="checkbox" id="${dimension.id}_${safeId}" value="${item.value}">
+                <span style="white-space: normal; overflow: hidden; text-overflow: ellipsis; font-size: 0.9rem;">
+                    ${item.label}
+                </span>
+            </label>
+        `;
+        
+        const checkbox = checkboxOption.querySelector('input[type="checkbox"]');
+        
+        // Add event listener for checkbox changes
+        checkbox.addEventListener('change', (e) => {
+            this.handleSimpleFilterCheckboxChange(dimension, item.value, e.target.checked);
+        });
+        
+        checkboxList.appendChild(checkboxOption);
     });
     
-    this.filterSelections[dimension.id] = new Set();
+    // Initialize all items as excluded (unchecked) in the filter selections
+    this.filterSelections[dimension.id].clear(); // Start fresh
+    uniqueValues.forEach(item => {
+        this.filterSelections[dimension.id].add(item.value);
+    });
+    
+    console.log(`✅ Status: Populated ${dimension.label} with ${uniqueValues.length} items (all unchecked by default)`);
   }
 
   
@@ -1108,75 +1178,99 @@ class EnhancedFilterSystem {
     const labelMap = new Map();
     const result = [];
     
-    switch (dimension.id) {
-      case 'rootGmid':
-        if (this.state.dimensions.gmid_display) {
-          this.state.dimensions.gmid_display.forEach(item => {
-            if (item.ROOT_GMID && !valueSet.has(item.ROOT_GMID)) {
-              valueSet.add(item.ROOT_GMID);
-              labelMap.set(item.ROOT_GMID, item.ROOT_DISPLAY || item.ROOT_GMID);
-            }
-          });
-        }
-        break;
+    console.log(`🔍 DEBUG: Getting values for dimension: ${dimension.id}`);
+    console.log(`🔍 DEBUG: Dimension key: ${dimension.dimensionKey}`);
+    
+    // Check if we have dimension filter data (the optimized data structure)
+    if (this.state.dimensionFilters && this.state.dimensionFilters[dimension.dimensionKey]) {
+        const dimensionFilter = this.state.dimensionFilters[dimension.dimensionKey];
+        console.log(`✅ Using dimensionFilters data for ${dimension.id}: ${dimensionFilter.data?.length || 0} records`);
         
-      case 'smartcode':
-        if (this.state.dimensions.smartcode) {
-          this.state.dimensions.smartcode.forEach(item => {
-            if (item.SMARTCODE && !valueSet.has(item.SMARTCODE)) {
-              valueSet.add(item.SMARTCODE);
-              labelMap.set(item.SMARTCODE, item.SMARTCODE);
-            }
-          });
+        if (dimensionFilter.data && dimensionFilter.config) {
+            dimensionFilter.data.forEach(item => {
+                const value = item[dimensionFilter.config.valueField];
+                const label = item[dimensionFilter.config.displayField] || value;
+                
+                if (value !== null && value !== undefined && !valueSet.has(value)) {
+                    valueSet.add(value);
+                    labelMap.set(value, label);
+                }
+            });
         }
-        break;
+    }
+    // Fallback to regular dimensions data
+    else if (this.state.dimensions && this.state.dimensions[dimension.dimensionKey]) {
+        console.log(`✅ Using fallback dimensions data for ${dimension.id}`);
         
-      case 'businessYear':
-        if (this.state.dimensions.year) {
-          this.state.dimensions.year.forEach(item => {
-            if (item.YEAR && !valueSet.has(item.YEAR)) {
-              valueSet.add(item.YEAR);
-              labelMap.set(item.YEAR, item.YEAR.toString());
-            }
-          });
+        switch (dimension.id) {
+            case 'rootGmid':
+                this.state.dimensions.root_gmid_display.forEach(item => {
+                    if (item.ROOT_GMID && !valueSet.has(item.ROOT_GMID)) {
+                        valueSet.add(item.ROOT_GMID);
+                        labelMap.set(item.ROOT_GMID, item.ROOT_DISPLAY || item.ROOT_GMID);
+                    }
+                });
+                break;
+                
+            case 'smartcode':
+                this.state.dimensions.smartcode.forEach(item => {
+                    if (item.SMARTCODE && !valueSet.has(item.SMARTCODE)) {
+                        valueSet.add(item.SMARTCODE);
+                        labelMap.set(item.SMARTCODE, item.SMARTCODE_DESC || item.SMARTCODE);
+                    }
+                });
+                break;
+                
+            case 'businessYear':
+                this.state.dimensions.year.forEach(item => {
+                    if (item.YEAR && !valueSet.has(item.YEAR)) {
+                        valueSet.add(item.YEAR);
+                        labelMap.set(item.YEAR, item.YEAR.toString());
+                    }
+                });
+                break;
+                
+            case 'itemCostType':
+                this.state.dimensions.item_cost_type.forEach(item => {
+                    if (item.ITEM_COST_TYPE && !valueSet.has(item.ITEM_COST_TYPE)) {
+                        valueSet.add(item.ITEM_COST_TYPE);
+                        labelMap.set(item.ITEM_COST_TYPE, item.ITEM_COST_TYPE_DESC || item.ITEM_COST_TYPE);
+                    }
+                });
+                break;
+                
+            case 'materialType':
+                this.state.dimensions.material_type.forEach(item => {
+                    if (item.MATERIAL_TYPE && !valueSet.has(item.MATERIAL_TYPE)) {
+                        valueSet.add(item.MATERIAL_TYPE);
+                        labelMap.set(item.MATERIAL_TYPE, item.MATERIAL_TYPE_DESC || item.MATERIAL_TYPE);
+                    }
+                });
+                break;
+                
+            default:
+                console.warn(`No implementation for dimension: ${dimension.id}`);
+                break;
         }
-        break;
-        
-      case 'itemCostType':
-        if (this.state.dimensions.item_cost_type) {
-          this.state.dimensions.item_cost_type.forEach(item => {
-            if (item.ITEM_COST_TYPE && !valueSet.has(item.ITEM_COST_TYPE)) {
-              valueSet.add(item.ITEM_COST_TYPE);
-              labelMap.set(item.ITEM_COST_TYPE, item.ITEM_COST_TYPE_DESC || item.ITEM_COST_TYPE);
-            }
-          });
-        }
-        break;
-        
-      case 'materialType':
-        if (this.state.dimensions.material_type) {
-          this.state.dimensions.material_type.forEach(item => {
-            if (item.MATERIAL_TYPE && !valueSet.has(item.MATERIAL_TYPE)) {
-              valueSet.add(item.MATERIAL_TYPE);
-              labelMap.set(item.MATERIAL_TYPE, item.MATERIAL_TYPE_DESC || item.MATERIAL_TYPE);
-            }
-          });
-        }
-        break;
-        
-      default:
-        console.warn(`No implementation for dimension: ${dimension.id}`);
-        break;
+    } else {
+        console.warn(`⚠️ No data source found for dimension: ${dimension.id}`);
+        console.log(`Available dimensionFilters:`, Object.keys(this.state.dimensionFilters || {}));
+        console.log(`Available dimensions:`, Object.keys(this.state.dimensions || {}));
     }
     
     // Convert to array format
     valueSet.forEach(value => {
-      result.push({
-        value: value,
-        id: value,
-        label: labelMap.get(value) || value.toString()
-      });
+        result.push({
+            value: value,
+            id: value,
+            label: labelMap.get(value) || value.toString()
+        });
     });
+    
+    console.log(`🔍 DEBUG: Found ${result.length} unique values for ${dimension.id}`);
+    if (result.length > 0) {
+        console.log(`🔍 DEBUG: Sample values:`, result.slice(0, 3));
+    }
     
     return result;
   }
@@ -1189,13 +1283,64 @@ class EnhancedFilterSystem {
    * @param {boolean} checked - New checkbox state
    */
   handleSimpleFilterCheckboxChange(dimension, value, checked) {
-    if (checked) {
-      this.filterSelections[dimension.id].delete(value);
-    } else {
-      this.filterSelections[dimension.id].add(value);
-    }
+      if (checked) {
+          this.filterSelections[dimension.id].delete(value);
+      } else {
+          this.filterSelections[dimension.id].add(value);
+      }
+      
+      this.updateSelectionCount(dimension);
+
+      // Special handling for Root GMID filter
+      if (dimension.id === 'rootGmid') {
+        console.log('🔄 Root GMID filter changed - will fetch GMID display data on Apply Filters');
+        this.updateApplyButtonText();
+      }
+  }
+
+
+  /**
+ * Update apply button text based on current ROOT_GMID selections
+ */
+  updateApplyButtonText() {
+    const applyBtn = this.elements.applyFiltersBtn;
+    if (!applyBtn || applyBtn.disabled) return;
     
-    this.updateSelectionCount(dimension);
+    // Use the helper method to check for meaningful selections
+    const hasMeaningfulSelections = this.checkIfAnyMeaningfulSelectionsExist();
+    const selectedRootGmids = this.getSelectedRootGmids();
+    
+    if (selectedRootGmids.length > 0) {
+        // Check if we have pending GMID data to load
+        const needsGmidData = !this.state.gmidDisplayData || 
+                             this.state.gmidDisplayData.length === 0 ||
+                             !this.state.selectedRootGmidsForGmidData ||
+                             !this.arraysEqual(selectedRootGmids, this.state.selectedRootGmidsForGmidData);
+        
+        if (needsGmidData) {
+            applyBtn.innerHTML = `<i class="fas fa-check"></i> Apply Filters & Load GMID Data (${selectedRootGmids.length} ROOT_GMIDs)`;
+        } else {
+            applyBtn.innerHTML = '<i class="fas fa-check"></i> Apply Filters';
+        }
+    } else if (hasMeaningfulSelections) {
+        applyBtn.innerHTML = '<i class="fas fa-check"></i> Apply Filters';
+    } else {
+        applyBtn.innerHTML = '<i class="fas fa-filter"></i> Apply Filters (No specific selections)';
+    }
+}
+
+
+  /**
+   * HELPER: Compare two arrays for equality
+   */
+  arraysEqual(arr1, arr2) {
+    if (!arr1 || !arr2) return false;
+    if (arr1.length !== arr2.length) return false;
+    
+    const sorted1 = [...arr1].sort();
+    const sorted2 = [...arr2].sort();
+    
+    return sorted1.every((val, index) => val === sorted2[index]);
   }
 
   
@@ -1210,27 +1355,33 @@ class EnhancedFilterSystem {
     let selectedCount = 0;
     let totalCount = 0;
 
-    const checkboxList = document.getElementById(`${dimension.id}CheckboxList`);
-
-    if (checkboxList) {
-      const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
-      totalCount = checkboxes.length;
-      selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+    if (dimension.hierarchical) {
+        const treeContainer = document.getElementById(`${dimension.id}TreeContainer`);
+        if (treeContainer) {
+            const checkboxes = treeContainer.querySelectorAll('input[type="checkbox"]');
+            totalCount = checkboxes.length;
+            selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+        }
+    } else {
+        const checkboxList = document.getElementById(`${dimension.id}CheckboxList`);
+        if (checkboxList) {
+            const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
+            totalCount = checkboxes.length;
+            selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+        }
     }
 
     countElement.textContent = `${selectedCount} / ${totalCount}`;
 
     const selectionText = document.querySelector(`#${dimension.id}Dropdown .selection-text`);
-    
     if (selectionText) {
-      // CHANGED: Updated text logic for unselected-by-default behavior
-      if (selectedCount === 0) {
-        selectionText.textContent = `No ${dimension.label}s selected`;
-      } else if (selectedCount === totalCount) {
-        selectionText.textContent = `All ${dimension.label}s selected`;
-      } else {
-        selectionText.textContent = `${selectedCount} selected`;
-      }
+        selectionText.textContent = selectedCount === totalCount ? 
+            `All ${dimension.label}s` : `${selectedCount} selected`;
+    }
+    
+    // Update apply button text if this is ROOT_GMID dimension
+    if (dimension.id === 'rootGmid') {
+        this.updateApplyButtonText();
     }
   }
   
@@ -1284,16 +1435,30 @@ class EnhancedFilterSystem {
    */
   handleFilterSearch(dimension, searchTerm) {
     const searchLower = searchTerm.toLowerCase();
-    const checkboxOptions = document.querySelectorAll(`#${dimension.id}CheckboxList .checkbox-option`);
     
-    checkboxOptions.forEach(option => {
-      const label = option.querySelector('label');
-      if (label) {
-        const text = label.textContent.toLowerCase();
-        const match = text.includes(searchLower);
-        option.style.display = match ? '' : 'none';
-      }
-    });
+    if (dimension.hierarchical) {
+      const treeNodes = document.querySelectorAll(`#${dimension.id}TreeContainer .filter-tree-node`);
+      
+      treeNodes.forEach(node => {
+        const label = node.querySelector('.filter-tree-label');
+        if (label) {
+          const text = label.textContent.toLowerCase();
+          const match = text.includes(searchLower);
+          node.style.display = match ? '' : 'none';
+        }
+      });
+    } else {
+      const checkboxOptions = document.querySelectorAll(`#${dimension.id}CheckboxList .checkbox-option`);
+      
+      checkboxOptions.forEach(option => {
+        const label = option.querySelector('label');
+        if (label) {
+          const text = label.textContent.toLowerCase();
+          const match = text.includes(searchLower);
+          option.style.display = match ? '' : 'none';
+        }
+      });
+    }
   }
 
   
@@ -1304,12 +1469,22 @@ class EnhancedFilterSystem {
   selectAllInFilter(dimension) {
     this.filterSelections[dimension.id].clear();
     
-    const checkboxList = document.getElementById(`${dimension.id}CheckboxList`);
-    if (checkboxList) {
-      const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
-      checkboxes.forEach(checkbox => {
-        checkbox.checked = true;
-      });
+    if (dimension.hierarchical) {
+      const treeContainer = document.getElementById(`${dimension.id}TreeContainer`);
+      if (treeContainer) {
+        const checkboxes = treeContainer.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+          checkbox.checked = true;
+        });
+      }
+    } else {
+      const checkboxList = document.getElementById(`${dimension.id}CheckboxList`);
+      if (checkboxList) {
+        const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+          checkbox.checked = true;
+        });
+      }
     }
     
     this.updateSelectionCount(dimension);
@@ -1321,13 +1496,29 @@ class EnhancedFilterSystem {
    * @param {Object} dimension - Dimension configuration
    */
   clearAllInFilter(dimension) {
-    const checkboxList = document.getElementById(`${dimension.id}CheckboxList`);
-    if (checkboxList) {
-      const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
-      checkboxes.forEach(checkbox => {
-        checkbox.checked = false;
-        this.filterSelections[dimension.id].add(checkbox.value);
-      });
+    if (dimension.hierarchical) {
+      const treeContainer = document.getElementById(`${dimension.id}TreeContainer`);
+      if (treeContainer) {
+        const checkboxes = treeContainer.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+          checkbox.checked = false;
+          
+          const checkboxId = checkbox.id;
+          if (checkboxId.startsWith(`${dimension.id}_node_`)) {
+            const nodeId = checkboxId.replace(`${dimension.id}_node_`, '');
+            this.filterSelections[dimension.id].add(nodeId);
+          }
+        });
+      }
+    } else {
+      const checkboxList = document.getElementById(`${dimension.id}CheckboxList`);
+      if (checkboxList) {
+        const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+          checkbox.checked = false;
+          this.filterSelections[dimension.id].add(checkbox.value);
+        });
+      }
     }
     
     this.updateSelectionCount(dimension);
@@ -1337,154 +1528,1907 @@ class EnhancedFilterSystem {
   /**
    * Apply all filters to the data
    */
-  applyAllFilters() {
-    console.log('⏳ Status: Applying filters and fetching data...');
-    console.time('ApplyFiltersWithFetch');
+  async applyAllFilters() {
+    console.log('🔍 DEBUG: Starting OPTIMIZED filter application...');
+    console.time('OptimizedApplyFilters');
     
-    // Debug: Log current filter selections
-    console.log('🔍 Current filter selections:');
-    Object.values(this.filterMeta).forEach(dimension => {
-      const selections = this.filterSelections[dimension.id];
-      const selectionCount = selections ? selections.size : 0;
-      console.log(`  - ${dimension.label}: ${selectionCount} excluded items`);
-    });
-    
-    // Build filter parameters for database query
-    const filterParams = this.buildFilterParameters();
-    
-    // Check if we have any filters to apply
-    const hasFilters = Object.keys(filterParams).length > 0;
-    
-    if (!hasFilters) {
-      console.log('⏳ Status: No specific filters selected, checking if all are excluded...');
-      
-      // Check if any dimension has all items excluded
-      let allExcluded = false;
-      Object.values(this.filterMeta).forEach(dimension => {
-        const allValues = this.getAllValuesFromFieldData(dimension);
-        const excludedCount = this.filterSelections[dimension.id].size;
-        
-        if (excludedCount > 0 && excludedCount >= allValues.length) {
-          allExcluded = true;
-          console.log(`All items excluded for ${dimension.label}`);
-        }
-      });
-      
-      if (allExcluded) {
-        this.handleEmptyFilterResult();
-        return;
-      } else {
-        // If no filters applied, show message but don't fetch data
+    try {
+        // Update UI to show loading state
         this.updateDataVolumeIndicator(0, 0);
-        this.updateFilteredRecordsCount(0);
-        
         const dataText = document.getElementById('dataVolumeText');
         if (dataText) {
-          dataText.textContent = 'Select filter criteria and click Apply to load data';
-        }
-        return;
-      }
-    }
-    
-    console.log('📊 Filter parameters for API:', filterParams);
-    
-    // Fetch fact data with filters applied at database level
-    this.fetchFilteredFactData(filterParams)
-      .then(factData => {
-        if (!factData || factData.length === 0) {
-          console.log('⚠️ No fact data returned for current filter selection');
-          this.handleEmptyFilterResult();
-          return;
+            dataText.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Loading data...';
         }
         
-        // Store the filtered fact data
+        // Disable apply button during processing
+        const applyBtn = this.elements.applyFiltersBtn;
+        if (applyBtn) {
+            applyBtn.disabled = true;
+            applyBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Processing...';
+        }
+
+        // STEP 1: USE HELPER METHOD - Check if any meaningful selections exist
+        const hasMeaningfulSelections = this.checkIfAnyMeaningfulSelectionsExist();
+        console.log(`🔍 DEBUG: Has meaningful selections: ${hasMeaningfulSelections}`);
+
+        // STEP 2: USE HELPER METHOD - Get detailed summary for debugging
+        const selectionSummary = this.getFilterSelectionSummary();
+        console.log('📊 DEBUG: Filter Selection Summary:', selectionSummary);
+        
+        // Log the summary in a readable format
+        console.log(`📊 SUMMARY: ${selectionSummary.dimensionsWithPartialSelections}/${selectionSummary.totalDimensions} dimensions have partial selections`);
+        selectionSummary.details.forEach(detail => {
+            console.log(`   ${detail.dimension}: ${detail.selectedCount}/${detail.totalCount} selected (${detail.status}) - Query: ${detail.wouldIncludeInQuery ? 'YES' : 'NO'}`);
+        });
+
+        // STEP 3: Early validation - if no meaningful selections, inform user
+        if (!hasMeaningfulSelections) {
+            console.log('⚠️ DEBUG: No meaningful filter selections detected');
+            
+            if (selectionSummary.dimensionsWithNoneSelected > 0) {
+                // Some dimensions have zero selections - this would return no data
+                this.showUserMessage('No Data Available', 
+                    `${selectionSummary.dimensionsWithNoneSelected} dimension(s) have no items selected, which would return no data. Please select at least one item in each dimension.`);
+            } else {
+                // All dimensions have all items selected - no filtering needed
+                this.showUserMessage('No Filters Applied', 
+                    'All dimensions have all items selected. Please make specific selections to filter the data.');
+            }
+            
+            this.resetApplyButton();
+            return;
+        }
+
+        // Step 4: Handle ROOT_GMID processing
+        const selectedRootGmids = this.getSelectedRootGmids();
+        console.log('🔍 DEBUG: Selected ROOT_GMIDs:', selectedRootGmids);
+        
+        if (selectedRootGmids.length > 0) {
+            console.log('🔄 DEBUG: Processing GMID display data...');
+            if (applyBtn) applyBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Loading GMID Data...';
+            
+            try {
+                await this.batchProcessGmidDisplayData(selectedRootGmids);
+                console.log('✅ DEBUG: GMID data processing completed');
+            } catch (error) {
+                console.warn('⚠️ DEBUG: GMID data processing failed, continuing:', error.message);
+                this.createMinimalGmidStructure(selectedRootGmids);
+            }
+        }
+        
+        // Step 5: Build filter parameters using the fixed method
+        console.log('🔄 DEBUG: Building filter parameters...');
+        if (applyBtn) applyBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Building Query...';
+        
+        const filterParams = this.buildFilterParameters();
+        
+        // Step 6: Validate filter parameters
+        if (filterParams === null) {
+            // No filters applied at all
+            console.log('ℹ️ DEBUG: No filter parameters generated - no filtering requested');
+            this.showUserMessage('No Filters Applied', 'Please select specific items in at least one dimension to filter the data.');
+            this.resetApplyButton();
+            return;
+        }
+        
+        if (typeof filterParams === 'object' && Object.keys(filterParams).length === 0) {
+            // Filters too broad/complex
+            console.log('⚠️ DEBUG: Filter parameters too broad - all selections exceeded limits');
+            this.showUserMessage('Filters Too Broad', 
+                'Your filter selections are too broad (more than 10 items selected in applicable dimensions). Please narrow your selections.');
+            this.resetApplyButton();
+            return;
+        }
+        
+        // Step 7: Fetch FACT_BOM data with validated parameters
+        console.log('🔄 DEBUG: Fetching FACT_BOM data with validated parameters...');
+        console.log('📊 DEBUG: Filter parameters being sent:', filterParams);
+        if (applyBtn) applyBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Loading Fact Data...';
+        
+        const factData = await this.fetchFilteredFactData(filterParams);
+        
+        if (!factData || factData.length === 0) {
+            console.log('⚠️ DEBUG: No fact data returned for current selections');
+            this.handleEmptyResult();
+            return;
+        }
+        
+        // Step 8: Success - store and update UI
         this.state.factData = factData;
         this.state.filteredData = factData;
         this.state.factDataLoaded = true;
         
-        console.log(`✅ Status: Retrieved ${factData.length} fact records matching filters`);
+        console.log(`✅ DEBUG: Successfully loaded ${factData.length} records`);
         
-        // Update UI indicators
+        // Step 9: Update UI indicators
+        if (applyBtn) applyBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Updating UI...';
+        
         this.updateDataVolumeIndicator(factData.length, factData.length);
         this.updateFilteredRecordsCount(factData.length);
         
-        // Refresh pivot table with new data
-        this.refreshPivotTable();
+        if (dataText) {
+            const filterCount = Object.keys(filterParams).length;
+            dataText.textContent = `${this.formatNumber(factData.length)} records loaded (${filterCount} filters applied)`;
+        }
         
-        console.timeEnd('ApplyFiltersWithFetch');
-      })
-      .catch(error => {
-        console.error('❌ Error fetching filtered fact data:', error);
-        this.handleFilterError(error);
-      });
+        // Step 10: Initialize mappings and refresh
+        this.initializeMappingsAndRefresh();
+        
+        // Reset apply button
+        this.resetApplyButton();
+        
+        console.timeEnd('OptimizedApplyFilters');
+        console.log('✅ DEBUG: Filter application completed successfully');
+        
+    } catch (error) {
+        console.error('❌ DEBUG: Error in filter application:', error);
+        this.handleError(error);
+        this.resetApplyButton();
+    }
   }
 
 
   /**
-   * Build filter parameters for database query
-   * @returns {Object} - Filter parameters object for API call
+   * Check if any items are actually selected (not just all selected)
    */
-  buildFilterParameters() {
-    const filterParams = {};
-    
-    Object.values(this.filterMeta).forEach(dimension => {
-      const selections = this.filterSelections[dimension.id];
+  checkIfAnyItemsSelected() {
+    return Object.values(this.filterMeta).some(dimension => {
+      const allValues = this.getAllValuesForDimension(dimension);
+      const excludedCount = this.filterSelections[dimension.id].size;
+      const selectedCount = allValues.length - excludedCount;
       
-      // Skip if no selections (all items selected)
-      if (!selections || selections.size === 0) {
-        return;
-      }
-      
-      const fieldName = dimension.factField;
-      
-      if (!fieldName) {
-        console.warn(`⚠️ No factField defined for dimension: ${dimension.id}`);
-        return;
-      }
-      
-      // Get all available values for this dimension from field-specific data
-      const allValues = this.getAllValuesFromFieldData(dimension);
-      
-      // Calculate selected values (inverse of excluded values)
-      const selectedValues = allValues.filter(value => !selections.has(value));
-      
-      // Only add to filter params if we have some (but not all) values selected
-      if (selectedValues.length > 0 && selectedValues.length < allValues.length) {
-        filterParams[fieldName] = selectedValues;
-        console.log(`🔍 Filter parameter: ${fieldName} = [${selectedValues.length} values]`);
-      } else if (selectedValues.length === 0) {
-        console.log(`🔍 No values selected for ${dimension.label}, filter will return no results`);
-        // Return empty object to indicate no results should be returned
-        return {};
-      }
+      // Return true if some (but not all) items are selected
+      return selectedCount > 0 && selectedCount < allValues.length;
     });
-    
-    return filterParams;
   }
 
 
   /**
-   * Get all possible values for a dimension from field-specific data
-   * @param {Object} dimension - Dimension configuration
-   * @returns {Array} - Array of all possible values
+   * INTEGRATED: Show user-friendly messages
    */
-  getAllValuesFromFieldData(dimension) {
-    const dimensionFilter = this.state.dimensionFilters[dimension.dimensionKey];
+  showUserMessage(title, message, type = 'info') {
+      console.log(`📢 USER MESSAGE [${type.toUpperCase()}]: ${title} - ${message}`);
+      
+      // Update the data text area with the message
+      const dataText = document.getElementById('dataVolumeText');
+      if (dataText) {
+          const iconMap = {
+              'info': 'ℹ️',
+              'warning': '⚠️', 
+              'error': '❌',
+              'success': '✅'
+          };
+          
+          const colorMap = {
+              'info': '#2563eb',
+              'warning': '#f59e0b',
+              'error': '#dc3545', 
+              'success': '#10b981'
+          };
+          
+          dataText.innerHTML = `<span style="color: ${colorMap[type]};">${iconMap[type]} ${message}</span>`;
+      }
+      
+      // Also show in pivot table area if appropriate
+      if (type === 'warning' || type === 'error') {
+          const pivotTableBody = document.getElementById('pivotTableBody');
+          if (pivotTableBody) {
+              pivotTableBody.innerHTML = `
+                  <tr>
+                      <td colspan="100%" style="text-align: center; padding: 40px; color: ${colorMap[type]};">
+                          <div style="font-size: 16px; margin-bottom: 8px;">${iconMap[type]} ${title}</div>
+                          <div style="font-size: 14px;">${message}</div>
+                      </td>
+                  </tr>
+              `;
+          }
+      }
+  }
+
+
+  /**
+   * Reset apply button to normal state
+   */
+  resetApplyButton() {
+    const applyBtn = this.elements.applyFiltersBtn;
+    if (applyBtn) {
+      applyBtn.disabled = false;
+      
+      const selectedRootGmids = this.getSelectedRootGmids();
+      const hasFilterSelections = this.checkIfAnyItemsSelected();
+      
+      if (selectedRootGmids.length > 0) {
+        applyBtn.innerHTML = `<i class="fas fa-check"></i> Apply Filters & Load GMID Data (${selectedRootGmids.length} ROOT_GMIDs)`;
+      } else if (hasFilterSelections) {
+        applyBtn.innerHTML = '<i class="fas fa-check"></i> Apply Filters';
+      } else {
+        applyBtn.innerHTML = '<i class="fas fa-filter"></i> Apply Filters (No filters selected)';
+      }
+    }
+  }
+
+
+   /**
+   * Batch process GMID display data - called only from Apply Filters
+   */
+  async batchProcessGmidDisplayData(selectedRootGmids) {
+    console.log(`⏳ BATCH: Processing GMID display data for ${selectedRootGmids.length} ROOT_GMIDs...`);
     
-    if (!dimensionFilter || !dimensionFilter.data) {
-      console.warn(`No field data available for dimension: ${dimension.dimensionKey}`);
-      return [];
+    try {
+      // Strategy 1: Try fetching from API
+      console.log('📊 BATCH: Attempting to fetch GMID display data from API...');
+      const gmidDisplayData = await this.batchFetchGmidDisplayData(selectedRootGmids);
+      
+      if (gmidDisplayData && gmidDisplayData.length > 0) {
+        console.log(`✅ BATCH: Retrieved ${gmidDisplayData.length} GMID display records from API`);
+        await this.processGmidDisplayData(gmidDisplayData);
+        return;
+      }
+      
+      // Strategy 2: Check existing dimension data
+      console.log('📊 BATCH: Checking existing dimension data...');
+      const existingGmidData = this.getExistingGmidDisplayData(selectedRootGmids);
+      
+      if (existingGmidData && existingGmidData.length > 0) {
+        console.log(`✅ BATCH: Using ${existingGmidData.length} existing GMID display records`);
+        await this.processGmidDisplayData(existingGmidData);
+        return;
+      }
+      
+      // Strategy 3: Create minimal structure
+      console.log('⚠️ BATCH: Creating minimal GMID structure from available data');
+      this.createMinimalGmidStructure(selectedRootGmids);
+      
+    } catch (error) {
+      console.warn('⚠️ BATCH: Could not process GMID display data:', error.message);
+      this.createMinimalGmidStructure(selectedRootGmids);
+    }
+  }
+
+
+  /**
+   * Batch fetch GMID display data - optimized for multiple ROOT_GMIDs
+   */
+  async batchFetchGmidDisplayData(selectedRootGmids) {
+    try {
+      const API_BASE_URL = this.API_CONFIG.BASE_URL;
+      const url = `${API_BASE_URL}${this.API_CONFIG.ENDPOINTS.DIMENSION_FIELDS}/DIM_GMID_DISPLAY`;
+      
+      console.log(`📊 DEBUG: Fetching GMID display data from: ${url}`);
+      console.log(`📊 DEBUG: Selected ROOT_GMIDs for query:`, selectedRootGmids);
+      
+      // Determine optimal limit based on number of ROOT_GMIDs
+      const estimatedRecordsPerRootGmid = 100;
+      const optimalLimit = Math.max(10000, selectedRootGmids.length * estimatedRecordsPerRootGmid);
+      
+      const requestBody = {
+        fields: ['ROOT_GMID', 'PATH_GMID', 'COMPONENT_GMID', 'DISPLAY'],
+        options: {
+          limit: optimalLimit,
+          distinct: true
+        }
+      };
+      
+      console.log(`📊 DEBUG: Request body:`, requestBody);
+      console.log(`📊 DEBUG: Requesting up to ${optimalLimit} records for ${selectedRootGmids.length} ROOT_GMIDs`);
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/x-ndjson'
+        },
+        body: JSON.stringify(requestBody)
+      });
+      
+      console.log(`📊 DEBUG: API Response status: ${response.status}`);
+      
+      if (!response.ok) {
+        throw new Error(`BATCH API returned ${response.status}: ${response.statusText}`);
+      }
+      
+      // Parse NDJSON response with detailed logging
+      const allGmidData = await this.parseNDJSONStream(response);
+      console.log(`📊 DEBUG: Total records retrieved from API: ${allGmidData.length}`);
+      
+      if (allGmidData.length > 0) {
+        console.log(`📊 DEBUG: Sample record from API:`, allGmidData[0]);
+        
+        // Check what ROOT_GMIDs we actually got back
+        const returnedRootGmids = [...new Set(allGmidData.map(item => item.ROOT_GMID))];
+        console.log(`📊 DEBUG: Unique ROOT_GMIDs in API response: ${returnedRootGmids.length}`, returnedRootGmids);
+        
+        // Check if our selected ROOT_GMIDs are in the response
+        const matchingRootGmids = selectedRootGmids.filter(gmid => returnedRootGmids.includes(gmid));
+        const missingRootGmids = selectedRootGmids.filter(gmid => !returnedRootGmids.includes(gmid));
+        
+        console.log(`📊 DEBUG: Selected ROOT_GMIDs found in response: ${matchingRootGmids.length}`, matchingRootGmids);
+        if (missingRootGmids.length > 0) {
+          console.warn(`⚠️ DEBUG: Selected ROOT_GMIDs NOT found in response: ${missingRootGmids.length}`, missingRootGmids);
+        }
+      } else {
+        console.warn(`⚠️ DEBUG: API returned ZERO records for DIM_GMID_DISPLAY`);
+        return null;
+      }
+      
+      // Filter client-side for selected ROOT_GMIDs
+      console.log(`📊 DEBUG: Filtering ${allGmidData.length} records for selected ROOT_GMIDs...`);
+      const filteredGmidData = allGmidData.filter(item => 
+        item.ROOT_GMID && selectedRootGmids.includes(item.ROOT_GMID)
+      );
+      
+      console.log(`✅ DEBUG: Filtered to ${filteredGmidData.length} GMID display records for selected ROOT_GMIDs`);
+      
+      if (filteredGmidData.length > 0) {
+        console.log(`📊 DEBUG: Sample filtered record:`, filteredGmidData[0]);
+        
+        // Analyze the structure of filtered data
+        const pathStructures = new Set();
+        const displayStructures = new Set();
+        
+        filteredGmidData.slice(0, 5).forEach(item => {
+          if (item.PATH_GMID) pathStructures.add(item.PATH_GMID);
+          if (item.DISPLAY) displayStructures.add(item.DISPLAY);
+        });
+        
+        console.log(`📊 DEBUG: Sample PATH_GMID structures:`, Array.from(pathStructures));
+        console.log(`📊 DEBUG: Sample DISPLAY structures:`, Array.from(displayStructures));
+      } else {
+        console.warn(`⚠️ DEBUG: ZERO records match selected ROOT_GMIDs after filtering`);
+        console.log(`📊 DEBUG: This means selected ROOT_GMIDs do not exist in DIM_GMID_DISPLAY table`);
+      }
+      
+      // Log efficiency metrics
+      const efficiency = allGmidData.length > 0 ? (filteredGmidData.length / allGmidData.length * 100).toFixed(1) : 0;
+      console.log(`📊 DEBUG: Filtering efficiency: ${efficiency}% (${filteredGmidData.length}/${allGmidData.length})`);
+      
+      return filteredGmidData;
+      
+    } catch (error) {
+      console.error('❌ DEBUG: Failed to fetch GMID display data:', error);
+      console.error('❌ DEBUG: Error details:', error.message);
+      return null;
+    }
+  }
+
+
+  /**
+   * Helper: Initialize mappings and refresh UI components
+   */
+  initializeMappingsAndRefresh() {
+    try {
+      console.log('🔄 Initializing mappings and refreshing UI...');
+      
+      // Initialize mappings if available
+      if (window.App && window.App.data && window.App.data.initializeMappings) {
+        console.log('📊 Calling initializeMappings...');
+        window.App.data.initializeMappings();
+      } else {
+        console.warn('⚠️ initializeMappings not available');
+      }
+      
+      // Refresh pivot table
+      console.log('📊 Refreshing pivot table...');
+      this.refreshPivotTable();
+      
+      console.log('✅ Mappings and UI refresh completed');
+      
+    } catch (error) {
+      console.error('❌ Error initializing mappings or refreshing UI:', error);
+      // Don't throw - continue with the process
+    }
+  }
+
+
+  /**
+   * Helper: Check if all items are excluded in any dimension
+   */
+  checkIfAllItemsExcluded() {
+    return Object.values(this.filterMeta).some(dimension => {
+      const allValues = this.getAllValuesForDimension(dimension);
+      const excludedCount = this.filterSelections[dimension.id].size;
+      const selectedCount = allValues.length - excludedCount;
+      
+      if (selectedCount === 0 && allValues.length > 0) {
+        console.log(`   ${dimension.label}: All ${allValues.length} items excluded`);
+        return true;
+      }
+      
+      return false;
+    });
+  }
+
+  /**
+   * Uses POST /api/dimension-fields/DIM_GMID_DISPLAY
+   */
+  async fetchGmidDisplayDataForRootGmids(selectedRootGmids) {
+    console.log(`⏳ Status: Fetching GMID display data for ${selectedRootGmids.length} ROOT_GMIDs...`);
+    
+    try {
+      // Strategy 1: Try using the dimension-fields endpoint with filters
+      const gmidDisplayData = await this.fetchGmidDisplayUsingDimensionFields(selectedRootGmids);
+      
+      if (gmidDisplayData && gmidDisplayData.length > 0) {
+        console.log(`✅ Status: Retrieved ${gmidDisplayData.length} GMID display records`);
+        await this.processGmidDisplayData(gmidDisplayData);
+        return;
+      }
+      
+      // Strategy 2: Check existing dimension data
+      const existingGmidData = this.getExistingGmidDisplayData(selectedRootGmids);
+      
+      if (existingGmidData && existingGmidData.length > 0) {
+        console.log(`✅ Status: Using ${existingGmidData.length} existing GMID display records`);
+        await this.processGmidDisplayData(existingGmidData);
+        return;
+      }
+      
+      // Strategy 3: Create minimal structure
+      console.log('⚠️ Status: Creating minimal GMID structure from available data');
+      this.createMinimalGmidStructure(selectedRootGmids);
+      
+    } catch (error) {
+      console.warn('⚠️ Warning: Could not fetch GMID display data:', error.message);
+      this.createMinimalGmidStructure(selectedRootGmids);
+    }
+  }
+
+  /**
+   * ENHANCED: Process GMID display data and update hierarchy
+   */
+  async processGmidDisplayData(gmidDisplayData) {
+    try {
+      console.log(`📊 DEBUG: ========== GMID HIERARCHY BUILDING DEBUG ==========`);
+      console.log(`📊 DEBUG: Processing ${gmidDisplayData.length} GMID display records...`);
+      
+      if (gmidDisplayData.length === 0) {
+        console.warn(`⚠️ DEBUG: Cannot build hierarchy - no GMID display data provided`);
+        return;
+      }
+      
+      // Analyze the data structure before hierarchy building
+      console.log(`📊 DEBUG: Analyzing data structure...`);
+      const sampleRecord = gmidDisplayData[0];
+      console.log(`📊 DEBUG: Sample record structure:`, sampleRecord);
+      console.log(`📊 DEBUG: Required fields check:`);
+      console.log(`   - ROOT_GMID: ${sampleRecord.ROOT_GMID ? '✅' : '❌'} (${sampleRecord.ROOT_GMID})`);
+      console.log(`   - PATH_GMID: ${sampleRecord.PATH_GMID ? '✅' : '❌'} (${sampleRecord.PATH_GMID})`);
+      console.log(`   - COMPONENT_GMID: ${sampleRecord.COMPONENT_GMID !== undefined ? '✅' : '❌'} (${sampleRecord.COMPONENT_GMID})`);
+      console.log(`   - DISPLAY: ${sampleRecord.DISPLAY ? '✅' : '❌'} (${sampleRecord.DISPLAY})`);
+      
+      // Store the data globally
+      this.state.gmidDisplayData = gmidDisplayData;
+      this.state.selectedRootGmidsForGmidData = this.getSelectedRootGmids();
+      
+      // Store in dimensions for hierarchy building
+      if (!this.state.dimensions) {
+        this.state.dimensions = {};
+      }
+      this.state.dimensions.gmid_display = gmidDisplayData;
+      
+      console.log(`📊 DEBUG: Data stored in state.dimensions.gmid_display: ${this.state.dimensions.gmid_display.length} records`);
+      
+      // Update GMID hierarchy with detailed logging
+      console.log(`📊 DEBUG: Calling updateGmidHierarchyFromExtractedData()...`);
+      const hierarchyResult = await this.updateGmidHierarchyFromExtractedData();
+      
+      if (hierarchyResult) {
+        // Verify the hierarchy was built correctly
+        const hierarchy = this.state.hierarchies?.gmid_display;
+        if (hierarchy) {
+          console.log(`✅ DEBUG: GMID hierarchy built successfully:`);
+          console.log(`   - Root node: ${hierarchy.root ? '✅' : '❌'}`);
+          console.log(`   - Root children: ${hierarchy.root?.children?.length || 0}`);
+          console.log(`   - Total nodes: ${Object.keys(hierarchy.nodesMap || {}).length}`);
+          console.log(`   - Flat data: ${hierarchy.flatData?.length || 0} records`);
+          
+          if (hierarchy.root?.children?.length > 0) {
+            console.log(`📊 DEBUG: First few hierarchy children:`, hierarchy.root.children.slice(0, 3).map(child => ({
+              id: child.id,
+              label: child.label,
+              hasChildren: child.hasChildren,
+              childCount: child.children?.length || 0
+            })));
+          } else {
+            console.warn(`⚠️ DEBUG: ROOT node has NO children - hierarchy building failed!`);
+          }
+        } else {
+          console.error(`❌ DEBUG: No hierarchy found in state.hierarchies.gmid_display after building`);
+        }
+      } else {
+        console.error(`❌ DEBUG: updateGmidHierarchyFromExtractedData() returned false/failed`);
+      }
+      
+      console.log(`📊 DEBUG: ========== END GMID HIERARCHY BUILDING DEBUG ==========`);
+      
+    } catch (error) {
+      console.error('❌ DEBUG: Error processing GMID display data:', error);
+      console.error('❌ DEBUG: Error stack:', error.stack);
+      throw error;
+    }
+  }
+
+
+  /**
+   * HELPER: Validate if table/endpoint exists by checking server response
+   */
+  async validateTableExists(tableName) {
+    try {
+      const API_BASE_URL = this.API_CONFIG.BASE_URL;
+      
+      // Use the generic data endpoint to test if table exists
+      const url = `${API_BASE_URL}${this.API_CONFIG.ENDPOINTS.DATA_GENERIC}/${tableName}?limit=1`;
+      
+      const response = await fetch(url);
+      
+      if (response.ok) {
+        this.availableEndpoints.add(tableName);
+        return true;
+      } else {
+        console.warn(`⚠️ Table ${tableName} not accessible: ${response.status}`);
+        return false;
+      }
+      
+    } catch (error) {
+      console.warn(`⚠️ Error validating table ${tableName}:`, error.message);
+      return false;
+    }
+  }
+
+
+  /**
+   * ENHANCED: Create minimal GMID structure when no detailed data is available
+   */
+  createMinimalGmidStructure(selectedRootGmids) {
+    console.log(`⏳ Status: Creating minimal GMID structure for ${selectedRootGmids.length} ROOT_GMIDs`);
+    
+    try {
+      // Get ROOT_GMID dimension data for display names
+      const rootGmidMap = new Map();
+      
+      if (this.state.dimensions && this.state.dimensions.root_gmid_display) {
+        this.state.dimensions.root_gmid_display.forEach(item => {
+          if (item.ROOT_GMID) {
+            rootGmidMap.set(item.ROOT_GMID, item.ROOT_DISPLAY || item.ROOT_GMID);
+          }
+        });
+      }
+      
+      // Create minimal GMID display data
+      const minimalGmidData = selectedRootGmids.map(rootGmid => ({
+        ROOT_GMID: rootGmid,
+        PATH_GMID: rootGmid,
+        COMPONENT_GMID: rootGmid,
+        DISPLAY: rootGmidMap.get(rootGmid) || rootGmid
+      }));
+      
+      // Store the minimal data
+      this.state.gmidDisplayData = minimalGmidData;
+      if (!this.state.dimensions) {
+        this.state.dimensions = {};
+      }
+      this.state.dimensions.gmid_display = minimalGmidData;
+      
+      console.log(`✅ Status: Created minimal GMID structure with ${minimalGmidData.length} entries`);
+      
+      // Update GMID hierarchy
+      this.updateGmidHierarchyFromExtractedData();
+      
+    } catch (error) {
+      console.error('❌ Error creating minimal GMID structure:', error);
+    }
+  }
+
+  /**
+ * ENHANCED: Get existing GMID display data from dimensions with better fallback
+ */
+  getExistingGmidDisplayData(selectedRootGmids) {
+    try {
+      // Check if we have gmid_display data in dimensions
+      if (this.state.dimensions && this.state.dimensions.gmid_display) {
+        const filteredData = this.state.dimensions.gmid_display.filter(item => 
+          item.ROOT_GMID && selectedRootGmids.includes(item.ROOT_GMID)
+        );
+        
+        if (filteredData.length > 0) {
+          console.log(`✅ Status: Found ${filteredData.length} existing GMID display records in dimensions`);
+          return filteredData;
+        }
+      }
+      
+      // Check if we have root_gmid_display data that we can convert
+      if (this.state.dimensions && this.state.dimensions.root_gmid_display) {
+        const rootGmidData = this.state.dimensions.root_gmid_display.filter(item =>
+          item.ROOT_GMID && selectedRootGmids.includes(item.ROOT_GMID)
+        );
+        
+        if (rootGmidData.length > 0) {
+          console.log(`✅ Status: Found ${rootGmidData.length} ROOT_GMID records, converting to GMID display format`);
+          return this.convertRootGmidToGmidDisplay(rootGmidData);
+        }
+      }
+      
+      return null;
+      
+    } catch (error) {
+      console.warn('⚠️ Warning: Error getting existing GMID display data:', error);
+      return null;
+    }
+  }
+
+
+  /**
+   * ENHANCED: Convert ROOT_GMID data to GMID display format
+   */
+  convertRootGmidToGmidDisplay(rootGmidData) {
+    return rootGmidData.map(item => ({
+      ROOT_GMID: item.ROOT_GMID,
+      PATH_GMID: item.ROOT_GMID, 
+      COMPONENT_GMID: item.ROOT_GMID, 
+      DISPLAY: item.ROOT_DISPLAY || item.ROOT_GMID
+    }));
+  }
+
+
+  /**
+   * Use POST /api/dimension-fields/DIM_GMID_DISPLAY to get GMID data
+   */
+  async fetchGmidDisplayUsingDimensionFields(selectedRootGmids) {
+    try {
+      const API_BASE_URL = this.API_CONFIG.BASE_URL;
+      
+      // Use the dimension-fields endpoint to get ALL GMID display data
+      // then filter client-side (since the server doesn't support WHERE filtering)
+      const url = `${API_BASE_URL}${this.API_CONFIG.ENDPOINTS.DIMENSION_FIELDS}/DIM_GMID_DISPLAY`;
+      
+      console.log(`📊 Fetching GMID display data from: ${url}`);
+      
+      const requestBody = {
+        fields: ['ROOT_GMID', 'PATH_GMID', 'COMPONENT_GMID', 'DISPLAY'],
+        options: {
+          limit: 50000,    // Get enough data to cover the selected ROOT_GMIDs
+          distinct: true
+        }
+      };
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/x-ndjson'
+        },
+        body: JSON.stringify(requestBody)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Dimension fields API returned ${response.status}: ${response.statusText}`);
+      }
+      
+      // Parse NDJSON response
+      const allGmidData = await this.parseNDJSONStream(response);
+      console.log(`📊 Retrieved ${allGmidData.length} total GMID display records`);
+      
+      // Filter client-side for selected ROOT_GMIDs
+      const filteredGmidData = allGmidData.filter(item => 
+        item.ROOT_GMID && selectedRootGmids.includes(item.ROOT_GMID)
+      );
+      
+      console.log(`✅ Status: Filtered to ${filteredGmidData.length} GMID display records for selected ROOT_GMIDs`);
+      
+      return filteredGmidData;
+      
+    } catch (error) {
+      console.warn('⚠️ Warning: Failed to fetch GMID display data using dimension-fields endpoint:', error.message);
+      return null;
+    }
+  }
+
+
+  /**
+   * Fetch filtered fact data from database
+   * @returns {Promise<Array>} - Promise resolving to filtered fact data
+   */
+  async fetchFilteredFactData(filterParams = null) {
+    try {
+      // Use provided parameters or build them
+      const params = filterParams || this.buildFilterParameters();
+      
+      // If no filters, return empty
+      if (Object.keys(params).length === 0) {
+        console.log('⏳ No filters provided for FACT_BOM query');
+        return [];
+      }
+      
+      // Build query parameters for the existing endpoint
+      const API_BASE_URL = this.API_CONFIG.BASE_URL;
+      const queryParams = new URLSearchParams();
+      
+      Object.entries(params).forEach(([field, values]) => {
+        if (Array.isArray(values) && values.length > 0) {
+          queryParams.append(field, values.join(','));
+        }
+      });
+      
+      // Use the existing working FACT_BOM filtered endpoint
+      const url = `${API_BASE_URL}${this.API_CONFIG.ENDPOINTS.FACT_BOM_FILTERED}?${queryParams.toString()}`;
+      console.log(`📊 Fetching FACT_BOM data: ${url}`);
+      
+      const response = await fetch(url, {
+        headers: { 'Accept': 'application/x-ndjson' }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`FACT_BOM API returned ${response.status}: ${response.statusText}`);
+      }
+      
+      // Parse NDJSON response using the FIXED method
+      console.log(`📊 Starting to parse FACT_BOM response...`);
+      const rows = await this.parseNDJSONStream(response);
+      
+      // Filter out rows with no meaningful data
+      const filteredRows = rows.filter(row => {
+        const hasValidCost = row.COST_UNIT !== null && row.COST_UNIT !== undefined && row.COST_UNIT !== 0;
+        const hasValidQty = row.QTY_UNIT !== null && row.QTY_UNIT !== undefined && row.QTY_UNIT !== 0;
+        return hasValidCost || hasValidQty;
+      });
+      
+      console.log(`✅ Retrieved ${filteredRows.length} FACT_BOM records with valid data`);
+      return filteredRows;
+      
+    } catch (error) {
+      console.error('❌ Error fetching FACT_BOM data:', error);
+      throw error;
+    }
+  }
+
+
+  /**
+   * SIMPLE: Handle errors without popups
+   */
+  handleError(error) {
+      console.error('❌ Filter error:', error);
+      
+      this.updateDataVolumeIndicator(0, 0);
+      this.updateFilteredRecordsCount(0);
+      
+      const dataText = document.getElementById('dataVolumeText');
+      if (dataText) {
+          dataText.innerHTML = `<span style="color: #dc3545;">Error: ${error.message}</span>`;
+      }
+      
+      // Simple error display in pivot table
+      const pivotTableBody = document.getElementById('pivotTableBody');
+      if (pivotTableBody) {
+          pivotTableBody.innerHTML = `
+              <tr>
+                  <td colspan="100%" style="text-align: center; padding: 40px; color: #dc3545;">
+                      <div style="font-size: 18px; margin-bottom: 8px;">⚠️ Error Loading Data</div>
+                      <div style="font-size: 14px;">${error.message}</div>
+                      <div style="font-size: 12px; margin-top: 8px;">
+                          <button onclick="window.EnhancedFilterSystem.applyAllFiltersSimple()" 
+                                  style="padding: 6px 12px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                              Try Again
+                          </button>
+                      </div>
+                  </td>
+              </tr>
+          `;
+      }
+  }
+
+
+  /**
+   * SIMPLE: Handle empty results without popups
+   */
+  handleEmptyResult() {
+    console.log('⚠️ No records match current filters');
+    
+    this.updateDataVolumeIndicator(0, 0);
+    this.updateFilteredRecordsCount(0);
+    
+    const dataText = document.getElementById('dataVolumeText');
+    if (dataText) {
+      dataText.innerHTML = '<span style="color: #dc3545;">No data matches current filters</span>';
     }
     
-    const uniqueValues = new Set();
+    // Enhanced empty state message
+    const pivotTableBody = document.getElementById('pivotTableBody');
+    if (pivotTableBody) {
+      pivotTableBody.innerHTML = `
+        <tr>
+          <td colspan="100%" style="text-align: center; padding: 40px; color: #666;">
+            <div style="font-size: 18px; margin-bottom: 8px;">📊 No Data Found</div>
+            <div style="font-size: 14px;">Your current filter selection returned no results.</div>
+            <div style="font-size: 12px; margin-top: 16px; color: #999;">
+              <strong>Suggestions:</strong><br>
+              • Select more items in each filter dimension<br>
+              • Try different combinations of filter values<br>
+              • 
+              <button onclick="window.EnhancedFilterSystem.resetAllFilters()" 
+                      style="background: none; border: none; color: #007bff; text-decoration: underline; cursor: pointer;">
+                Reset all filters
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
     
-    dimensionFilter.data.forEach(item => {
-      if (item && item[dimension.valueField] !== undefined && item[dimension.valueField] !== null) {
-        uniqueValues.add(item[dimension.valueField]);
-      }
+    this.resetApplyButton();
+  }
+
+
+  /**
+   * PHASE 2 Build filter parameters for database query
+   * @returns {Object} - Filter parameters object for API call
+   */
+  // buildFilterParameters() {
+  //   const filterParams = {};
+  //   const debugInfo = [];
+    
+  //   console.log('🔍 OPTIMIZED: Building filter parameters...');
+    
+  //   Object.values(this.filterMeta).forEach(dimension => {
+  //     const selections = this.filterSelections[dimension.id];
+  //     const fieldName = dimension.factField;
+      
+  //     if (!fieldName) {
+  //       console.warn(`⚠️ No factField defined for dimension: ${dimension.id}`);
+  //       return;
+  //     }
+      
+  //     // Get all available values for this dimension
+  //     const allValues = this.getAllValuesForDimension(dimension);
+      
+  //     if (allValues.length === 0) {
+  //       console.warn(`⚠️ No values available for dimension: ${dimension.id}`);
+  //       return;
+  //     }
+      
+  //     // Calculate excluded and selected counts
+  //     const excludedCount = selections ? selections.size : 0;
+  //     const selectedCount = allValues.length - excludedCount;
+      
+  //     // OPTIMIZATION 1: Skip if nothing is excluded (all items selected)
+  //     if (excludedCount === 0) {
+  //       debugInfo.push(`${dimension.label}: ALL selected (${allValues.length}/${allValues.length}) - SKIPPED`);
+  //       return;
+  //     }
+      
+  //     // OPTIMIZATION 2: Skip if everything is excluded (would return no results anyway)
+  //     if (selectedCount === 0) {
+  //       console.log(`🔍 No values selected for ${dimension.label}, this will result in no data`);
+  //       debugInfo.push(`${dimension.label}: NONE selected (0/${allValues.length}) - WILL RETURN EMPTY`);
+  //       return {}; // Return empty object to indicate no results
+  //     }
+      
+  //     // OPTIMIZATION 3: Only create WHERE clause if selected items < 50% of total
+  //     // This ensures the WHERE clause is shorter than excluding items
+  //     const selectionRatio = selectedCount / allValues.length;
+  //     const shouldIncludeInWhere = selectionRatio <= 0.5;
+      
+  //     if (!shouldIncludeInWhere) {
+  //       debugInfo.push(`${dimension.label}: ${selectedCount}/${allValues.length} selected (${(selectionRatio*100).toFixed(1)}%) - WHERE clause would be too long, SKIPPED`);
+  //       return;
+  //     }
+      
+  //     // OPTIMIZATION 4: Calculate WHERE clause efficiency
+  //     const selectedValues = allValues.filter(value => !selections.has(value));
+  //     const whereClauseLength = selectedValues.length;
+  //     const maxEfficientWhereLength = 100; // Reasonable limit for WHERE IN clauses
+      
+  //     if (whereClauseLength > maxEfficientWhereLength) {
+  //       debugInfo.push(`${dimension.label}: WHERE clause would have ${whereClauseLength} items (max efficient: ${maxEfficientWhereLength}) - SKIPPED`);
+  //       return;
+  //     }
+      
+  //     // Include this dimension in the filter parameters
+  //     filterParams[fieldName] = selectedValues;
+  //     debugInfo.push(`${dimension.label}: ${selectedCount}/${allValues.length} selected (${(selectionRatio*100).toFixed(1)}%) - WHERE IN (${whereClauseLength} items) - INCLUDED ✅`);
+      
+  //     console.log(`🔍 Filter parameter: ${fieldName} = [${selectedValues.length} values] (${(selectionRatio*100).toFixed(1)}% of total)`);
+  //   });
+    
+  //   // Log optimization summary
+  //   console.log('📊 FILTER OPTIMIZATION SUMMARY:');
+  //   debugInfo.forEach(info => console.log(`   ${info}`));
+  //   console.log(`📊 Total filter parameters: ${Object.keys(filterParams).length}`);
+    
+  //   return filterParams;
+  // }
+
+  // buildFilterParameters() {
+  //   const filterParams = {};
+  //   const debugInfo = [];
+    
+  //   console.log('🔍 Building filter parameters with corrected logic...');
+    
+  //   Object.values(this.filterMeta).forEach(dimension => {
+  //       const selections = this.filterSelections[dimension.id];
+  //       const fieldName = dimension.factField;
+        
+  //       if (!fieldName) {
+  //           console.warn(`⚠️ No factField defined for dimension: ${dimension.id}`);
+  //           return;
+  //       }
+        
+  //       // Get all available values for this dimension
+  //       const allValues = this.getAllValuesForDimension(dimension);
+        
+  //       if (allValues.length === 0) {
+  //           console.warn(`⚠️ No values available for dimension: ${dimension.id}`);
+  //           return;
+  //       }
+        
+  //       // FIXED LOGIC: Calculate selected items correctly
+  //       // filterSelections stores EXCLUDED items, so selected = total - excluded
+  //       const excludedCount = selections ? selections.size : 0;
+  //       const selectedCount = allValues.length - excludedCount;
+        
+  //       debugInfo.push(`${dimension.label}: ${selectedCount}/${allValues.length} selected, ${excludedCount} excluded`);
+        
+  //       // RULE 1: If ZERO selected OR ALL selected, skip this dimension
+  //       if (selectedCount === 0) {
+  //           console.log(`🔍 SKIP: ${dimension.label} - ZERO items selected (would return no data)`);
+  //           debugInfo.push(`   → SKIPPED: Zero items selected`);
+  //           return;
+  //       }
+        
+  //       if (selectedCount === allValues.length) {
+  //           console.log(`🔍 SKIP: ${dimension.label} - ALL items selected (${selectedCount}/${allValues.length})`);
+  //           debugInfo.push(`   → SKIPPED: All items selected`);
+  //           return;
+  //       }
+        
+  //       // RULE 2: If more than 10 selected, skip to avoid complex WHERE clause
+  //       if (selectedCount > 10) {
+  //           console.log(`🔍 SKIP: ${dimension.label} - Too many selected (${selectedCount} > 10)`);
+  //           debugInfo.push(`   → SKIPPED: Too many items selected (${selectedCount} > 10)`);
+  //           return;
+  //       }
+        
+  //       // RULE 3: If between 1 and 10 selected, include in filter parameters
+  //       if (selectedCount >= 1 && selectedCount <= 10) {
+  //           // Get the actual selected values (exclude the excluded ones)
+  //           const selectedValues = allValues.filter(value => !selections.has(value));
+            
+  //           filterParams[fieldName] = selectedValues;
+            
+  //           console.log(`✅ INCLUDE: ${dimension.label} - ${selectedCount} items selected`);
+  //           console.log(`   Values: [${selectedValues.slice(0, 3).join(', ')}${selectedValues.length > 3 ? '...' : ''}]`);
+  //           debugInfo.push(`   → INCLUDED: ${selectedCount} items in WHERE clause`);
+  //       }
+  //   });
+    
+  //   // Log summary
+  //   console.log('📊 FILTER PARAMETER BUILDING SUMMARY:');
+  //   debugInfo.forEach(info => console.log(`   ${info}`));
+  //   console.log(`📊 Total filter parameters created: ${Object.keys(filterParams).length}`);
+    
+  //   // Enhanced validation
+  //   if (Object.keys(filterParams).length === 0) {
+  //       console.log('⚠️ RESULT: No filter parameters created');
+        
+  //       // Check why no parameters were created
+  //       const hasAnySelections = Object.values(this.filterMeta).some(dimension => {
+  //           const allValues = this.getAllValuesForDimension(dimension);
+  //           const excludedCount = this.filterSelections[dimension.id] ? this.filterSelections[dimension.id].size : 0;
+  //           const selectedCount = allValues.length - excludedCount;
+  //           return selectedCount > 0 && selectedCount < allValues.length;
+  //       });
+        
+  //       if (!hasAnySelections) {
+  //           console.log('   Reason: No specific selections made (all dimensions have all items selected)');
+  //           return null; // Indicates "no filters applied"
+  //       } else {
+  //           console.log('   Reason: All selections were either too broad (>10 items) or resulted in all items selected');
+  //           return {}; // Indicates "filters too broad"
+  //       }
+  //   }
+    
+  //   return filterParams;
+  // }
+
+  buildFilterParameters() {
+    const filterParams = {};
+    const debugInfo = [];
+    
+    console.log('🔍 Building filter parameters with UI-consistent data...');
+    
+    Object.values(this.filterMeta).forEach(dimension => {
+        const selections = this.filterSelections[dimension.id];
+        const fieldName = dimension.factField;
+        
+        if (!fieldName) {
+            console.warn(`⚠️ No factField defined for dimension: ${dimension.id}`);
+            return;
+        }
+        
+        // Use the SAME enhanced method that the UI uses
+        const allValues = this.getEnhancedAllValuesForDimension(dimension);
+        
+        if (allValues.length === 0) {
+            console.warn(`⚠️ No values available for dimension: ${dimension.id}`);
+            return;
+        }
+        
+        // FIXED LOGIC: Calculate selected items correctly using UI data
+        // filterSelections stores EXCLUDED items, so selected = total - excluded
+        const excludedCount = selections ? selections.size : 0;
+        const selectedCount = allValues.length - excludedCount;
+        
+        debugInfo.push(`${dimension.label}: ${selectedCount}/${allValues.length} selected, ${excludedCount} excluded`);
+        
+        // RULE 1: If ZERO selected OR ALL selected, skip this dimension
+        if (selectedCount === 0) {
+            console.log(`🔍 SKIP: ${dimension.label} - ZERO items selected (would return no data)`);
+            debugInfo.push(`   → SKIPPED: Zero items selected`);
+            return;
+        }
+        
+        if (selectedCount === allValues.length) {
+            console.log(`🔍 SKIP: ${dimension.label} - ALL items selected (${selectedCount}/${allValues.length})`);
+            debugInfo.push(`   → SKIPPED: All items selected`);
+            return;
+        }
+        
+        // RULE 2: If more than 10 selected, skip to avoid complex WHERE clause
+        if (selectedCount > 10) {
+            console.log(`🔍 SKIP: ${dimension.label} - Too many selected (${selectedCount} > 10)`);
+            debugInfo.push(`   → SKIPPED: Too many items selected (${selectedCount} > 10)`);
+            return;
+        }
+        
+        // RULE 3: If between 1 and 10 selected, include in filter parameters
+        if (selectedCount >= 1 && selectedCount <= 10) {
+            // Get the actual selected values using the SAME data source
+            const selectedValues = this.getSelectedValuesForDimension(dimension, allValues);
+            
+            filterParams[fieldName] = selectedValues;
+            
+            console.log(`✅ INCLUDE: ${dimension.label} - ${selectedCount} items selected`);
+            console.log(`   Values: [${selectedValues.slice(0, 3).join(', ')}${selectedValues.length > 3 ? '...' : ''}]`);
+            debugInfo.push(`   → INCLUDED: ${selectedCount} items in WHERE clause`);
+        }
     });
     
-    return Array.from(uniqueValues);
+    // Log summary
+    console.log('📊 FILTER PARAMETER BUILDING SUMMARY:');
+    debugInfo.forEach(info => console.log(`   ${info}`));
+    console.log(`📊 Total filter parameters created: ${Object.keys(filterParams).length}`);
+    
+    // Enhanced validation
+    if (Object.keys(filterParams).length === 0) {
+        console.log('⚠️ RESULT: No filter parameters created');
+        
+        // Check why no parameters were created using SAME enhanced method
+        const hasAnySelections = Object.values(this.filterMeta).some(dimension => {
+            const allValues = this.getEnhancedAllValuesForDimension(dimension);
+            const excludedCount = this.filterSelections[dimension.id] ? this.filterSelections[dimension.id].size : 0;
+            const selectedCount = allValues.length - excludedCount;
+            return selectedCount > 0 && selectedCount < allValues.length;
+        });
+        
+        if (!hasAnySelections) {
+            console.log('   Reason: No specific selections made (all dimensions have all items selected)');
+            return null; // Indicates "no filters applied"
+        } else {
+            console.log('   Reason: All selections were either too broad (>10 items) or resulted in all items selected');
+            return {}; // Indicates "filters too broad"
+        }
+    }
+    
+    return filterParams;
+}
+
+
+/**
+ * Get selected values for a dimension using the enhanced data source
+ * @param {Object} dimension - Dimension configuration
+ * @param {Array} allValues - All available values from enhanced source
+ * @returns {Array} - Array of selected values
+ */
+getSelectedValuesForDimension(dimension, allValues) {
+    const selections = this.filterSelections[dimension.id];
+    
+    // If no exclusions, all values are selected
+    if (!selections || selections.size === 0) {
+        return [...allValues];
+    }
+    
+    // For simple dimensions, filter allValues directly
+    if (!dimension.hierarchical) {
+        return allValues.filter(value => !selections.has(value));
+    }
+    
+    // For hierarchical dimensions, we need to map from node IDs to fact values
+    return this.getSelectedValuesFromHierarchy(dimension, allValues, selections);
+}
+
+
+/**
+ * Get selected values from hierarchical dimensions
+ * @param {Object} dimension - Dimension configuration
+ * @param {Array} allValues - All available fact values
+ * @param {Set} excludedNodes - Set of excluded node IDs
+ * @returns {Array} - Array of selected fact values
+ */
+getSelectedValuesFromHierarchy(dimension, allValues, excludedNodes) {
+    const hierarchy = this.state.hierarchies[dimension.dimensionKey];
+    if (!hierarchy || !hierarchy.nodesMap) {
+        console.warn(`⚠️ No hierarchy found for ${dimension.label}, using direct filtering`);
+        return allValues.filter(value => !excludedNodes.has(value));
+    }
+    
+    // Collect all excluded fact IDs from excluded nodes
+    const excludedFactIds = new Set();
+    
+    excludedNodes.forEach(nodeId => {
+        const node = hierarchy.nodesMap[nodeId];
+        if (node) {
+            // Add this node's factId if it's a leaf node
+            if (node.factId) {
+                if (Array.isArray(node.factId)) {
+                    node.factId.forEach(id => excludedFactIds.add(id));
+                } else {
+                    excludedFactIds.add(node.factId);
+                }
+            }
+            
+            // Add descendant factIds
+            if (node.descendantFactIds && node.descendantFactIds.length > 0) {
+                node.descendantFactIds.forEach(id => excludedFactIds.add(id));
+            } else if (node.children && node.children.length > 0) {
+                // Collect all leaf descendants
+                this.collectLeafDescendantFactIds(node, hierarchy.nodesMap).forEach(id => excludedFactIds.add(id));
+            }
+        }
+    });
+    
+    // Return values that are NOT excluded
+    return allValues.filter(value => !excludedFactIds.has(value));
+}
+
+
+  /**
+   * ENHANCED: Get detailed filter selection summary for debugging
+   * @returns {Object} - Summary of all filter selections
+   */
+  getFilterSelectionSummary() {
+    const summary = {
+        totalDimensions: 0,
+        dimensionsWithSelections: 0,
+        dimensionsWithAllSelected: 0,
+        dimensionsWithNoneSelected: 0,
+        dimensionsWithPartialSelections: 0,
+        details: []
+    };
+    
+    Object.values(this.filterMeta).forEach(dimension => {
+        // Use the enhanced method for consistency
+        const allValues = this.getEnhancedAllValuesForDimension(dimension);
+        if (allValues.length === 0) return;
+        
+        summary.totalDimensions++;
+        
+        const excludedCount = this.filterSelections[dimension.id] ? this.filterSelections[dimension.id].size : 0;
+        const selectedCount = allValues.length - excludedCount;
+        
+        let status;
+        if (selectedCount === 0) {
+            status = 'NONE_SELECTED';
+            summary.dimensionsWithNoneSelected++;
+        } else if (selectedCount === allValues.length) {
+            status = 'ALL_SELECTED';
+            summary.dimensionsWithAllSelected++;
+        } else {
+            status = 'PARTIAL_SELECTED';
+            summary.dimensionsWithPartialSelections++;
+            summary.dimensionsWithSelections++;
+        }
+        
+        summary.details.push({
+            dimension: dimension.label,
+            selectedCount,
+            totalCount: allValues.length,
+            excludedCount,
+            status,
+            wouldIncludeInQuery: selectedCount >= 1 && selectedCount <= 10 && selectedCount < allValues.length
+        });
+    });
+    
+    return summary;
+  }
+
+
+  /**
+   * Check if any meaningful filter selections have been made
+   * @returns {boolean} - True if user has made specific filter selections
+   */
+  checkIfAnyMeaningfulSelectionsExist() {
+    console.log('🔍 Checking for meaningful selections...');
+    
+    let hasAnyMeaningfulSelections = false;
+    
+    Object.values(this.filterMeta).forEach(dimension => {
+        // Use the enhanced method that matches getEnhancedUniqueValuesForDimension
+        const allValues = this.getEnhancedAllValuesForDimension(dimension);
+        
+        if (allValues.length === 0) {
+            console.log(`🔍 ${dimension.label}: No values available`);
+            return;
+        }
+        
+        const excludedCount = this.filterSelections[dimension.id] ? this.filterSelections[dimension.id].size : 0;
+        const selectedCount = allValues.length - excludedCount;
+        
+        console.log(`🔍 ${dimension.label}: ${selectedCount}/${allValues.length} selected (excluded: ${excludedCount})`);
+        
+        // A meaningful selection is:
+        // - Not zero (would return no data)  
+        // - Not all items (no filtering effect)
+        // - Between 1 and total available
+        const isMeaningful = selectedCount > 0 && selectedCount < allValues.length;
+        
+        if (isMeaningful) {
+            console.log(`✅ ${dimension.label}: MEANINGFUL selection detected`);
+            hasAnyMeaningfulSelections = true;
+        } else if (selectedCount === 0) {
+            console.log(`❌ ${dimension.label}: ZERO selections (would return no data)`);
+        } else if (selectedCount === allValues.length) {
+            console.log(`ℹ️ ${dimension.label}: ALL selected (no filtering effect)`);
+        }
+    });
+    
+    console.log(`🔍 RESULT: Has meaningful selections = ${hasAnyMeaningfulSelections}`);
+    return hasAnyMeaningfulSelections;
+  }
+
+
+  /**
+   * Enhanced version of getAllValuesForDimension that uses the same data source
+   * as getEnhancedUniqueValuesForDimension to ensure consistency
+   * @param {Object} dimension - Dimension configuration
+   * @returns {Array} - Array of all possible values for this dimension
+   */
+  getEnhancedAllValuesForDimension(dimension) {
+      const allValues = [];
+      
+      console.log(`🔍 Getting enhanced values for dimension: ${dimension.id} (key: ${dimension.dimensionKey})`);
+      
+      // Check if we have dimension filter data (the optimized data structure) 
+      if (this.state.dimensionFilters && this.state.dimensionFilters[dimension.dimensionKey]) {
+          const dimensionFilter = this.state.dimensionFilters[dimension.dimensionKey];
+          console.log(`✅ Using dimensionFilters data for ${dimension.id}: ${dimensionFilter.data?.length || 0} records`);
+          
+          if (dimensionFilter.data && dimensionFilter.config) {
+              const valueSet = new Set();
+              dimensionFilter.data.forEach(item => {
+                  const value = item[dimensionFilter.config.valueField];
+                  if (value !== null && value !== undefined && !valueSet.has(value)) {
+                      valueSet.add(value);
+                      allValues.push(value);
+                  }
+              });
+          }
+      }
+      // Fallback to regular dimensions data
+      else if (this.state.dimensions && this.state.dimensions[dimension.dimensionKey]) {
+          console.log(`✅ Using fallback dimensions data for ${dimension.id}`);
+          
+          const valueSet = new Set();
+          
+          switch (dimension.id) {
+              case 'rootGmid':
+                  this.state.dimensions.root_gmid_display.forEach(item => {
+                      if (item.ROOT_GMID && !valueSet.has(item.ROOT_GMID)) {
+                          valueSet.add(item.ROOT_GMID);
+                          allValues.push(item.ROOT_GMID);
+                      }
+                  });
+                  break;
+                  
+              case 'smartcode':
+                  this.state.dimensions.smartcode.forEach(item => {
+                      if (item.SMARTCODE && !valueSet.has(item.SMARTCODE)) {
+                          valueSet.add(item.SMARTCODE);
+                          allValues.push(item.SMARTCODE);
+                      }
+                  });
+                  break;
+                  
+              case 'businessYear':
+                  this.state.dimensions.year.forEach(item => {
+                      if (item.YEAR && !valueSet.has(item.YEAR)) {
+                          valueSet.add(item.YEAR);
+                          allValues.push(item.YEAR);
+                      }
+                  });
+                  break;
+                  
+              case 'itemCostType':
+                  this.state.dimensions.item_cost_type.forEach(item => {
+                      if (item.ITEM_COST_TYPE && !valueSet.has(item.ITEM_COST_TYPE)) {
+                          valueSet.add(item.ITEM_COST_TYPE);
+                          allValues.push(item.ITEM_COST_TYPE);
+                      }
+                  });
+                  break;
+                  
+              case 'materialType':
+                  this.state.dimensions.material_type.forEach(item => {
+                      if (item.MATERIAL_TYPE && !valueSet.has(item.MATERIAL_TYPE)) {
+                          valueSet.add(item.MATERIAL_TYPE);
+                          allValues.push(item.MATERIAL_TYPE);
+                      }
+                  });
+                  break;
+                  
+              // For hierarchical dimensions, collect all factIds
+              case 'legalEntity':
+                  if (this.state.hierarchies && this.state.hierarchies.le) {
+                      allValues.push(...this.collectAllFactIdsFromHierarchy(this.state.hierarchies.le));
+                  }
+                  break;
+                  
+              case 'costElement':
+                  if (this.state.hierarchies && this.state.hierarchies.cost_element) {
+                      allValues.push(...this.collectAllFactIdsFromHierarchy(this.state.hierarchies.cost_element));
+                  }
+                  break;
+                  
+              case 'managementCentre':
+                  if (this.state.hierarchies && this.state.hierarchies.mc) {
+                      allValues.push(...this.collectAllFactIdsFromHierarchy(this.state.hierarchies.mc));
+                  }
+                  break;
+                  
+              default:
+                  console.warn(`No implementation for getAllValues dimension: ${dimension.id}`);
+                  break;
+          }
+      } else {
+          console.warn(`⚠️ No data source found for dimension: ${dimension.id}`);
+          console.log(`Available dimensionFilters:`, Object.keys(this.state.dimensionFilters || {}));
+          console.log(`Available dimensions:`, Object.keys(this.state.dimensions || {}));
+      }
+      
+      console.log(`🔍 Found ${allValues.length} total values for ${dimension.id}`);
+      return allValues;
+  }
+
+
+  /**
+ * Refresh UI components that depend on GMID hierarchy
+ */
+  refreshGmidRelatedUI() {
+      console.log('⏳ Status: Refreshing GMID-related UI components...');
+      
+      // Refresh pivot table if it exists
+      if (window.App && window.App.pivotTable && window.App.pivotTable.generatePivotTable) {
+          setTimeout(() => {
+              window.App.pivotTable.generatePivotTable();
+          }, 100);
+      }
+      
+      console.log('✅ Status: GMID-related UI components refreshed');
+  }
+
+
+  /**
+ * Get currently selected ROOT_GMID values from the filter
+ * @returns {Array} - Array of selected ROOT_GMID values
+ */
+  getSelectedRootGmids() {
+    const rootGmidFilter = this.filterSelections.rootGmid;
+    
+    // Get all available ROOT_GMIDs
+    const allRootGmids = [];
+    if (this.state.dimensions && this.state.dimensions.root_gmid_display) {
+      this.state.dimensions.root_gmid_display.forEach(item => {
+        if (item.ROOT_GMID && !allRootGmids.includes(item.ROOT_GMID)) {
+          allRootGmids.push(item.ROOT_GMID);
+        }
+      });
+    }
+    
+    // Return selected values (excluded values are stored in filterSelections)
+    const selectedRootGmids = allRootGmids.filter(gmid => !rootGmidFilter.has(gmid));
+    
+    console.log(`📊 BATCH: Selected ROOT_GMIDs: ${selectedRootGmids.length} of ${allRootGmids.length}`);
+    return selectedRootGmids;
+  }
+
+
+  /**
+   * ENHANCED: Extract GMID Display data based on selected ROOT_GMID values
+   * Handles large data sets efficiently with pagination and chunking
+   * UPDATED: Better progress tracking and user feedback
+   * @param {Array} selectedRootGmids - Array of selected ROOT_GMID values
+   * @returns {Promise<Array>} - Promise resolving to filtered GMID display data
+   */
+  async extractGMIDDisplayData(selectedRootGmids = []) {
+      console.log(`⏳ Status: Extracting GMID Display data for ${selectedRootGmids.length} selected ROOT_GMIDs...`);
+      
+      try {
+          // If no ROOT_GMIDs selected, clear existing data
+          if (!selectedRootGmids || selectedRootGmids.length === 0) {
+              console.log('⚠️ No ROOT_GMIDs selected, clearing GMID display data');
+              this.clearGmidDisplayData();
+              return [];
+          }
+          
+          // Check if we already have data for these exact ROOT_GMIDs
+          if (this.state.gmidDisplayData && this.state.gmidDisplayData.length > 0) {
+              const existingRootGmids = [...new Set(this.state.gmidDisplayData.map(item => item.ROOT_GMID))];
+              const sameSelection = selectedRootGmids.length === existingRootGmids.length && 
+                                  selectedRootGmids.every(gmid => existingRootGmids.includes(gmid));
+              
+              if (sameSelection) {
+                  console.log('✅ Status: GMID data already loaded for these ROOT_GMIDs, skipping extraction');
+                  return this.state.gmidDisplayData;
+              }
+          }
+          
+          // Show loading indicator
+          this.showGmidLoadingIndicator();
+          
+          const API_BASE_URL = 'http://localhost:3000/api';
+          
+          // For large datasets, we need to be more efficient
+          // Only request essential fields to reduce data transfer
+          const essentialFields = [
+              'ROOT_GMID',
+              'PATH_GMID', 
+              'COMPONENT_GMID',
+              'DISPLAY'
+          ];
+          
+          // Build query parameters with chunking for large ROOT_GMID lists
+          const maxRootGmidsPerRequest = 50; // Limit to prevent URL length issues
+          const allGmidData = [];
+          const totalChunks = Math.ceil(selectedRootGmids.length / maxRootGmidsPerRequest);
+          
+          console.log(`📊 Processing ${selectedRootGmids.length} ROOT_GMIDs in ${totalChunks} chunks...`);
+          
+          // Process ROOT_GMIDs in chunks
+          for (let i = 0; i < selectedRootGmids.length; i += maxRootGmidsPerRequest) {
+              const chunk = selectedRootGmids.slice(i, i + maxRootGmidsPerRequest);
+              const chunkNumber = Math.floor(i/maxRootGmidsPerRequest) + 1;
+              
+              console.log(`⏳ Status: Processing ROOT_GMID chunk ${chunkNumber}/${totalChunks} (${chunk.length} items)`);
+              
+              // Update progress in UI
+              this.updateGmidLoadingProgress(chunkNumber, totalChunks);
+              
+              const queryParams = new URLSearchParams();
+              queryParams.append('ROOT_GMID', chunk.join(','));
+              queryParams.append('fields', essentialFields.join(','));
+              queryParams.append('limit', '100000'); // Generous limit per chunk
+              
+              const url = `${API_BASE_URL}/data/DIM_GMID_DISPLAY/filtered?${queryParams.toString()}`;
+              
+              const response = await fetch(url, {
+                  headers: { 'Accept': 'application/x-ndjson' }
+              });
+              
+              if (!response.ok) {
+                  throw new Error(`API returned ${response.status}: ${response.statusText} for chunk ${chunkNumber}`);
+              }
+
+              // Parse NDJSON response with streaming
+              const chunkData = await this.parseNDJSONStream(response);
+              allGmidData.push(...chunkData);
+              
+              console.log(`✅ Status: Chunk ${chunkNumber}/${totalChunks} processed: ${chunkData.length} records (Total so far: ${allGmidData.length})`);
+              
+              // Add small delay between chunks to be nice to the server
+              if (i + maxRootGmidsPerRequest < selectedRootGmids.length) {
+                  await new Promise(resolve => setTimeout(resolve, 100));
+              }
+          }
+
+          console.log(`✅ Status: Retrieved ${allGmidData.length} total GMID display records for ${selectedRootGmids.length} ROOT_GMIDs`);
+          
+          // Validate that we got data for all requested ROOT_GMIDs
+          const retrievedRootGmids = [...new Set(allGmidData.map(item => item.ROOT_GMID))];
+          const missingRootGmids = selectedRootGmids.filter(gmid => !retrievedRootGmids.includes(gmid));
+          
+          if (missingRootGmids.length > 0) {
+              console.warn(`⚠️ Warning: No GMID display data found for ${missingRootGmids.length} ROOT_GMIDs:`, missingRootGmids.slice(0, 5));
+          }
+          
+          // Store globally for application use
+          this.state.gmidDisplayData = allGmidData;
+          this.state.selectedRootGmidsForGmidData = [...selectedRootGmids]; // Track which ROOT_GMIDs this data is for
+          
+          // Store in dimensions object for hierarchy building
+          if (!this.state.dimensions) {
+              this.state.dimensions = {};
+          }
+          this.state.dimensions.gmid_display = allGmidData;
+          
+          // Hide loading indicator
+          this.hideGmidLoadingIndicator();
+          
+          console.log(`✅ Status: GMID display data stored globally in state`);
+          
+          return allGmidData;
+          
+      } catch (error) {
+          console.error('❌ Error extracting GMID display data:', error);
+          
+          // Hide loading indicator
+          this.hideGmidLoadingIndicator();
+          
+          // Store empty data to prevent null reference errors
+          this.clearGmidDisplayData();
+          
+          // Show user-friendly error message
+          this.showGmidErrorMessage(error.message);
+          
+          throw error;
+      }
+  }
+
+
+  /**
+   * Show loading indicator for GMID data extraction
+   */
+  showGmidLoadingIndicator() {
+      const dataText = document.getElementById('dataVolumeText');
+      if (dataText) {
+          dataText.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Loading GMID Display data...';
+      }
+      
+      // Update apply button during loading
+      const applyBtn = this.elements.applyFiltersBtn;
+      if (applyBtn) {
+          applyBtn.disabled = true;
+          applyBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Loading GMID Data...';
+      }
+  }
+
+
+  /**
+   * Hide loading indicator for GMID data extraction
+   */
+  hideGmidLoadingIndicator() {
+      const dataText = document.getElementById('dataVolumeText');
+      if (dataText) {
+          const selectedRootGmids = this.getSelectedRootGmids();
+          if (selectedRootGmids.length > 0) {
+              dataText.textContent = `GMID Display data loaded for ${selectedRootGmids.length} ROOT_GMIDs`;
+          } else {
+              dataText.textContent = 'Ready to apply filters';
+          }
+      }
+      
+      // Re-enable apply button
+      const applyBtn = this.elements.applyFiltersBtn;
+      if (applyBtn) {
+          applyBtn.disabled = false;
+          const selectedRootGmids = this.getSelectedRootGmids();
+          if (selectedRootGmids.length > 0) {
+              applyBtn.innerHTML = '<i class="fas fa-check"></i> Apply Filters & Load GMID Data';
+          } else {
+              applyBtn.innerHTML = '<i class="fas fa-check"></i> Apply Filters';
+          }
+      }
+  }
+
+
+  /**
+   * Show error message for GMID data extraction
+   * @param {string} errorMessage - Error message to display
+   */
+  showGmidErrorMessage(errorMessage) {
+      const dataText = document.getElementById('dataVolumeText');
+      if (dataText) {
+          dataText.innerHTML = `<span style="color: #dc3545;">Error loading GMID data: ${errorMessage}</span>`;
+      }
+      
+      // Re-enable apply button
+      const applyBtn = this.elements.applyFiltersBtn;
+      if (applyBtn) {
+          applyBtn.disabled = false;
+          applyBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Retry Apply Filters';
+      }
+  }
+
+
+  /**
+   * Clear GMID display data from memory
+   */
+  clearGmidDisplayData() {
+      this.state.gmidDisplayData = [];
+      if (this.state.dimensions) {
+          this.state.dimensions.gmid_display = [];
+      }
+      if (this.state.hierarchies) {
+          delete this.state.hierarchies.gmid_display;
+      }
+      console.log('✅ Status: GMID display data cleared');
+  }
+
+
+  /**
+   * Update loading progress for GMID data extraction
+   * @param {number} current - Current chunk number
+   * @param {number} total - Total number of chunks
+   */
+  updateGmidLoadingProgress(current, total) {
+      const dataText = document.getElementById('dataVolumeText');
+      if (dataText) {
+          const percentage = Math.round((current / total) * 100);
+          dataText.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> Loading GMID Display data... (${current}/${total} chunks - ${percentage}%)`;
+      }
+      
+      const applyBtn = this.elements.applyFiltersBtn;
+      if (applyBtn) {
+          const percentage = Math.round((current / total) * 100);
+          applyBtn.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> Loading GMID Data... ${percentage}%`;
+      }
+  }
+
+
+  /**
+   * Parse NDJSON stream efficiently
+   * @param {Response} response - Fetch response object
+   * @returns {Promise<Array>} - Parsed data array
+   */
+  async parseNDJSONStream(response, dataType = 'data') {
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    const rows = [];
+    let parseCount = 0;
+
+    const applyBtn = this.elements.applyFiltersBtn;
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+
+        lines.forEach(line => {
+          if (line.trim()) {
+            try {
+              rows.push(JSON.parse(line));
+              parseCount++;
+              
+              // Update progress every 1000 records
+              if (parseCount % 1000 === 0 && applyBtn) {
+                applyBtn.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> Loading ${dataType}... (${parseCount} records)`;
+              }
+            } catch (e) {
+              console.warn(`Invalid JSON line in ${dataType}:`, line.substring(0, 100) + '...', e);
+            }
+          }
+        });
+      }
+
+      // Process final buffer
+      if (buffer.trim()) {
+        try {
+          rows.push(JSON.parse(buffer));
+          parseCount++;
+        } catch (e) {
+          console.warn(`Invalid final JSON line in ${dataType}:`, buffer.substring(0, 100) + '...', e);
+        }
+      }
+      
+      console.log(`✅ Parsed ${parseCount} ${dataType} records successfully`);
+      
+    } finally {
+      reader.releaseLock();
+    }
+
+    return rows;
+  }
+
+
+  /**
+   * PHASE 3 Update GMID hierarchy based on extracted GMID display data
+   * This should be called after extractGMIDDisplayData to rebuild the hierarchy
+   */
+  async updateGmidHierarchyFromExtractedData() {
+    console.log('📊 DEBUG: ========== HIERARCHY UPDATE DEBUG ==========');
+    console.log('📊 DEBUG: Updating GMID hierarchy from extracted data...');
+    
+    try {
+      // Check if we have GMID display data
+      if (!this.state.gmidDisplayData || this.state.gmidDisplayData.length === 0) {
+        console.error('❌ DEBUG: No GMID display data available for hierarchy building');
+        console.log(`   - state.gmidDisplayData exists: ${!!this.state.gmidDisplayData}`);
+        console.log(`   - state.gmidDisplayData.length: ${this.state.gmidDisplayData?.length || 'undefined'}`);
+        return false;
+      }
+      
+      console.log(`✅ DEBUG: GMID display data available: ${this.state.gmidDisplayData.length} records`);
+      
+      // Check if the hierarchy building function exists
+      const hierarchyFunction = window.App?.data?.buildGmidDisplayHierarchy;
+      console.log(`📊 DEBUG: Hierarchy building function check:`);
+      console.log(`   - window.App exists: ${!!window.App}`);
+      console.log(`   - window.App.data exists: ${!!window.App?.data}`);
+      console.log(`   - buildGmidDisplayHierarchy exists: ${!!hierarchyFunction}`);
+      
+      if (hierarchyFunction) {
+        console.log(`📊 DEBUG: Calling buildGmidDisplayHierarchy with ${this.state.gmidDisplayData.length} records...`);
+        
+        // Call the hierarchy building function
+        const newHierarchy = hierarchyFunction(this.state.gmidDisplayData);
+        
+        console.log(`📊 DEBUG: Hierarchy building function returned:`, {
+          hasResult: !!newHierarchy,
+          hasRoot: !!newHierarchy?.root,
+          hasNodesMap: !!newHierarchy?.nodesMap,
+          nodeCount: Object.keys(newHierarchy?.nodesMap || {}).length,
+          rootChildren: newHierarchy?.root?.children?.length || 0
+        });
+        
+        if (newHierarchy && newHierarchy.root) {
+          // Store the new hierarchy
+          if (!this.state.hierarchies) {
+            this.state.hierarchies = {};
+          }
+          this.state.hierarchies.gmid_display = newHierarchy;
+          
+          console.log(`✅ DEBUG: GMID hierarchy stored successfully`);
+          console.log(`   - Total nodes in hierarchy: ${Object.keys(newHierarchy.nodesMap || {}).length}`);
+          console.log(`   - Root node children: ${newHierarchy.root.children?.length || 0}`);
+          
+          // Verify storage
+          const storedHierarchy = this.state.hierarchies.gmid_display;
+          console.log(`📊 DEBUG: Verification - stored hierarchy:`, {
+            exists: !!storedHierarchy,
+            rootExists: !!storedHierarchy?.root,
+            rootHasChildren: storedHierarchy?.root?.hasChildren,
+            rootChildrenCount: storedHierarchy?.root?.children?.length || 0
+          });
+          
+          return true;
+        } else {
+          console.error('❌ DEBUG: Hierarchy building function returned invalid result');
+          console.log('   - Result:', newHierarchy);
+          return false;
+        }
+      } else {
+        console.error('❌ DEBUG: buildGmidDisplayHierarchy function not available');
+        console.log('📊 DEBUG: Available functions in window.App.data:', Object.keys(window.App?.data || {}));
+        return false;
+      }
+      
+    } catch (error) {
+      console.error('❌ DEBUG: Error updating GMID hierarchy:', error);
+      console.error('❌ DEBUG: Error details:', error.message);
+      console.error('❌ DEBUG: Error stack:', error.stack);
+      return false;
+    } finally {
+      console.log('📊 DEBUG: ========== END HIERARCHY UPDATE DEBUG ==========');
+    }
+  }
+
+
+  /**
+   * Manual verification of ROOT_GMID query results
+   * Call this manually to test if your selected ROOT_GMID exists in the database
+   */
+  async debugRootGmidQuery(rootGmidToTest = null) {
+    console.log('🔍 DEBUG: ========== ROOT_GMID QUERY VERIFICATION ==========');
+    
+    const selectedRootGmids = rootGmidToTest ? [rootGmidToTest] : this.getSelectedRootGmids();
+    console.log(`🔍 DEBUG: Testing ROOT_GMID(s):`, selectedRootGmids);
+    
+    if (selectedRootGmids.length === 0) {
+      console.warn('⚠️ DEBUG: No ROOT_GMIDs to test');
+      return;
+    }
+    
+    try {
+      // Test 1: Check if ROOT_GMID exists in available dimension data
+      console.log('\n📊 DEBUG: Test 1 - Check ROOT_GMID in available dimensions...');
+      
+      if (this.state.dimensions?.root_gmid_display) {
+        const availableRootGmids = this.state.dimensions.root_gmid_display.map(item => item.ROOT_GMID);
+        console.log(`   Available ROOT_GMIDs in dimensions: ${availableRootGmids.length}`);
+        console.log(`   Sample available ROOT_GMIDs:`, availableRootGmids.slice(0, 10));
+        
+        selectedRootGmids.forEach(rootGmid => {
+          const exists = availableRootGmids.includes(rootGmid);
+          console.log(`   ROOT_GMID ${rootGmid}: ${exists ? '✅ EXISTS' : '❌ NOT FOUND'} in dimensions`);
+        });
+      } else {
+        console.warn('⚠️ DEBUG: No root_gmid_display dimension data available');
+      }
+      
+      // Test 2: Direct API query to DIM_GMID_DISPLAY
+      console.log('\n📊 DEBUG: Test 2 - Direct API query to DIM_GMID_DISPLAY...');
+      
+      const API_BASE_URL = this.API_CONFIG.BASE_URL;
+      const url = `${API_BASE_URL}${this.API_CONFIG.ENDPOINTS.DIMENSION_FIELDS}/DIM_GMID_DISPLAY`;
+      
+      const requestBody = {
+        fields: ['ROOT_GMID', 'PATH_GMID', 'COMPONENT_GMID', 'DISPLAY'],
+        options: {
+          limit: 100,  // Small limit for testing
+          distinct: false
+        }
+      };
+      
+      console.log(`   API URL: ${url}`);
+      console.log(`   Request body:`, requestBody);
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/x-ndjson'
+        },
+        body: JSON.stringify(requestBody)
+      });
+      
+      console.log(`   Response status: ${response.status}`);
+      
+      if (response.ok) {
+        const testData = await this.parseNDJSONStream(response);
+        console.log(`   Retrieved ${testData.length} test records`);
+        
+        if (testData.length > 0) {
+          const testRootGmids = [...new Set(testData.map(item => item.ROOT_GMID))];
+          console.log(`   Unique ROOT_GMIDs in API response: ${testRootGmids.length}`);
+          console.log(`   Sample ROOT_GMIDs from API:`, testRootGmids.slice(0, 10));
+          
+          selectedRootGmids.forEach(rootGmid => {
+            const exists = testRootGmids.includes(rootGmid);
+            console.log(`   ROOT_GMID ${rootGmid}: ${exists ? '✅ EXISTS' : '❌ NOT FOUND'} in DIM_GMID_DISPLAY API`);
+            
+            if (exists) {
+              const matchingRecords = testData.filter(item => item.ROOT_GMID === rootGmid);
+              console.log(`     Found ${matchingRecords.length} records for this ROOT_GMID`);
+              console.log(`     Sample record:`, matchingRecords[0]);
+            }
+          });
+        } else {
+          console.warn('⚠️ DEBUG: API returned zero records - DIM_GMID_DISPLAY might be empty');
+        }
+      } else {
+        console.error(`❌ DEBUG: API request failed: ${response.status} ${response.statusText}`);
+      }
+      
+      // Test 3: Check FACT_BOM for ROOT_GMID
+      console.log('\n📊 DEBUG: Test 3 - Check ROOT_GMID in FACT_BOM...');
+      
+      const factUrl = `${API_BASE_URL}${this.API_CONFIG.ENDPOINTS.FACT_BOM_FILTERED}?ROOT_GMID=${selectedRootGmids[0]}&limit=5`;
+      console.log(`   Testing FACT_BOM URL: ${factUrl}`);
+      
+      const factResponse = await fetch(factUrl, {
+        headers: { 'Accept': 'application/x-ndjson' }
+      });
+      
+      console.log(`   FACT_BOM response status: ${factResponse.status}`);
+      
+      if (factResponse.ok) {
+        const factData = await this.parseNDJSONStream(factResponse);
+        console.log(`   FACT_BOM records found: ${factData.length}`);
+        
+        if (factData.length > 0) {
+          console.log(`   Sample FACT_BOM record:`, factData[0]);
+        }
+      } else {
+        console.error(`❌ DEBUG: FACT_BOM query failed: ${factResponse.status}`);
+      }
+      
+    } catch (error) {
+      console.error('❌ DEBUG: Error in ROOT_GMID verification:', error);
+    }
+    
+    console.log('🔍 DEBUG: ========== END ROOT_GMID QUERY VERIFICATION ==========');
   }
 
 
@@ -1617,86 +3561,8 @@ class EnhancedFilterSystem {
   }
 
 
-
   /**
-   * Fetch filtered fact data from database
-   * @param {Object} filterParams - Filter parameters for the query
-   * @returns {Promise<Array>} - Promise resolving to filtered fact data
-   */
-  async fetchFilteredFactData(filterParams) {
-    const API_BASE_URL = 'http://localhost:3000/api';
-    
-    try {
-      const queryParams = new URLSearchParams();
-      
-      Object.entries(filterParams).forEach(([field, values]) => {
-        queryParams.append(field, values.join(','));
-      });
-      
-      const url = `${API_BASE_URL}/data/FACT_BOM/filtered?${queryParams.toString()}`;
-      console.log(`⏳ Status: Fetching filtered fact data from: ${url}`);
-      
-      const response = await fetch(url, {
-        headers: { 'Accept': 'application/x-ndjson' }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`API returned ${response.status}: ${response.statusText}`);
-      }
-
-      // Parse NDJSON response
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-      const rows = [];
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop();
-
-        lines.forEach(line => {
-          if (line.trim()) {
-            try {
-              rows.push(JSON.parse(line));
-            } catch (e) {
-              console.warn('Invalid JSON line:', e);
-            }
-          }
-        });
-      }
-
-      if (buffer.trim()) {
-        try {
-          rows.push(JSON.parse(buffer));
-        } catch (e) {
-          console.warn('Invalid final JSON line:', e);
-        }
-      }
-
-      // Filter out rows with no meaningful measure values
-      const filteredRows = rows.filter(row => {
-        const hasValidCost = row.COST_UNIT !== null && row.COST_UNIT !== undefined && row.COST_UNIT !== 0;
-        const hasValidQty = row.QTY_UNIT !== null && row.QTY_UNIT !== undefined && row.QTY_UNIT !== 0;
-        return hasValidCost || hasValidQty;
-      });
-
-      console.log(`✅ Status: Retrieved ${filteredRows.length} valid fact records`);
-      
-      return filteredRows;
-      
-    } catch (error) {
-      console.error('❌ Error fetching filtered fact data:', error);
-      throw error;
-    }
-  }
-
-
-  /**
-   * Optimize dimensions based on filtered fact data
+   * PHASE 2 Optimize dimensions based on filtered fact data
    * @param {Array} factData - The filtered fact data
    */
   optimizeDimensionsWithFactData(factData) {
@@ -1752,7 +3618,7 @@ class EnhancedFilterSystem {
 
 
   /**
-   * Rebuild hierarchies with filtered fact data
+   * PHASE 2 Rebuild hierarchies with filtered fact data
    * @param {Array} factData - The filtered fact data
    */
   rebuildHierarchiesWithFactData(factData) {
@@ -1772,7 +3638,7 @@ class EnhancedFilterSystem {
 
 
   /**
-   * Handle empty filter results
+   * PHASE 2 Handle empty filter results
    */
   handleEmptyFilterResult() {
     this.updateDataVolumeIndicator(0, 0);
@@ -1793,7 +3659,7 @@ class EnhancedFilterSystem {
 
 
   /**
-   * Handle filter errors
+   * PHASE 2 Handle filter errors
    * @param {Error} error - The error that occurred
    */
   handleFilterError(error) {
@@ -1814,9 +3680,8 @@ class EnhancedFilterSystem {
   }
 
 
-
   /**
-   * Get fact ID field for a dimension
+   * PHASE 2 Get fact ID field for a dimension
    * @param {string} dimKey - Dimension key
    * @returns {string|null} - Fact table field name
    */
@@ -1846,7 +3711,7 @@ class EnhancedFilterSystem {
 
 
   /**
-   * Get dimension ID field for a dimension
+   * PHASE 2 Get dimension ID field for a dimension
    * @param {string} dimKey - Dimension key
    * @returns {string|null} - Dimension table field name
    */
@@ -3488,33 +5353,33 @@ class EnhancedFilterSystem {
    * @param {Object} dimension - Dimension configuration
    * @returns {Array} - Filtered data
    */
-  // applyFilter(data, dimension) {
-  //   // Skip if no selections (all selected)
-  //   if (this.filterSelections[dimension.id].size === 0) {
-  //     return data;
-  //   }
+  applyFilter(data, dimension) {
+    // Skip if no selections (all selected)
+    if (this.filterSelections[dimension.id].size === 0) {
+      return data;
+    }
     
-  //   console.log(`✅ Status: Applying ${dimension.label} filter (${this.filterSelections[dimension.id].size} excluded)...`);
+    console.log(`✅ Status: Applying ${dimension.label} filter (${this.filterSelections[dimension.id].size} excluded)...`);
     
-  //   const startTime = performance.now();
-  //   let filteredData;
+    const startTime = performance.now();
+    let filteredData;
     
-  //   if (dimension.hierarchical) {
-  //     // For hierarchical dimensions, use hierarchy-aware filtering
-  //     filteredData = this.applyHierarchicalFilter(data, dimension);
-  //   } else {
-  //     // For simple dimensions like SMARTCODE, filter directly by field value
-  //     filteredData = data.filter(record => {
-  //       const value = record[dimension.factField];
-  //       return value !== undefined && !this.filterSelections[dimension.id].has(value);
-  //     });
-  //   }
+    if (dimension.hierarchical) {
+      // For hierarchical dimensions, use hierarchy-aware filtering
+      filteredData = this.applyHierarchicalFilter(data, dimension);
+    } else {
+      // For simple dimensions like SMARTCODE, filter directly by field value
+      filteredData = data.filter(record => {
+        const value = record[dimension.factField];
+        return value !== undefined && !this.filterSelections[dimension.id].has(value);
+      });
+    }
     
-  //   const endTime = performance.now();
-  //   console.log(`✅ Status: ${dimension.label} filter applied in ${(endTime - startTime).toFixed(2)}ms: ${data.length} -> ${filteredData.length} records`);
+    const endTime = performance.now();
+    console.log(`✅ Status: ${dimension.label} filter applied in ${(endTime - startTime).toFixed(2)}ms: ${data.length} -> ${filteredData.length} records`);
     
-  //   return filteredData;
-  // }
+    return filteredData;
+  }
 
   
   /**
@@ -3704,16 +5569,76 @@ class EnhancedFilterSystem {
    * Refresh the pivot table with filtered data
    */
   refreshPivotTable() {
-    console.log('⏳ Status: Refreshing pivot table with filtered data...');
+    console.log('🔄 Attempting to refresh pivot table...');
     
-    if (window.App && window.App.pivotTable && window.App.pivotTable.generatePivotTable) {
-      window.App.pivotTable.generatePivotTable();
-      console.log('✅ Status: Pivot table refreshed');
-    } else if (window.generatePivotTable) {
-      window.generatePivotTable();
-      console.log('✅ Status: Pivot table refreshed');
-    } else {
-      console.warn('⚠️ Warning: Pivot table refresh function not found');
+    try {
+      if (window.App && window.App.pivotTable && window.App.pivotTable.generatePivotTable) {
+        console.log('📊 Calling App.pivotTable.generatePivotTable()...');
+        window.App.pivotTable.generatePivotTable();
+        console.log('✅ Pivot table refreshed via App.pivotTable');
+      } else if (window.generatePivotTable) {
+        console.log('📊 Calling global generatePivotTable()...');
+        window.generatePivotTable();
+        console.log('✅ Pivot table refreshed via global function');
+      } else {
+        console.warn('⚠️ No pivot table refresh function found');
+        console.log('Available methods:');
+        console.log('  - window.App.pivotTable:', !!window.App?.pivotTable);
+        console.log('  - window.generatePivotTable:', !!window.generatePivotTable);
+      }
+    } catch (error) {
+      console.error('❌ Error refreshing pivot table:', error);
+      // Don't throw - this shouldn't break the filter process
+    }
+  }
+
+
+  /**
+   * Manual data sync for pivot table (call this if pivot table is still empty)
+   */
+  manualDataSync() {
+    console.log('🔧 MANUAL: Attempting manual data sync...');
+    
+    try {
+      // Check if we have data
+      if (!this.state.factData || this.state.factData.length === 0) {
+        console.warn('⚠️ MANUAL: No fact data available for sync');
+        return false;
+      }
+      
+      console.log(`📊 MANUAL: Syncing ${this.state.factData.length} records...`);
+      
+      // Try multiple sync approaches
+      if (window.App) {
+        // Approach 1: Direct data assignment
+        if (window.App.pivotTable) {
+          window.App.pivotTable.data = this.state.factData;
+          console.log('✅ MANUAL: Data assigned to pivotTable.data');
+        }
+        
+        // Approach 2: State sync
+        if (window.App.state) {
+          window.App.state.factData = this.state.factData;
+          window.App.state.filteredData = this.state.factData;
+          console.log('✅ MANUAL: Data synced to App.state');
+        }
+      }
+      
+      // Approach 3: Global state sync
+      if (window.appState) {
+        window.appState.factData = this.state.factData;
+        window.appState.filteredData = this.state.factData;
+        console.log('✅ MANUAL: Data synced to global appState');
+      }
+      
+      // Force refresh
+      this.refreshPivotTable();
+      
+      return true;
+      
+    } catch (error) {
+      console.error('❌ MANUAL: Error in manual data sync:', error);
+      return false;
     }
   }
 
@@ -3814,11 +5739,48 @@ class EnhancedFilterSystem {
   }
 
 
+  /**
+   * SIMPLE: Reset all filters without validation
+   */
   resetAllFilters() {
-    Object.values(this.filterMeta).forEach(dimension => {
-      this.filterSelections[dimension.id].clear();
-    });
-    this.applyAllFilters();
+      console.log('🔄 Resetting all filters...');
+      
+      // Clear all filter selections
+      Object.values(this.filterMeta).forEach(dimension => {
+          this.filterSelections[dimension.id].clear();
+      });
+      
+      // Update UI
+      this.populateFilters();
+      this.updateAllSelectionCounts();
+      
+      // Clear data state
+      this.state.factData = [];
+      this.state.filteredData = [];
+      this.state.factDataLoaded = false;
+      
+      // Clear pivot table
+      const pivotTableBody = document.getElementById('pivotTableBody');
+      if (pivotTableBody) {
+          pivotTableBody.innerHTML = `
+              <tr>
+                  <td colspan="100%" style="text-align: center; padding: 40px; color: #666;">
+                      <div style="font-size: 16px;">Select filters and click "Apply Filters" to load data</div>
+                  </td>
+              </tr>
+          `;
+      }
+      
+      // Reset UI indicators
+      this.updateDataVolumeIndicator(0, 0);
+      this.updateFilteredRecordsCount(0);
+      
+      const dataText = document.getElementById('dataVolumeText');
+      if (dataText) {
+          dataText.textContent = 'Ready to apply filters';
+      }
+      
+      console.log('✅ All filters reset');
   }
 }
 

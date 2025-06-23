@@ -1539,3 +1539,242 @@ thead tr:last-child th {
     border-right: 1px solid var(--border-medium) !important;
     border-left: 1px solid var(--border-light) !important;
 }
+
+/* Enhanced CSS for Single Row + Single Column Scenario */
+
+/* Column headers in single row + single column mode */
+.single-row-single-column .column-header {
+    background: linear-gradient(135deg, #e6f3ff 0%, #cce7ff 100%) !important;
+    border: 1px solid #66b3ff !important;
+    color: #0066cc !important;
+    font-weight: 600 !important;
+    text-align: center !important;
+    padding: 8px 12px !important;
+    position: relative !important;
+    vertical-align: middle !important;
+    min-width: 120px !important;
+    white-space: nowrap !important;
+}
+
+/* Column header expand/collapse controls */
+.single-row-single-column .column-header .expand-collapse {
+    display: inline-flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 16px !important;
+    height: 16px !important;
+    margin-right: 6px !important;
+    vertical-align: middle !important;
+    border: 1px solid #0066cc !important;
+    border-radius: 3px !important;
+    background: linear-gradient(135deg, white 0%, #f0f8ff 100%) !important;
+    cursor: pointer !important;
+    font-size: 12px !important;
+    font-weight: bold !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 0 1px 2px rgba(0, 102, 204, 0.2) !important;
+}
+
+/* Column header expand/collapse states */
+.single-row-single-column .column-header .expand-collapse.collapsed {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%) !important;
+    border-color: #e17055 !important;
+    color: #d63031 !important;
+}
+
+.single-row-single-column .column-header .expand-collapse.collapsed:before {
+    content: "+" !important;
+    font-size: 14px !important;
+    line-height: 1 !important;
+}
+
+.single-row-single-column .column-header .expand-collapse.expanded {
+    background: linear-gradient(135deg, #d4edda 0%, #a3d9a3 100%) !important;
+    border-color: #28a745 !important;
+    color: #155724 !important;
+}
+
+.single-row-single-column .column-header .expand-collapse.expanded:before {
+    content: "−" !important;
+    font-size: 16px !important;
+    line-height: 1 !important;
+}
+
+/* Column header hover effects */
+.single-row-single-column .column-header .expand-collapse:hover {
+    background: linear-gradient(135deg, #e6f3ff 0%, #cce7ff 100%) !important;
+    border-color: #0066cc !important;
+    transform: scale(1.1) !important;
+    box-shadow: 0 2px 4px rgba(0, 102, 204, 0.4) !important;
+}
+
+/* Column labels in headers */
+.single-row-single-column .column-header .column-label {
+    display: inline-block !important;
+    vertical-align: middle !important;
+    font-weight: 600 !important;
+    color: #0066cc !important;
+    max-width: calc(100% - 25px) !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+/* Enhanced measures header for single row + single column */
+.single-row-single-column .measures-header {
+    background: linear-gradient(135deg, #f8f0ff 0%, #e6ccff 100%) !important;
+    border: 2px solid #9966cc !important;
+    color: #663399 !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1.5px !important;
+    font-size: 0.9rem !important;
+}
+
+/* Individual measure headers */
+.single-row-single-column .measure-header {
+    background: linear-gradient(135deg, #fff5e6 0%, #ffe0b3 100%) !important;
+    border: 1px solid #ff9933 !important;
+    color: #cc6600 !important;
+    font-weight: 600 !important;
+    text-align: center !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+    font-size: 0.85rem !important;
+}
+
+/* Row headers in single row + single column mode */
+.single-row-single-column .hierarchy-cell {
+    position: sticky !important;
+    left: 0 !important;
+    z-index: 20 !important;
+    background: white !important;
+    border-right: 2px solid #66b3ff !important;
+    padding: 8px 12px !important;
+    box-sizing: border-box !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    min-width: 200px !important;
+    max-width: 300px !important;
+}
+
+/* Row expand/collapse controls */
+.single-row-single-column .hierarchy-cell .expand-collapse {
+    display: inline-flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 18px !important;
+    height: 18px !important;
+    margin-right: 8px !important;
+    vertical-align: middle !important;
+    border: 1px solid #666 !important;
+    border-radius: 3px !important;
+    background: linear-gradient(135deg, white 0%, #f8f9fa 100%) !important;
+    cursor: pointer !important;
+    font-size: 12px !important;
+    font-weight: bold !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Value cells in single row + single column mode */
+.single-row-single-column .value-cell {
+    text-align: right !important;
+    padding: 8px 12px !important;
+    background: white !important;
+    border: 1px solid #e5e7eb !important;
+    min-width: 100px !important;
+    font-variant-numeric: tabular-nums !important;
+    font-weight: 500 !important;
+}
+
+/* Enhanced value cell styling for non-zero values */
+.single-row-single-column .value-cell.non-zero-value {
+    background: linear-gradient(135deg, #f0fff4 0%, #e6ffe6 100%) !important;
+    color: #006600 !important;
+    font-weight: 600 !important;
+}
+
+/* Enhanced value cell styling for large values */
+.single-row-single-column .value-cell.large-value {
+    background: linear-gradient(135deg, #fff8dc 0%, #f0e68c 100%) !important;
+    color: #b8860b !important;
+    font-weight: 700 !important;
+}
+
+/* Responsive adjustments for single row + single column */
+@media (max-width: 1200px) {
+    .single-row-single-column .column-header {
+        min-width: 100px !important;
+        padding: 6px 8px !important;
+        font-size: 0.8rem !important;
+    }
+    
+    .single-row-single-column .column-header .expand-collapse {
+        width: 14px !important;
+        height: 14px !important;
+        font-size: 10px !important;
+    }
+    
+    .single-row-single-column .hierarchy-cell {
+        min-width: 150px !important;
+        max-width: 250px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .single-row-single-column .column-header {
+        min-width: 80px !important;
+        padding: 4px 6px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    .single-row-single-column .column-header .expand-collapse {
+        width: 12px !important;
+        height: 12px !important;
+        font-size: 8px !important;
+        margin-right: 4px !important;
+    }
+    
+    .single-row-single-column .hierarchy-cell {
+        min-width: 120px !important;
+        max-width: 200px !important;
+    }
+}
+
+/* Container class application */
+.pivot-table-container.single-row-single-column {
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+}
+
+/* Table layout for single row + single column */
+.single-row-single-column table {
+    table-layout: auto !important;
+    width: 100% !important;
+    border-collapse: collapse !important;
+    border-spacing: 0 !important;
+}
+
+/* Sticky header support */
+.single-row-single-column thead th {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 10 !important;
+    background-clip: padding-box !important;
+}
+
+/* Corner cell special styling */
+.single-row-single-column .corner-cell {
+    position: sticky !important;
+    left: 0 !important;
+    top: 0 !important;
+    z-index: 50 !important;
+    background: linear-gradient(135deg, #e6ffe6 0%, #ccffcc 100%) !important;
+    border: 2px solid #00cc44 !important;
+    color: #006622 !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+    box-shadow: 0 2px 4px rgba(0, 204, 68, 0.3) !important;
+}
