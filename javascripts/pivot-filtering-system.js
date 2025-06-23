@@ -747,29 +747,30 @@ class EnhancedFilterSystem {
    */
   populateHierarchicalFilter(dimension) {
       console.log(`⏳ Status: Populating hierarchical filter for ${dimension.label}...`);
-      
       const treeContainer = document.getElementById(`${dimension.id}TreeContainer`);
       if (!treeContainer) {
           console.warn(`Tree container for ${dimension.id} not found`);
           return;
       }
-      
       const hierarchy = this.state.hierarchies[dimension.dimensionKey];
       if (!hierarchy || !hierarchy.root) {
           treeContainer.innerHTML = `<div class="empty-tree-message">No hierarchy data available</div>`;
           return;
       }
-      
       treeContainer.innerHTML = '';
-      
       const treeNodes = document.createElement('div');
       treeNodes.className = 'filter-tree-nodes';
       treeContainer.appendChild(treeNodes);
-      
       // Start with all nodes excluded (unchecked)
       this.initializeAllNodesAsExcluded(hierarchy, dimension);
-      
-      this.renderHierarchyNode(treeNodes, hierarchy.root, dimension, 0);
+      // Correction: for Legal Entity and Management Centre, do not render the root node but only its children
+      if (dimension.id === 'legalEntity' || dimension.id === 'managementCentre') {
+        hierarchy.root.children.forEach(childNode => {
+          this.renderHierarchyNode(treeNodes, childNode, dimension, 0);
+        });
+      } else {
+        this.renderHierarchyNode(treeNodes, hierarchy.root, dimension, 0);
+      }
   }
 
 
@@ -1185,7 +1186,6 @@ class EnhancedFilterSystem {
     if (this.state.dimensionFilters && this.state.dimensionFilters[dimension.dimensionKey]) {
         const dimensionFilter = this.state.dimensionFilters[dimension.dimensionKey];
         console.log(`✅ Using dimensionFilters data for ${dimension.id}: ${dimensionFilter.data?.length || 0} records`);
-        
         if (dimensionFilter.data && dimensionFilter.config) {
             dimensionFilter.data.forEach(item => {
                 const value = item[dimensionFilter.config.valueField];
