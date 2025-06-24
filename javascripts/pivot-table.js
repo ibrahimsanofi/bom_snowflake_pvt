@@ -978,8 +978,8 @@ const pivotTable = {
      * Filter records by MC
      */
     filterByMC: function(records, node) {
-        if (!state.mappings || !state.mappings.managementCentre) return records;
-        
+        if (!state.mappings || !state.mappings.managementCentre || node._id === 'ROOT') return records;
+
         // Get the mapping
         const mapping = state.mappings.managementCentre;
         
@@ -6307,7 +6307,7 @@ const pivotTable = {
         }
 
         const dimName = extractDimensionName(field);
-        
+
         try {
             // Check if hierarchy exists
             if (!this.state.hierarchies) {

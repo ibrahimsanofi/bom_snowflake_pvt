@@ -2276,7 +2276,6 @@ function buildPathHierarchyWithSegmentLabels(data, config) {
         isFlat: false,
         usePathSegmentsForLabels: true
     };
-    
     const finalConfig = { ...defaultConfig, ...config };
     
     // Handle flat data with special function
@@ -2312,16 +2311,16 @@ function buildPathHierarchyWithSegmentLabels(data, config) {
         };
     }
     
-    // CRITICAL FIX: Always create a single ROOT node regardless of number of segments
     const nodesMap = {};
     let rootNode;
-    
+    let skipFirstSegment = false;
+
     if (firstLevelSegments.size === 1) {
-        // Single segment - create root with that segment's label
-        const singleSegment = Array.from(firstLevelSegments)[0];
+        // Use the unique segment as the root node (X)
+        const onlySegment = Array.from(firstLevelSegments)[0];
         rootNode = {
-            id: 'ROOT',  // ALWAYS use 'ROOT' as ID
-            label: singleSegment,
+            id: 'ROOT',
+            label: onlySegment,
             children: [],
             level: 0,
             path: ['ROOT'],
@@ -2329,11 +2328,12 @@ function buildPathHierarchyWithSegmentLabels(data, config) {
             isLeaf: false,
             hasChildren: false
         };
+        nodesMap['ROOT'] = rootNode;
+        skipFirstSegment = true;
     } else {
-        // Multiple segments - create a master root
         rootNode = {
-            id: 'ROOT',  // ALWAYS use 'ROOT' as ID
-            label: 'All',
+            id: 'ROOT',
+            label: (config && config.rootLabel) ? config.rootLabel : 'All',
             children: [],
             level: 0,
             path: ['ROOT'],
@@ -2341,51 +2341,46 @@ function buildPathHierarchyWithSegmentLabels(data, config) {
             isLeaf: false,
             hasChildren: false
         };
+        nodesMap['ROOT'] = rootNode;
     }
-    
-    nodesMap['ROOT'] = rootNode;
-    
+
     // Map to track nodes by path
     const nodesByPathKey = new Map();
-    
+
     // Process each data item
     data.forEach(item => {
         try {
             if (!item) return;
-            
+
             const pathString = finalConfig.getPath(item);
             if (!pathString) return;
-            
+
             // Split path into segments
             const pathSegments = pathString.split(finalConfig.pathSeparator)
                 .filter(segment => segment.trim() !== '');
-            
+
             if (pathSegments.length === 0) return;
-            
+
             // Start with root node
             let currentNode = rootNode;
-            let currentPath = ['ROOT'];
-            
-            // Process ALL segments (including first)
-            for (let i = 0; i < pathSegments.length; i++) {
+            let currentPath = [...rootNode.path];
+
+            // Si on doit sauter le premier segment (cas racine unique)
+            let startIdx = skipFirstSegment ? 1 : 0;
+
+            for (let i = startIdx; i < pathSegments.length; i++) {
                 const segment = pathSegments[i];
-                
-                // Skip empty segments
                 if (!segment || segment === "") continue;
-                
-                // Create path key for this segment
+
+                // Build a unique key for this node under its parent
                 const pathKey = `${currentNode.id}_${segment}`;
                 const nodeId = `SEGMENT_${pathKey.replace(/[^a-zA-Z0-9_]/g, '_')}`;
-                
-                // Create node if it doesn't exist
+
                 if (!nodesByPathKey.has(pathKey)) {
-                    // Determine if this is a leaf node
                     const isLeafNode = (i === pathSegments.length - 1);
-                    
-                    // Create new node
                     const newNode = {
                         id: nodeId,
-                        label: segment,  // Always use segment as label
+                        label: segment,
                         children: [],
                         level: currentNode.level + 1,
                         path: [...currentPath, nodeId],
@@ -2394,43 +2389,24 @@ function buildPathHierarchyWithSegmentLabels(data, config) {
                         hasChildren: !isLeafNode,
                         factId: isLeafNode ? finalConfig.getLeafId(item) : null
                     };
-                    
-                    // Store node in map
                     nodesMap[nodeId] = newNode;
                     nodesByPathKey.set(pathKey, nodeId);
-                    
-                    // Add to parent's children
                     currentNode.children.push(newNode);
                     currentNode.isLeaf = false;
                     currentNode.hasChildren = true;
-                    
-                    // For leaf nodes, store original data
                     if (isLeafNode) {
                         newNode.data = { ...item };
                     }
                 }
-                
-                // Update current node for next iteration
                 const existingNodeId = nodesByPathKey.get(pathKey);
                 currentNode = nodesMap[existingNodeId];
-                
-                if (!currentNode) {
-                    break;
-                }
-                
+                if (!currentNode) break;
                 currentPath = [...currentPath, existingNodeId];
             }
         } catch (error) {
             console.warn("Error processing item:", error);
         }
     });
-    
-    // Sort hierarchy nodes
-    try {
-        sortHierarchyNodes(rootNode);
-    } catch (error) {
-        console.warn("Error sorting nodes:", error);
-    }
     
     // Create result object with single root
     const result = {
@@ -2441,7 +2417,7 @@ function buildPathHierarchyWithSegmentLabels(data, config) {
         isEmpty: false
     };
     
-    console.log(`✅ Status: Built hierarchy with ROOT node and ${Object.keys(nodesMap).length} total nodes`);
+    console.log(`✅ Status: Built hierarchy with root node "${rootNode.label}" and ${Object.keys(nodesMap).length} total nodes`);
     
     return result;
 }
@@ -2588,7 +2564,7 @@ function buildLegalEntityHierarchy(data) {
         pathSeparator: '//',
         data: data
     });
-    
+    config.rootLabel = 'All Legal Entities'; // Ajouté
     // Build hierarchy with segment labels
     const hierarchy = buildPathHierarchyWithSegmentLabels(data, config);
     
@@ -2651,7 +2627,7 @@ function buildManagementCentreHierarchy(data) {
         pathSeparator: '//',
         data: data
     });
-    
+    config.rootLabel = 'All Management Centres';
     // Build hierarchy with segment labels
     const hierarchy = buildPathHierarchyWithSegmentLabels(data, config);
     

@@ -763,14 +763,8 @@ class EnhancedFilterSystem {
       treeContainer.appendChild(treeNodes);
       // Start with all nodes excluded (unchecked)
       this.initializeAllNodesAsExcluded(hierarchy, dimension);
-      // Correction: for Legal Entity and Management Centre, do not render the root node but only its children
-      if (dimension.id === 'legalEntity' || dimension.id === 'managementCentre') {
-        hierarchy.root.children.forEach(childNode => {
-          this.renderHierarchyNode(treeNodes, childNode, dimension, 0);
-        });
-      } else {
-        this.renderHierarchyNode(treeNodes, hierarchy.root, dimension, 0);
-      }
+
+      this.renderHierarchyNode(treeNodes, hierarchy.root, dimension, 0);
   }
 
 
@@ -780,10 +774,13 @@ class EnhancedFilterSystem {
    * @param {Object} dimension - Dimension configuration
    */
   initializeAllNodesAsExcluded(hierarchy, dimension) {
-      // Collect all node IDs and add them to the excluded set
-      Object.keys(hierarchy.nodesMap).forEach(nodeId => {
-          this.filterSelections[dimension.id].add(nodeId);
-      });
+    if (dimension.id === 'managementCentre') {
+        this.filterSelections[dimension.id].clear();
+    } else {
+        Object.keys(hierarchy.nodesMap).forEach(nodeId => {
+            this.filterSelections[dimension.id].add(nodeId);
+        });
+    }
   }
 
   
