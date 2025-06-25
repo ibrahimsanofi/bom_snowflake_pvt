@@ -17,6 +17,8 @@ const state = {
     filteredFactData: null,
     decimalPlaces: 2,          // Number of decimal places for numeric values
     valueFormat: 'regular',
+    gmidPlaceholderLoaded: false,    // True when placeholder is loaded
+    gmidRealDataLoaded: false,       // True when real data replaces placeholder
     
     // Filter state
     filters: {                    // Filter state object
@@ -40,10 +42,10 @@ const state = {
             row: { 'ROOT': true },
             column: { 'ROOT': true }
         },
-        // gmid_display: {
-        //     row: { 'ROOT': true },
-        //     column: { 'ROOT': true }
-        // },
+        gmid_display: {
+            row: { 'ROOT': true },
+            column: { 'ROOT': true }
+        },
         root_gmid_display: {
             row: { 'ROOT': true },
             column: { 'ROOT': true }
@@ -106,10 +108,10 @@ function initializeExpandedNodes() {
             row: { 'ROOT': true },
             column: { 'ROOT': true }
         },
-        // gmid_display: {
-        //     row: { 'ROOT': true },
-        //     column: { 'ROOT': true }
-        // },
+        gmid_display: {
+            row: { 'ROOT': true },
+            column: { 'ROOT': true }
+        },
         root_gmid_display: {
             row: { 'ROOT': true },
             column: { 'ROOT': true }

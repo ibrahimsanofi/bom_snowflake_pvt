@@ -172,7 +172,7 @@ function initDragAndDrop() {
 }
 
 
-/**k
+/**
  * Enhanced drag and drop reordering
  */
 function enhanceDragDropReordering() {
@@ -960,6 +960,7 @@ function addLogEntry(message, type = 'info') {
     logContainer.scrollTop = logContainer.scrollHeight;
 }
 
+
 // Function to setup console log interception to update row counts when appropriate
 function setupRowCountUpdates() {
     // Store original console.log
@@ -996,18 +997,44 @@ function setupRowCountUpdates() {
  * @param {string} status - Status (waiting, loading, loaded, error)
  * @param {number} rowCount - Number of rows (optional)
  */
-function updateTableStatus(tableName, status, rowCount) {
+function updateTableStatus(tableName, status, count = null) {
     const normalizedName = tableName.toLowerCase().replace(/[^a-z0-9_]/g, '');
-    const statusElement = document.getElementById(`${normalizedName}Status`);
-    const rowCountElement = document.getElementById(`${normalizedName}Rows`);
+    const statusElementId = `${normalizedName}Status`;
+    const statusElement = document.getElementById(statusElementId);
     
     if (statusElement) {
-        statusElement.className = `table-status ${status}`;
-        statusElement.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+        let displayText;
+        let className;
+        
+        switch (status) {
+            case 'deferred':
+                displayText = 'Deferred';
+                className = `table-status deferred`;
+                break;
+            case 'loading':
+                displayText = 'Loading';
+                className = `table-status loading`;
+                break;
+            case 'loaded':
+                displayText = count ? `Loaded (${count.toLocaleString()})` : 'Loaded';
+                className = `table-status loaded`;
+                break;
+            case 'error':
+                displayText = 'Error';
+                className = `table-status error`;
+                break;
+            default:
+                displayText = status.charAt(0).toUpperCase() + status.slice(1);
+                className = `table-status ${status}`;
+        }
+        
+        statusElement.className = className;
+        statusElement.textContent = displayText;
     }
-    
-    if (rowCountElement && rowCount !== undefined) {
-        rowCountElement.textContent = `${rowCount.toLocaleString()} rows`;
+
+    if (status === 'placeholder') {
+        statusElement.className = 'table-status placeholder';
+        statusElement.innerHTML = `<i class="fas fa-clock"></i> Placeholder (${count || 0})`;
     }
 }
 

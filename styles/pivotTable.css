@@ -1778,3 +1778,84 @@ thead tr:last-child th {
     text-align: center !important;
     box-shadow: 0 2px 4px rgba(0, 204, 68, 0.3) !important;
 }
+
+/* Deferred loading of dimensions */
+.table-status.deferred {
+    background-color: #f59e0b;
+    color: white;
+}
+
+.table-status.deferred::before {
+    content: "⏳ ";
+}
+
+/* Animated data loading */
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.data-volume-text {
+  transition: all 0.3s ease-in-out;
+}
+
+.progress-bar {
+  transition: width 0.1s ease-out, background-color 0.3s ease-in-out;
+}
+
+/* Enhanced loading states */
+.data-volume-indicator {
+  position: relative;
+  overflow: hidden;
+}
+
+.data-volume-indicator::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s ease-in-out;
+}
+
+.data-volume-indicator.loading::before {
+  left: 100%;
+}
+
+/* gmid filter styling */
+.filter-disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.filter-loading .multiselect-button {
+  background-color: #f3f4f6;
+  color: #6b7280;
+}
+
+.filter-ready .multiselect-button {
+  background-color: white;
+  border-color: #10b981;
+}
+
+.filter-error .multiselect-button {
+  background-color: #fef2f2;
+  border-color: #ef4444;
+  color: #dc2626;
+}
+
+.empty-tree-message {
+  padding: 20px;
+  text-align: center;
+  color: #6b7280;
+  font-style: italic;
+}

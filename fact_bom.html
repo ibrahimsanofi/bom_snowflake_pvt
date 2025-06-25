@@ -836,5 +836,17 @@
             });
         });
     </script>
+    <script>
+        // Page reload is managed here. It is done at the discretion of users
+        let shouldPrompt = true;
+
+        window.addEventListener("beforeunload", function (e) {
+        if (shouldPrompt) {
+            const confirmationMessage = "Are you sure you want to leave or reload this page?";
+            e.returnValue = confirmationMessage; // Required for some browsers
+            return confirmationMessage;
+        }
+        });
+    </script>
 </body>
 </html>

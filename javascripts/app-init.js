@@ -215,6 +215,14 @@ function initializeApp() {
             loadFactDataFromDatabase(elements);
         });
     }    
+
+    //
+    const loadDeferredBtn = document.getElementById('loadDeferredBtn');
+    if (loadDeferredBtn) {
+        loadDeferredBtn.addEventListener('click', function() {
+            loadAllDeferredDimensions();
+        });
+    }
     
     // STEP 12: Add handler for reconnect button
     const reconnectBtn = document.getElementById('reconnectBtn');
@@ -228,9 +236,9 @@ function initializeApp() {
 }
 
 
-
 /**
- * MODIFIED: setupDatabaseConnection to exclude DIM_GMID_DISPLAY from available dimensions
+ * Set up the initial database connection
+ * @param {Object} elements - DOM elements
  */
 function setupDatabaseConnection(elements) {
     try{
@@ -258,7 +266,7 @@ function setupDatabaseConnection(elements) {
                 updateConnectionStatus('success', 'Connected to Snowflake database');
                 
                 // Parse the dimension names
-                const allDimensions = text
+                const availableDimensions = text
                     .split('\n')
                     .filter(Boolean)
                     .map(line => {
@@ -272,33 +280,13 @@ function setupDatabaseConnection(elements) {
                     })
                     .filter(Boolean);
                 
-                // FILTER OUT DIM_GMID_DISPLAY and any other unwanted dimensions
-                const excludedDimensions = [
-                    'DIM_GMID_DISPLAY',
-                    // Add other dimensions to exclude here if needed
-                ];
+                console.log(`✅ Status: Available dimensions: ${availableDimensions.join(', ')}`);
                 
-                const availableDimensions = allDimensions.filter(dimension => 
-                    !excludedDimensions.includes(dimension)
-                );
-                
-                console.log(`📊 Total dimensions from server: ${allDimensions.length}`);
-                console.log(`🚫 Excluded dimensions: ${excludedDimensions.join(', ')}`);
-                console.log(`✅ Available dimensions: ${availableDimensions.join(', ')}`);
-                
-                // Log specifically what was filtered out
-                const filteredOut = allDimensions.filter(dimension => 
-                    excludedDimensions.includes(dimension)
-                );
-                if (filteredOut.length > 0) {
-                    console.log(`🔧 Filtered out dimensions: ${filteredOut.join(', ')}`);
-                }
-
                 // Store available tables in state
                 if (window.App && window.App.state) {
                     window.App.state.availableTables = availableDimensions;
                 }
-
+                
                 // Update UI
                 updateTableStatuses(availableDimensions, 'waiting');
                 isConnectingToDatabase = false;
@@ -324,7 +312,7 @@ function loadDimensionDataFromDatabase(elements) {
     console.log("✅ Status: Starting dimension data loading from Snowflake database");
     
     // Load only the dimension data
-    data.ingestDimensionFilterData(elements);
+    data.ingestDimensionData(elements);
     
     console.log("✅ Status: Snowflake dimension data loading completed successfully");
     

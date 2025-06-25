@@ -1,5 +1,5 @@
 /*
-xxx
+Functions in this module handle various data-centric tasks identified for the project
 */
 
 import stateModule from './state.js';
@@ -14,72 +14,13 @@ const state = stateModule.state;
  * API Constants - Endpoints for data retrieval
  */
 const API_BASE_URL = 'http://localhost:3000/api';
+
+
 const ENDPOINTS = {
     GET_DIMENSIONS: `${API_BASE_URL}/get_bom_dim`,
     GET_DATA: `${API_BASE_URL}/data/`,
     GET_FACT_NAMES: `${API_BASE_URL}/get_fact_names`,
-    GET_DIMENSION_FIELDS: `${API_BASE_URL}/dimension-fields/` // NEW ENDPOINT
-};
-
-/**
- * ENHANCED: Configuration for dimension field loading
- * Maps each dimension to the specific fields needed for filtering
- */
-const DIMENSION_FIELD_CONFIG = {
-    'DIM_LE': {
-        fields: ['LE', 'LE_DESC', 'PATH'],
-        displayField: 'LE_DESC',
-        valueField: 'LE',
-        filterField: 'LE'
-    },
-    'DIM_COST_ELEMENT': {
-        fields: ['COST_ELEMENT', 'COST_ELEMENT_DESC', 'PATH'],
-        displayField: 'COST_ELEMENT_DESC',
-        valueField: 'COST_ELEMENT',
-        filterField: 'COST_ELEMENT'
-    },
-    'DIM_SMARTCODE': {
-        fields: ['SMARTCODE', 'SMARTCODE_DESC', 'PATH'],
-        displayField: 'SMARTCODE_DESC',
-        valueField: 'SMARTCODE',
-        filterField: 'ROOT_SMARTCODE'
-    },
-    // 'DIM_GMID_DISPLAY': {
-    //     fields: ['ROOT_GMID', 'PATH_GMID', 'COMPONENT_GMID', 'DISPLAY'],
-    //     displayField: 'COMPONENT_GMID',
-    //     valueField: 'COMPONENT_GMID',
-    //     filterField: 'COMPONENT_GMID'
-    // },
-    'DIM_ROOT_GMID_DISPLAY': {
-        fields: ['ROOT_GMID', 'ROOT_DISPLAY'],
-        displayField: 'ROOT_DISPLAY',
-        valueField: 'ROOT_GMID',
-        filterField: 'ROOT_GMID'
-    },
-    'DIM_ITEM_COST_TYPE': {
-        fields: ['ITEM_COST_TYPE', 'ITEM_COST_TYPE_DESC'],
-        displayField: 'ITEM_COST_TYPE_DESC',
-        valueField: 'ITEM_COST_TYPE',
-        filterField: 'ITEM_COST_TYPE'
-    },
-    'DIM_MATERIAL_TYPE': {
-        fields: ['MATERIAL_TYPE', 'MATERIAL_TYPE_DESC'],
-        displayField: 'MATERIAL_TYPE_DESC',
-        valueField: 'MATERIAL_TYPE',
-        filterField: 'COMPONENT_MATERIAL_TYPE'
-    },
-    'DIM_MC': {
-        fields: ['MC', 'LE_DESC', 'PATH'],
-        displayField: 'LE_DESC',
-        valueField: 'MC',
-        filterField: 'MC'
-    },
-    'DIM_YEAR': {
-        fields: ['YEAR'],
-        displayField: 'YEAR',
-        valueField: 'YEAR',
-        filterField: 'ZYEAR'
-    }
+    GET_DIMENSION_FIELDS: `${API_BASE_URL}/dimension-fields/`
 };
 
 
@@ -191,11 +132,10 @@ async function fetchOptimizedData(tableName, fields = null) {
     
     if (fields && fields.length > 0) {
         const fieldsParam = fields.join(',');
-        url += `?fields=${encodeURIComponent(fieldsParam)}&distinct=true`;
+        url += `?fields=${encodeURIComponent(fieldsParam)}&limit=10000&distinct=true`;
+    } else {
+        url += '?limit=10000';
     }
-    // } else {
-    //     url += '?limit=10000';
-    // }
     
     try {
         console.log(`⏳ Status: Fetching optimized data from ${tableName}...`);
@@ -296,6 +236,88 @@ async function validateAllDimensionFields() {
 
 
 /**
+ * Load placeholder GMID_DISPLAY data for initial dimension setup
+ * This loads a small sample to initialize the dimension and hierarchy
+ * @returns {Promise<Array>} - Small array of GMID_DISPLAY records
+ */
+async function loadGmidDisplayPlaceholder() {
+    const API_BASE_URL = 'http://localhost:3000/api';
+    
+    try {
+        console.log('📦 Loading GMID_DISPLAY placeholder data...');
+        
+        const url = `${API_BASE_URL}/data/DIM_GMID_DISPLAY/placeholder?limit=10`;
+        
+        const response = await fetch(url, {
+            headers: { 'Accept': 'application/x-ndjson' }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`API returned ${response.status}: ${response.statusText}`);
+        }
+
+        // Parse NDJSON response
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        const rows = [];
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
+
+            lines.forEach(line => {
+                if (line.trim()) {
+                    try {
+                        rows.push(JSON.parse(line));
+                    } catch (e) {
+                        console.warn('Invalid JSON line in placeholder:', e);
+                    }
+                }
+            });
+        }
+
+        if (buffer.trim()) {
+            try {
+                rows.push(JSON.parse(buffer));
+            } catch (e) {
+                console.warn('Invalid final JSON in placeholder:', e);
+            }
+        }
+
+        console.log(`✅ Loaded ${rows.length} GMID_DISPLAY placeholder records`);
+        
+        // Add metadata to identify as placeholder
+        rows._isPlaceholder = true;
+        rows._loadedAt = Date.now();
+        
+        return rows;
+        
+    } catch (error) {
+        console.error('❌ Error loading GMID placeholder:', error);
+        
+        // Return minimal fallback data
+        const fallbackData = [
+            {
+                COMPONENT_GMID: 'PLACEHOLDER_001',
+                ROOT_GMID: 'SAMPLE_ROOT',
+                PATH_GMID: 'SAMPLE_ROOT',
+                DISPLAY: 'Sample GMID (placeholder data)'
+            }
+        ];
+        fallbackData._isPlaceholder = true;
+        fallbackData._isFallback = true;
+        
+        return fallbackData;
+    }
+}
+
+
+/**
  * COMBINED FUNCTION: Load dimension data and build hierarchies
  * This replaces the original ingestDimensionFilterData function
  * @param {Object} elements - DOM elements object
@@ -357,7 +379,7 @@ async function ingestDimensionFilterDataOnly(elements, selectedFact = 'FACT_BOM'
                 id: `${dim}`,
                 label: dim.replace(/^DIM_/, ''),
                 type: 'dimension',
-                hierarchical: ['LE', 'COST_ELEMENT', 'SMARTCODE', 'MC', 'YEAR', 'ITEM_COST_TYPE', 'MATERIAL_TYPE', 'ROOT_GMID_DISPLAY'].includes(
+                hierarchical: ['LE', 'COST_ELEMENT', 'GMID_DISPLAY', 'SMARTCODE', 'MC', 'YEAR', 'ITEM_COST_TYPE', 'MATERIAL_TYPE', 'ROOT_GMID_DISPLAY'].includes(
                     dim.replace(/^DIM_/, '')
                 )
             });
@@ -562,17 +584,7 @@ async function buildAndPersistDimensionHierarchies(elements = null) {
                         hierarchy = buildManagementCentreHierarchy(dimensionFilter.data);
                         break;
                     case 'gmid_display':
-                        // Note: This will be populated later via extractGMIDDisplayData
-                        hierarchy = createFallbackHierarchy('GMID Display (Filtered)', 'GMID_DISPLAY_ROOT');
-                        break;
-                    case 'root_gmid_display':
-                        // NEW: Handle root_gmid_display as a flat hierarchy
-                        hierarchy = buildStandaloneFlatHierarchy(
-                            dimensionFilter.data,
-                            'ROOT_GMID_DISPLAY',
-                            'ROOT_GMID',
-                            'ROOT_DISPLAY'
-                        );
+                        hierarchy = buildGmidDisplayHierarchy(dimensionFilter.data);
                         break;
                     case 'item_cost_type':
                         hierarchy = buildItemCostTypeHierarchy(dimensionFilter.data);
@@ -638,9 +650,6 @@ async function buildAndPersistDimensionHierarchies(elements = null) {
                 );
             }
         }
-
-        // NOTE: gmid_display hierarchy will be built later via extractGMIDDisplayData
-        console.log('📝 Status: GMID Display hierarchy will be built on-demand when ROOT_GMID filter is applied');
 
         // Validate that we have at least some hierarchies
         const successfulHierarchies = Object.values(hierarchyResults).filter(success => success).length;
@@ -850,52 +859,73 @@ async function fetchDimensionNamesForFact(factTable) {
  * @returns {Promise<void>}
  */
 async function ingestDimensionData(elements, selectedFact = 'FACT_BOM') {
-    console.log('⏳ Status: Loading dimension data from Snowflake database server...', 'info', elements);
+    console.log('⏳ Status: Loading dimension data with GMID limited loading...');
     
     try {        
         // 1. Get dimensions related to the selected fact table
         const dimNames = await fetchDimensionNamesForFact(selectedFact);
         
+        console.log(`✅ Status: Loading ${dimNames.length} dimensions`);
 
-        // 2. Build available files list (used for UI)
+        // 2. Build available files list (include ALL dimensions as regular dimensions)
         state.availableFiles = [];
         dimNames.forEach(dim => {
             state.availableFiles.push({
                 id: `${dim}`,
                 label: dim.replace(/^DIM_/, ''),
                 type: 'dimension',
-                hierarchical: ['LE', 'COST_ELEMENT', 'ROOT_GMID_DISPLAY', 'SMARTCODE', 'MC', 'YEAR', 'ITEM_COST_TYPE', 'MATERIAL_TYPE'].includes(
+                hierarchical: ['LE', 'COST_ELEMENT', 'GMID_DISPLAY', 'ROOT_GMID_DISPLAY', 'SMARTCODE', 'MC', 'YEAR', 'ITEM_COST_TYPE', 'MATERIAL_TYPE'].includes(
                     dim.replace(/^DIM_/, '')
-                )
+                ),
+                suppressFilter: dim === 'DIM_GMID_DISPLAY' // Flag to suppress filter UI
             });
         });
         
-        // Add fact table to available files (but don't load it yet)
+        // Add fact table to available files
         state.availableFiles.push({
             id: selectedFact,
             label: selectedFact.replace(/^FACT_/, ''),
             type: 'fact'
         });
-        
 
         // 3. Load dimension data
         console.log("⏳ Status: Loading dimension data from database...");
         state.dimensions = {};
         
-        // Initialize dimensions to empty objects to prevent null reference issues
+        // Initialize all dimensions to empty objects
         dimNames.forEach(dim => {
             const dimKey = dim.replace(/^DIM_/, '').toLowerCase();
             state.dimensions[dimKey] = [];
         });
         
-        // Fetch all dimension data in parallel for efficiency
+        // 4. Fetch dimension data with special handling for GMID_DISPLAY
         const dimensionPromises = dimNames.map(async dim => {
             try {
-                // Update status
                 ui.updateTableStatus(dim, 'loading');
                 
-                // Fetch dimension data
-                const { data, error } = await fetchDatabaseData(dim);
+                let data, error;
+                
+                // Special handling for GMID_DISPLAY - load placeholder data
+                if (dim === 'DIM_GMID_DISPLAY') {
+                    console.log("📦 Loading GMID_DISPLAY with 10-record limit...");
+                    const gmidData = await loadGmidDisplayPlaceholder();
+                    data = gmidData;
+                    error = null;
+                    
+                    if (data && data.length > 0) {
+                        console.log(`✅ Status: GMID_DISPLAY loaded with limit: ${data.length} records`);
+                        ui.updateTableStatus(dim, 'limited', data.length);
+                    } else {
+                        console.warn("⚠️ Warning: No GMID_DISPLAY data received");
+                        ui.updateTableStatus(dim, 'warning');
+                        error = "No data received";
+                    }
+                } else {
+                    // Regular dimension loading
+                    const result = await fetchDatabaseData(dim);
+                    data = result.data;
+                    error = result.error;
+                }
                 
                 if (error || !data) {
                     ui.updateTableStatus(dim, 'error');
@@ -903,12 +933,12 @@ async function ingestDimensionData(elements, selectedFact = 'FACT_BOM') {
                     return false;
                 }
                 
-                // Store in state (lowercase dimension name without DIM_ prefix)
                 const dimKey = dim.replace(/^DIM_/, '').toLowerCase();
                 state.dimensions[dimKey] = data;
                 
-                // Update status
-                ui.updateTableStatus(dim, 'loaded', data.length);
+                if (dim !== 'DIM_GMID_DISPLAY') {
+                    ui.updateTableStatus(dim, 'loaded', data.length);
+                }
                 console.log(`✅ Status: Loaded dimension ${dim}: ${data.length} rows`);
                                 
                 return true;
@@ -921,22 +951,19 @@ async function ingestDimensionData(elements, selectedFact = 'FACT_BOM') {
         
         // Wait for all dimension data to load
         await Promise.all(dimensionPromises);
-        
 
-        // 4. Verify dimensions are loaded
-        const dimensionsLoaded = Object.keys(state.dimensions).some(key => 
-            Array.isArray(state.dimensions[key]) && state.dimensions[key].length > 0
+        // 5. Verify dimensions are loaded
+        const dimensionsLoaded = Object.keys(state.dimensions).some(dimKey => 
+            Array.isArray(state.dimensions[dimKey]) && state.dimensions[dimKey].length > 0
         );
         
         if (!dimensionsLoaded) {
             throw new Error("No dimension data was properly loaded");
         }
-        
 
-        // 5. Generate available fields
+        // 6. Generate available fields (include all dimensions, including GMID_DISPLAY)
         state.availableFields = [];
         
-        // Add dimension fields
         state.availableFiles.forEach(file => {
             if (file.type === 'dimension') {
                 state.availableFields.push({
@@ -944,8 +971,9 @@ async function ingestDimensionData(elements, selectedFact = 'FACT_BOM') {
                     label: file.label,
                     category: 'Dimension',
                     type: 'dimension',
-                    hierarchical: true, //file.hierarchical,
-                    draggableTo: ['row', 'column', 'filter']
+                    hierarchical: file.hierarchical,
+                    draggableTo: ['row', 'column', 'filter'],
+                    suppressFilter: file.suppressFilter || false // Pass through the suppress flag
                 });
             }
         });
@@ -965,35 +993,44 @@ async function ingestDimensionData(elements, selectedFact = 'FACT_BOM') {
             });
         });
 
-
-        // 6. Process dimension data to build hierarchies
+        // 7. Process dimension data to build hierarchies (including limited GMID)
         try {
-            console.log("⏳ Status: Building Dimension hierarchies...");
-            const hierarchies = processDimensionHierarchies(state.dimensions, null); // No fact data yet
+            console.log("⏳ Status: Building dimension hierarchies with limited GMID data...");
+            const hierarchies = processDimensionHierarchies(state.dimensions, null);
             state.hierarchies = hierarchies || {};
-            console.log("✅ Status: Dimension hierarchies built:", Object.keys(state.hierarchies));
+            
+            // Mark GMID hierarchy as limited data (not placeholder, but limited)
+            if (state.hierarchies.gmid_display) {
+                state.hierarchies.gmid_display._isLimited = true;
+                state.hierarchies.gmid_display._loadedAt = Date.now();
+                state.hierarchies.gmid_display._recordCount = state.dimensions.gmid_display?.length || 0;
+                
+                // Update root node label to indicate limited data
+                if (state.hierarchies.gmid_display.root) {
+                    const recordCount = state.hierarchies.gmid_display._recordCount;
+                    state.hierarchies.gmid_display.root.label = `GMIDs (${recordCount} sample records)`;
+                }
+            }
+            
+            console.log("✅ Status: Dimension hierarchies built including limited GMID:", Object.keys(state.hierarchies));
             
         } catch (hierError){
             console.error("Error building hierarchies:", hierError);
-            // Initialize empty hierarchies
             state.hierarchies = {};
         }
         
-        
-        // 7. Set up UI elements
+        // 8. Set up UI elements
         ui.renderAvailableFields(elements);
         ui.setDefaultFields();
         ui.renderFieldContainers(elements, state);
         
-
-        // 8. Initialize mappings (without fact data for now)
+        // 9. Initialize mappings (without fact data for now)
         console.log("⏳ Status: Initializing basic mappings without fact data");
         initializeBasicMappings();
                 
-        // 9. Initialize filter system now that dimensions are available
-        console.log("⏳ Status: Initializing filter system with dimension data");
+        // 10. Initialize filter system now that dimensions are available
+        console.log("⏳ Status: Initializing filter system with dimension data including limited GMID");
         setTimeout(() => {
-            // Try to initialize the filter system if it exists
             if (window.EnhancedFilterSystem && typeof window.EnhancedFilterSystem.initialize === 'function') {
                 window.EnhancedFilterSystem.state = state;
                 window.EnhancedFilterSystem.initialize();
@@ -1002,25 +1039,246 @@ async function ingestDimensionData(elements, selectedFact = 'FACT_BOM') {
             }
         }, 500);
         
-        // Show success message
-        console.log('✅ Status: Dimension data loaded successfully from Snowflake database.', 'success', elements);
+        console.log('✅ Status: Enhanced dimension data loaded successfully with limited GMID data.', 'success', elements);
         state.dimensionsLoaded = true;
+        state.gmidLimitedLoaded = true; // New flag
 
         return true;
         
     } catch (error) {
-        console.error('Dimension Data Loading Error:', error);
+        console.error('Enhanced Dimension Data Loading Error:', error);
                 
-        // Show app content even on error
         const appContent = document.getElementById('appContent');
         if (appContent) {
             appContent.style.display = 'block';
         }
         
-        // Show error message
-        console.error(`❌ Dimension Data Loading Error: ${error.message}`, 'error', elements);
+        console.error(`❌ Enhanced Dimension Data Loading Error: ${error.message}`, 'error', elements);
         return false;
     }
+}
+
+
+
+/**
+ * Replace GMID placeholder with real filtered data
+ * @param {Array} selectedRootGmids - Array of selected ROOT_GMID values
+ * @returns {Promise<boolean>} - Success status
+ */
+async function replaceGmidPlaceholderWithRealData(selectedRootGmids) {
+    if (!selectedRootGmids || selectedRootGmids.length === 0) {
+        console.log('✅ Status: No ROOT_GMIDs selected, keeping placeholder data');
+        return true;
+    }
+    
+    if (selectedRootGmids.length > 10) {
+        console.warn(`⚠️ Warning: ${selectedRootGmids.length} ROOT_GMIDs selected (max 10 recommended for performance)`);
+        selectedRootGmids = selectedRootGmids.slice(0, 10);
+    }
+    
+    console.log(`🔄 Replacing GMID placeholder with real data for ${selectedRootGmids.length} ROOT_GMIDs...`);
+    
+    try {
+        // Use the existing filtered GMID endpoint
+        const API_BASE_URL = 'http://localhost:3000/api';
+        
+        const queryParams = new URLSearchParams();
+        queryParams.append('ROOT_GMID', selectedRootGmids.join(','));
+        
+        const url = `${API_BASE_URL}/data/DIM_GMID_DISPLAY/filtered?${queryParams.toString()}`;
+        
+        console.log(`📡 Fetching real GMID data from: ${url}`);
+        
+        const response = await fetch(url, {
+            headers: { 'Accept': 'application/x-ndjson' }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`API returned ${response.status}: ${response.statusText}`);
+        }
+
+        // Parse NDJSON response
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        const rows = [];
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
+
+            lines.forEach(line => {
+                if (line.trim()) {
+                    try {
+                        rows.push(JSON.parse(line));
+                    } catch (e) {
+                        console.warn('Invalid JSON line in real GMID data:', e);
+                    }
+                }
+            });
+        }
+
+        if (buffer.trim()) {
+            try {
+                rows.push(JSON.parse(buffer));
+            } catch (e) {
+                console.warn('Invalid final JSON in real GMID data:', e);
+            }
+        }
+
+        console.log(`✅ Loaded ${rows.length} real GMID_DISPLAY records`);
+        
+        // Replace placeholder data with real data
+        state.dimensions.gmid_display = rows;
+        
+        // Rebuild GMID hierarchy with real data
+        console.log("🔧 Rebuilding GMID hierarchy with real data...");
+        const gmidHierarchy = buildGmidDisplayHierarchy(rows);
+        
+        if (gmidHierarchy) {
+            state.hierarchies.gmid_display = gmidHierarchy;
+            state.hierarchies.gmid_display._isPlaceholder = false;
+            state.hierarchies.gmid_display._replacedAt = Date.now();
+            
+            console.log(`✅ Status: GMID hierarchy rebuilt with real data: ${Object.keys(gmidHierarchy.nodesMap || {}).length} nodes`);
+        }
+        
+        // Update UI status
+        ui.updateTableStatus('DIM_GMID_DISPLAY', 'loaded', rows.length);
+        
+        // Clear placeholder flag
+        state.gmidPlaceholderLoaded = false;
+        state.gmidRealDataLoaded = true;
+        
+        console.log(`✅ Status: Successfully replaced GMID placeholder with ${rows.length} real records`);
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Error replacing GMID placeholder with real data:', error);
+        
+        // Update UI to show error but keep placeholder
+        ui.updateTableStatus('DIM_GMID_DISPLAY', 'error');
+        
+        return false;
+    }
+}
+
+
+/**
+ * Check if GMID dimension is currently using placeholder data
+ * @returns {boolean} - True if using placeholder data
+ */
+function isGmidUsingPlaceholderData() {
+    return state.gmidPlaceholderLoaded === true && 
+           state.gmidRealDataLoaded !== true &&
+           state.hierarchies?.gmid_display?._isPlaceholder === true;
+}
+
+
+function createPlaceholderHierarchy(dimensionName) {
+    const dimKey = dimensionName.replace(/^DIM_/, '').toLowerCase();
+    const label = dimensionName.replace(/^DIM_/, '').replace(/_/g, ' ');
+    
+    const rootNode = {
+        id: 'ROOT',
+        label: `${label} (Loading...)`,
+        children: [],
+        level: 0,
+        path: ['ROOT'],
+        expanded: false,
+        isLeaf: true,  // Temporarily treat as leaf until loaded
+        hasChildren: false,
+        isPlaceholder: true
+    };
+    
+    return {
+        root: rootNode,
+        nodesMap: { 'ROOT': rootNode },
+        flatData: [],
+        isPlaceholder: true,
+        dimensionName: dimensionName
+    };
+}
+
+
+async function loadDeferredDimension(dimensionName) {
+    console.log(`⏳ Status: Loading deferred dimension: ${dimensionName}`);
+    
+    try {
+        ui.updateTableStatus(dimensionName, 'loading');
+        
+        // Fetch the dimension data
+        const { data, error } = await fetchDatabaseData(dimensionName);
+        
+        if (error || !data) {
+            ui.updateTableStatus(dimensionName, 'error');
+            console.error(`Error loading deferred dimension: ${dimensionName}`, error);
+            return false;
+        }
+        
+        // Store in state
+        const dimKey = dimensionName.replace(/^DIM_/, '').toLowerCase();
+        state.dimensions[dimKey] = data;
+        
+        // Build hierarchy for this dimension
+        const hierarchies = processDimensionHierarchies({ [dimKey]: data }, null);
+        if (hierarchies && hierarchies[dimKey]) {
+            state.hierarchies[dimKey] = hierarchies[dimKey];
+        }
+        
+        // Update UI status
+        ui.updateTableStatus(dimensionName, 'loaded', data.length);
+        
+        // Add to available fields if not already there
+        const existingField = state.availableFields.find(f => f.id === dimensionName);
+        if (!existingField) {
+            const file = state.availableFiles.find(f => f.id === dimensionName);
+            if (file) {
+                state.availableFields.push({
+                    id: file.id,
+                    label: file.label,
+                    category: 'Dimension',
+                    type: 'dimension',
+                    hierarchical: file.hierarchical,
+                    draggableTo: ['row', 'column', 'filter']
+                });
+                
+                // Re-render available fields
+                const elements = core.getDomElements();
+                ui.renderAvailableFields(elements);
+            }
+        }
+        
+        console.log(`✅ Status: Successfully loaded deferred dimension ${dimensionName}: ${data.length} rows`);
+        return true;
+        
+    } catch (error) {
+        console.error(`❌ Error loading deferred dimension ${dimensionName}:`, error);
+        ui.updateTableStatus(dimensionName, 'error');
+        return false;
+    }
+}
+
+
+async function loadAllDeferredDimensions() {
+    if (!state.deferredDimensions || state.deferredDimensions.length === 0) {
+        console.log("✅ Status: No deferred dimensions to load");
+        return true;
+    }
+    
+    console.log(`⏳ Status: Loading ${state.deferredDimensions.length} deferred dimensions...`);
+    
+    const loadPromises = state.deferredDimensions.map(dim => loadDeferredDimension(dim));
+    const results = await Promise.all(loadPromises);
+    
+    const successCount = results.filter(Boolean).length;
+    console.log(`✅ Status: Loaded ${successCount}/${state.deferredDimensions.length} deferred dimensions`);
+    
+    return successCount > 0;
 }
 
 
@@ -1047,20 +1305,6 @@ async function ingestFactData(elements, selectedFact = 'FACT_BOM') {
         let { data: factData, error: factError } = await fetchDatabaseData(selectedFact);
 
         console.log(`✅ Status: Loaded fact data ${selectedFact}: ${factData.length} rows`);
-
-        // This step is crucial in performance enhancement. It filters out fact rows with zero/null/empty values for the measures 
-        // console.log(`⏳ Status: Filtering out null/empty/zero fact data from ${selectedFact}...`);
-
-        // factData = factData.filter(row => {
-        //     // Check if COST_UNIT has a valid value (not null/undefined/empty string and not zero)
-        //     const xHasValue = row.COST_UNIT !== null && row.COST_UNIT !== undefined && row.COST_UNIT !== 0 && row.COST_UNIT !== '';
-            
-        //     // Check if QTY_UNIT has a valid value (not null/undefined/empty string and not zero)
-        //     const yHasValue = row.QTY_UNIT !== null && row.QTY_UNIT !== undefined && row.QTY_UNIT !== 0 && row.QTY_UNIT !== '';
-            
-        //     // Keep this row if either x or y has a valid value
-        //     return xHasValue || yHasValue;
-        // });
         
         if (factError || !factData) {
             ui.updateTableStatus(selectedFact, 'error');
@@ -1378,8 +1622,7 @@ function initializeAllDimensionsCollapsed() {
     }
     
     // Get all available dimensions
-    // const allDimensions = ['le', 'cost_element', 'smartcode', 'gmid_display', 'root_gmid_display', 'item_cost_type', 'material_type', 'mc', 'year'];
-    const allDimensions = ['le', 'cost_element', 'smartcode', 'root_gmid_display', 'item_cost_type', 'material_type', 'mc', 'year'];
+    const allDimensions = ['le', 'cost_element', 'smartcode', 'gmid_display', 'root_gmid_display', 'item_cost_type', 'material_type', 'mc', 'year'];
     
     allDimensions.forEach(dimName => {
         if (!state.expandedNodes[dimName]) {
@@ -1666,7 +1909,6 @@ function getAllLeafDescendantFactIds(node) {
     
     return factIds;
 }
-
 
 
 /**
@@ -2031,9 +2273,6 @@ function initializeMappings() {
     
     console.log("✅ Status: All mappings initialized successfully");
 }
-
-
-
 
 
 /**
@@ -2674,7 +2913,7 @@ function buildGmidDisplayHierarchy(data) {
     const hasPathData = data && Array.isArray(data) && 
                          data.some(item => item && item.PATH_GMID && 
                                   typeof item.PATH_GMID === 'string' && 
-                                  item.PATH_GMID.includes('//'));
+                                  item.PATH_GMID.includes('/'));
     
     if (!hasPathData) {
         console.log("GMID data appears to be flat. Using flat hierarchy builder.");
@@ -2684,9 +2923,15 @@ function buildGmidDisplayHierarchy(data) {
     }
     
     // Create config for path segment labels
+    // const config = createPathSegmentLabelConfig({
+    //     pathField: 'PATH_GMID',
+    //     idField: 'GMID',
+    //     pathSeparator: '/',
+    //     data: data
+    // });
     const config = createPathSegmentLabelConfig({
-        pathField: 'PATH_GMID',
-        idField: 'GMID',
+        pathField: 'DISPLAY',
+        idField: 'COMPONENT_GMID',
         pathSeparator: '//',
         data: data
     });
@@ -2798,11 +3043,7 @@ function sortHierarchyNodes(node) {
  * @param {Array} factData - Object containing arrays of fact table data
  * @returns {Object} - Object containing processed hierarchies for each dimension
  */
-function processDimensionHierarchies(dimensions){ //, factData) {
-    // console.log("processDimensionHierarchies called with:", 
-    //             "dimensions:", dimensions ? Object.keys(dimensions) : "none", 
-    //             "factData:", factData ? factData.length : "none");
-    
+function processDimensionHierarchies(dimensions){ 
     const hierarchies = {};
     
     try {
@@ -3466,9 +3707,6 @@ function buildGmidDisplayMapping(gmidDisplayData, bomData) {
     const pathMappings = Object.keys(mapping.pathGmidToDisplay).length;
     const rootGmids = Object.keys(mapping.nodeToChildGmids).filter(id => !mapping.nodeToParent[id]).length;
     
-    // console.log(`✅ Status: GMID Display mapping complete: ${mappedGmids} GMIDs mapped`);
-    // console.log(`✅ Status: PATH_GMID mapping: ${pathMappings} path segments mapped`);
-    // console.log(`✅ Status: Root GMID mapping: ${rootGmids} root GMIDs`);
     
     return mapping;
 }
@@ -4456,11 +4694,11 @@ function isNodeExpanded(nodeId, dimensionName, zone, state) {
  * @param {string} hierarchyName - Name of the hierarchy
  * @param {string} zone - Zone to initialize ('row' or 'column')
  */
-function initializeExpansionTracking(state, hierarchyName, zone) {
-    state.expandedNodes = state.expandedNodes || {};
-    state.expandedNodes[hierarchyName] = state.expandedNodes[hierarchyName] || {};
-    state.expandedNodes[hierarchyName][zone] = state.expandedNodes[hierarchyName][zone] || {};
-}
+// function initializeExpansionTracking(state, hierarchyName, zone) {
+//     state.expandedNodes = state.expandedNodes || {};
+//     state.expandedNodes[hierarchyName] = state.expandedNodes[hierarchyName] || {};
+//     state.expandedNodes[hierarchyName][zone] = state.expandedNodes[hierarchyName][zone] || {};
+// }
 
 
 
@@ -4690,6 +4928,14 @@ export default {
     fetchDimensionFields,
     fetchOptimizedData,
     validateAllDimensionFields,
+    ingestDimensionFilterDataOnly,
     clearServerCache,
+    loadDeferredDimension,
+    loadAllDeferredDimensions,
+    createPlaceholderHierarchy,
 
+    //
+    loadGmidDisplayPlaceholder,
+    replaceGmidPlaceholderWithRealData,
+    isGmidUsingPlaceholderData,
   };

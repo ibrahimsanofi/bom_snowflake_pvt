@@ -2031,6 +2031,7 @@ const pivotTable = {
         const factIdFieldMap = {
             'le': 'LE',
             'cost_element': 'COST_ELEMENT',
+            'root_gmid_display': 'ROOT_GMID',
             'gmid_display': 'COMPONENT_GMID',
             'smartcode': 'ROOT_SMARTCODE',
             'item_cost_type': 'ITEM_COST_TYPE',
@@ -2054,6 +2055,7 @@ const pivotTable = {
         const dimensionIdFieldMap = {
             'le': 'LE',
             'cost_element': 'COST_ELEMENT',
+            'root_gmid_display': 'ROOT_GMID',
             'gmid_display': 'COMPONENT_GMID',
             'smartcode': 'SMARTCODE',
             'item_cost_type': 'ITEM_COST_TYPE',
@@ -2426,9 +2428,6 @@ const pivotTable = {
             if (node._id === 'ROOT' || node._id.includes('ROOT')) {
                 return false;
             }
-            
-            // For ITEM_COST_TYPE: we want AV, OVERHEAD, MATERIAL, VARIABLE
-            // For MC: we want SANOFI, BIOPHARMA, CHC INTEGRATED
             
             // Include nodes that have factId (these are the actual data nodes)
             if (node.factId) {
@@ -5434,19 +5433,14 @@ const pivotTable = {
         // Map dimension names to display names
         const displayNames = {
             'le': 'Legal Entity',
-            'legal_entity': 'Legal Entity',
             'cost_element': 'Cost Element',
             'material_type': 'Material Type',
             'item_cost_type': 'Item Cost Type',
-            'gmid_display': 'GMID',
-            'gmid': 'GMID',
+            'gmid_display': 'GMID Display',
+            'gmid': 'ROOT GMID',
             'smartcode': 'Smart Code',
-            'smart_code': 'Smart Code',
             'mc': 'Management Center',
-            'management_center': 'Management Center',
             'year': 'Business Year',
-            'business_year': 'Business Year',
-            'zyear': 'Business Year'
         };
         
         return displayNames[dimName.toLowerCase()] || 
@@ -5466,7 +5460,8 @@ const pivotTable = {
             'cost_element': 'Cost Element',
             'material_type': 'Material Type',
             'item_cost_type': 'Item Cost Type',
-            'gmid_display': 'GMID',
+            'root_gmid_display': 'ROOT GMID',
+            'gmid_display': 'GMID Display',
             'smartcode': 'Smart Code',
             'mc': 'Management Center',
             'year': 'Year'
@@ -5643,39 +5638,6 @@ const pivotTable = {
         this.renderMultiRowHeader(elements, rowFields, valueFields);
         this.renderMultiRowBody(elements, pivotData, rowFields, valueFields);
     },
-
-
-    // Alternative: Programmatic equal width calculation
-    // calculateAndApplyEqualWidths: function(elements, rowFields) {
-    //     const container = elements.pivotTableHeader.closest('.pivot-table-container');
-    //     const table = container.querySelector('table');
-        
-    //     if (!table) return;
-        
-    //     const dimensionCount = rowFields.length;
-    //     if (dimensionCount < 2) return;
-        
-    //     // Calculate equal width percentage
-    //     const equalWidth = 100 / dimensionCount;
-        
-    //     // Apply to dimension headers
-    //     const headers = table.querySelectorAll('thead th[class*="dimension-header-"]');
-    //     headers.forEach(header => {
-    //         header.style.width = `${equalWidth}%`;
-    //         header.style.minWidth = `${equalWidth}%`;
-    //         header.style.maxWidth = `${equalWidth}%`;
-    //     });
-        
-    //     // Apply to dimension cells
-    //     const cells = table.querySelectorAll('tbody td.dimension-cell');
-    //     cells.forEach(cell => {
-    //         cell.style.width = `${equalWidth}%`;
-    //         cell.style.minWidth = `${equalWidth}%`;
-    //         cell.style.maxWidth = `${equalWidth}%`;
-    //     });
-        
-    //     // console.log(`📐 Applied ${equalWidth}% width to ${dimensionCount} dimensions`);
-    // },
 
 
     // Option 1: CSS Classes
@@ -5932,95 +5894,6 @@ const pivotTable = {
     },
 
 
-    // Function to generate truly independent row combinations
-    // generateIndependentRowCombinations: function(dimensionMatrices, rowFields) {
-    //     const combinations = [];
-        
-    //     // Generate cartesian product of all dimension rows
-    //     // Each dimension contributes its visible rows independently
-        
-    //     if (rowFields.length === 0) {
-    //         return combinations;
-    //     }
-        
-    //     if (rowFields.length === 1) {
-    //         // Single dimension - simple case
-    //         const field = rowFields[0];
-    //         const rows = dimensionMatrices[field] || [];
-    //         return rows.map(row => ({
-    //             nodes: [row],
-    //             key: row._id
-    //         }));
-    //     }
-        
-    //     if (rowFields.length === 2) {
-    //         // Two dimensions - generate all combinations
-    //         const field1 = rowFields[0];
-    //         const field2 = rowFields[1];
-    //         const rows1 = dimensionMatrices[field1] || [];
-    //         const rows2 = dimensionMatrices[field2] || [];
-            
-    //         // console.log(`🔗 Generating combinations: ${rows1.length} × ${rows2.length}`);
-    //         // console.log(`  Dimension 1 (${extractDimensionName(field1)}):`, rows1.map(r => `${r.label} (${r._id})`));
-    //         // console.log(`  Dimension 2 (${extractDimensionName(field2)}):`, rows2.map(r => `${r.label} (${r._id})`));
-            
-    //         // CRITICAL FIX: Remove duplicates from each dimension first
-    //         const uniqueRows1 = this.removeDuplicateRows(rows1);
-    //         const uniqueRows2 = this.removeDuplicateRows(rows2);
-            
-    //         // console.log(`  After deduplication: ${uniqueRows1.length} × ${uniqueRows2.length}`);
-            
-    //         uniqueRows1.forEach(row1 => {
-    //             uniqueRows2.forEach(row2 => {
-    //                 const combinationKey = `${row1._id}|${row2._id}`;
-    //                 combinations.push({
-    //                     nodes: [row1, row2],
-    //                     key: combinationKey
-    //                 });
-    //             });
-    //         });
-            
-    //         // ADDITIONAL FIX: Remove any duplicate combinations
-    //         const uniqueCombinations = this.removeDuplicateCombinations(combinations);
-            
-    //         console.log(`🔗 Generated ${uniqueCombinations.length} unique combinations`);
-    //         // uniqueCombinations.forEach((combo, idx) => {
-    //         //     console.log(`  Combo ${idx}: ${combo.nodes.map(n => n.label).join(' × ')} (${combo.key})`);
-    //         // });
-            
-    //         return uniqueCombinations;
-    //     }
-        
-    //     if (rowFields.length === 3) {
-    //         // Three dimensions - generate all combinations
-    //         const field1 = rowFields[0];
-    //         const field2 = rowFields[1];
-    //         const field3 = rowFields[2];
-    //         const rows1 = this.removeDuplicateRows(dimensionMatrices[field1] || []);
-    //         const rows2 = this.removeDuplicateRows(dimensionMatrices[field2] || []);
-    //         const rows3 = this.removeDuplicateRows(dimensionMatrices[field3] || []);
-            
-    //         // console.log(`🔗 Generating 3D combinations: ${rows1.length} × ${rows2.length} × ${rows3.length}`);
-            
-    //         rows1.forEach(row1 => {
-    //             rows2.forEach(row2 => {
-    //                 rows3.forEach(row3 => {
-    //                     combinations.push({
-    //                         nodes: [row1, row2, row3],
-    //                         key: `${row1._id}|${row2._id}|${row3._id}`
-    //                     });
-    //                 });
-    //             });
-    //         });
-            
-    //         return this.removeDuplicateCombinations(combinations);
-    //     }
-        
-    //     // For more than 3 dimensions, use recursive approach
-    //     return this.generateRecursiveCombinations(dimensionMatrices, rowFields);
-    // },
-
-
     // Function to remove duplicate rows from a single dimension
     removeDuplicateRows: function(rows) {
         const seen = new Set();
@@ -6037,23 +5910,6 @@ const pivotTable = {
         // console.log(`    Removed ${rows.length - uniqueRows.length} duplicate rows`);
         return uniqueRows;
     },
-
-
-    // Function to remove duplicate combinations
-    // removeDuplicateCombinations: function(combinations) {
-    //     const seen = new Set();
-    //     const uniqueCombinations = [];
-        
-    //     combinations.forEach(combo => {
-    //         if (!seen.has(combo.key)) {
-    //             seen.add(combo.key);
-    //             uniqueCombinations.push(combo);
-    //         }
-    //     });
-        
-    //     // console.log(`    Removed ${combinations.length - uniqueCombinations.length} duplicate combinations`);
-    //     return uniqueCombinations;
-    // },
 
 
     // Function to check if a dimension has expanded nodes
