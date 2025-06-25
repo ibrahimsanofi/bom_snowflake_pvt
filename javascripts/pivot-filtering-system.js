@@ -720,24 +720,47 @@ class EnhancedFilterSystem {
       this.openDropdowns[dimensionId] = !isOpen;
       
       if (!isOpen) {
-        // Position dropdown
         const buttonRect = dropdownButton.getBoundingClientRect();
         dropdownContent.style.position = 'fixed';
         dropdownContent.style.top = (buttonRect.bottom + 5) + 'px';
         dropdownContent.style.left = buttonRect.left + 'px';
-        
-        // Ensure it doesn't go off-screen
+        dropdownContent.style.right = '';
+        dropdownContent.style.width = '';
+        dropdownContent.style.whiteSpace = 'nowrap';
         const windowWidth = window.innerWidth;
-        if (buttonRect.left + 300 > windowWidth) {
-          dropdownContent.style.left = (windowWidth - 310) + 'px';
+        const dropdownWidth = dropdownContent.offsetWidth || 350;
+        if (buttonRect.left + dropdownWidth > windowWidth) {
+          dropdownContent.style.left = (windowWidth - dropdownWidth - 10) + 'px';
         }
-        
         if (searchInput) {
           setTimeout(() => searchInput.focus(), 100);
         }
       }
     });
-    
+    // Reposition dropdown on scroll/resize if open
+    const repositionDropdown = () => {
+      if (this.openDropdowns[dimensionId]) {
+        const buttonRect = dropdownButton.getBoundingClientRect();
+        dropdownContent.style.position = 'fixed';
+        dropdownContent.style.display = 'block';
+        dropdownContent.style.top = (buttonRect.bottom + 5) + 'px';
+        dropdownContent.style.left = buttonRect.left + 'px';
+        dropdownContent.style.right = '';
+        dropdownContent.style.width = '';
+        const windowWidth = window.innerWidth;
+        const dropdownWidth = dropdownContent.offsetWidth || 350;
+        if (buttonRect.left + dropdownWidth > windowWidth) {
+          dropdownContent.style.left = (windowWidth - dropdownWidth - 10) + 'px';
+        }
+        if (window.innerWidth <= 768) {
+          dropdownContent.style.width = '90vw';
+          dropdownContent.style.left = '5vw';
+          dropdownContent.style.right = '5vw';
+        }
+      }
+    };
+    window.addEventListener('scroll', repositionDropdown, true);
+    window.addEventListener('resize', repositionDropdown);
     // Prevent dropdown from closing when clicking inside
     dropdownContent.addEventListener('click', (e) => {
       e.stopPropagation();

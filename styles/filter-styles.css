@@ -7,7 +7,7 @@
 .multiselect-dropdown-content {
     max-height: 70vh !important; /* Use viewport height for better responsiveness */
     min-width: 350px !important; /* Minimum width */
-    max-width: 90vw !important; /* Prevent going off screen */
+    max-width: 30vw !important; /* Prevent going off screen */
   }
   
   /* Improve checkbox container */
