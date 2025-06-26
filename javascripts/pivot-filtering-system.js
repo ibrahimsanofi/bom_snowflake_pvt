@@ -141,6 +141,10 @@ class EnhancedFilterSystem {
     
     // Initialize all filters to unchecked state
     this.initializeFiltersUnchecked();
+
+    Object.values(this.filterMeta).forEach(dimension => {
+      this.clearAllInFilter(dimension);
+    });
     
     // Update all selection counts to reflect unchecked state
     this.updateAllSelectionCounts();
@@ -338,22 +342,22 @@ class EnhancedFilterSystem {
   refreshGmidFilterUI() {
     const dimension = this.filterMeta.gmidDisplay;
     if (!dimension) return;
-    
+  
     console.log('🔄 Refreshing GMID filter UI with real data...');
-    
+  
     // Check if hierarchy is available and not placeholder
     const hierarchy = this.state.hierarchies?.gmid_display;
     if (!hierarchy || hierarchy._isPlaceholder) {
-        console.log('⚠️ GMID hierarchy not ready for UI refresh');
-        return;
+      console.log('⚠️ GMID hierarchy not ready for UI refresh');
+      return;
     }
-    
-    // Repopulate the hierarchical filter with real data
-    //data.populateHierarchicalFilterEnhanced(dimension);
-    
+  
+    // Repopule uniquement le filtre GMID
+    this.populateHierarchicalFilter(dimension);
+  
     // Update filter state
     this.setGmidFilterState('ready', 'Real GMID data loaded and ready');
-    
+  
     console.log('✅ GMID filter UI refreshed with real data');
   }
 
@@ -1035,30 +1039,34 @@ class EnhancedFilterSystem {
    * @param {Object} dimension - Dimension configuration
    */
   populateHierarchicalFilter(dimension) {
-      console.log(`⏳ Status: Populating hierarchical filter for ${dimension.label}...`);
-      
-      const treeContainer = document.getElementById(`${dimension.id}TreeContainer`);
-      if (!treeContainer) {
-          console.warn(`Tree container for ${dimension.id} not found`);
-          return;
-      }
-      
-      const hierarchy = this.state.hierarchies[dimension.dimensionKey];
-      if (!hierarchy || !hierarchy.root) {
-          treeContainer.innerHTML = `<div class="empty-tree-message">No hierarchy data available</div>`;
-          return;
-      }
-      
-      treeContainer.innerHTML = '';
-      
-      const treeNodes = document.createElement('div');
-      treeNodes.className = 'filter-tree-nodes';
-      treeContainer.appendChild(treeNodes);
-      
-      // Start with all nodes excluded (unchecked)
-      this.initializeAllNodesAsExcluded(hierarchy, dimension);
-      
-      this.renderHierarchyNode(treeNodes, hierarchy.root, dimension, 0);
+    console.log(`⏳ Status: Populating hierarchical filter for ${dimension.label}...`);
+  
+    const previousSelection = this.filterSelections[dimension.id] || new Set();
+  
+    const treeContainer = document.getElementById(`${dimension.id}TreeContainer`);
+    if (!treeContainer) {
+      console.warn(`Tree container for ${dimension.id} not found`);
+      return;
+    }
+  
+    const hierarchy = this.state.hierarchies[dimension.dimensionKey];
+    if (!hierarchy || !hierarchy.root) {
+      treeContainer.innerHTML = `<div class="empty-tree-message">No hierarchy data available</div>`;
+      return;
+    }
+  
+    treeContainer.innerHTML = '';
+  
+    const treeNodes = document.createElement('div');
+    treeNodes.className = 'filter-tree-nodes';
+    treeContainer.appendChild(treeNodes);
+  
+    const validNodeIds = new Set(Object.keys(hierarchy.nodesMap));
+    this.filterSelections[dimension.id] = new Set(
+      Array.from(previousSelection).filter(nodeId => validNodeIds.has(nodeId))
+    );
+  
+    this.renderHierarchyNode(treeNodes, hierarchy.root, dimension, 0);
   }
 
 
@@ -1399,52 +1407,57 @@ class EnhancedFilterSystem {
    * @param {Object} dimension - Dimension configuration
    */
   populateSimpleFilter(dimension) {
-  console.log(`⏳ Status: Populating simple filter for ${dimension.label}...`);
+    console.log(`⏳ Status: Populating simple filter for ${dimension.label}...`);
 
-  const checkboxList = document.getElementById(`${dimension.id}CheckboxList`);
-  if (!checkboxList) {
-    console.warn(`Checkbox list for ${dimension.id} not found`);
-    return;
-  }
-
-  checkboxList.innerHTML = '';
-
-  const uniqueValues = this.getUniqueValuesForDimension(dimension);
-
-  if (uniqueValues.length === 0) {
-    checkboxList.innerHTML = `<div class="no-values-message">No values available</div>`;
-    return;
-  }
-
-  uniqueValues.sort((a, b) => {
-    return a.label.toString().toLowerCase().localeCompare(b.label.toString().toLowerCase());
-  });
-
-  uniqueValues.forEach(item => {
-    const checkboxOption = document.createElement('div');
-    checkboxOption.className = 'checkbox-option';
-    
-    const safeId = (item.id || item.value).toString().replace(/[^a-zA-Z0-9]/g, '_');
-    
-    checkboxOption.innerHTML = `
-      <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; width: 100%; overflow: hidden;">
-        <input type="checkbox" id="${dimension.id}_${safeId}" value="${item.value}">
-        <span style="white-space: normal; overflow: hidden; text-overflow: ellipsis; font-size: 0.9rem;">
-          ${item.label}
-        </span>
-      </label>
-    `;
-    
-    const checkbox = checkboxOption.querySelector('input[type="checkbox"]');
-    checkbox.addEventListener('change', (e) => {
-      this.handleSimpleFilterCheckboxChange(dimension, item.value, e.target.checked);
+    const previousSelection = this.filterSelections[dimension.id] || new Set();
+  
+    const checkboxList = document.getElementById(`${dimension.id}CheckboxList`);
+    if (!checkboxList) {
+      console.warn(`Checkbox list for ${dimension.id} not found`);
+      return;
+    }
+  
+    checkboxList.innerHTML = '';
+  
+    const uniqueValues = this.getUniqueValuesForDimension(dimension);
+  
+    if (uniqueValues.length === 0) {
+      checkboxList.innerHTML = `<div class="no-values-message">No values available</div>`;
+      return;
+    }
+  
+    uniqueValues.sort((a, b) => {
+      return a.label.toString().toLowerCase().localeCompare(b.label.toString().toLowerCase());
     });
-    
-    checkboxList.appendChild(checkboxOption);
-  });
-
-  // CHANGED: Initialize with all items excluded (unchecked)
-  this.filterSelections[dimension.id] = new Set(uniqueValues.map(item => item.value));
+  
+    uniqueValues.forEach(item => {
+      const checkboxOption = document.createElement('div');
+      checkboxOption.className = 'checkbox-option';
+  
+      const safeId = (item.id || item.value).toString().replace(/[^a-zA-Z0-9]/g, '_');
+  
+      checkboxOption.innerHTML = `
+        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; width: 100%; overflow: hidden;">
+          <input type="checkbox" id="${dimension.id}_${safeId}" value="${item.value}" ${!previousSelection.has(item.value) ? 'checked' : ''}>
+          <span style="white-space: normal; overflow: hidden; text-overflow: ellipsis; font-size: 0.9rem;">
+            ${item.label}
+          </span>
+        </label>
+      `;
+  
+      const checkbox = checkboxOption.querySelector('input[type="checkbox"]');
+      checkbox.addEventListener('change', (e) => {
+        this.handleSimpleFilterCheckboxChange(dimension, item.value, e.target.checked);
+      });
+  
+      checkboxList.appendChild(checkboxOption);
+    });
+  
+    this.filterSelections[dimension.id] = new Set(
+      uniqueValues
+        .map(item => item.value)
+        .filter(value => previousSelection.has(value))
+    );
   }
 
   
@@ -4579,9 +4592,9 @@ class EnhancedFilterSystem {
       if (!dimension.hierarchical) {
         const checkboxList = document.getElementById(`${dimension.id}CheckboxList`);
         if (!checkboxList) return;
-
+  
         const allValues = this.getUniqueValuesForDimension(dimension);
-
+  
         const validSet = new Set();
         this.state.filteredData.forEach(record => {
           const value = record[dimension.factField];
@@ -4592,7 +4605,7 @@ class EnhancedFilterSystem {
         checkboxList.innerHTML = '';
 
         let allAreValid = true;
-
+  
         allValues.forEach(item => {
           const safeId = (item.id || item.value).toString().replace(/[^a-zA-Z0-9]/g, '_');
           const isValid = validSet.has(item.value);
@@ -4613,7 +4626,7 @@ class EnhancedFilterSystem {
           });
           checkboxList.appendChild(checkboxOption);
         });
-
+  
         this.updateSelectionCount(dimension);
       }
     });
@@ -4626,7 +4639,6 @@ class EnhancedFilterSystem {
         const treeContainer = document.getElementById(`${dimension.id}TreeContainer`);
         if (!treeContainer) return;
 
-        // Récupère tous les factIds présents dans filteredData pour ce dimension
         const validFactIds = new Set();
         this.state.filteredData.forEach(record => {
           const value = record[dimension.factField];
@@ -4635,7 +4647,6 @@ class EnhancedFilterSystem {
           }
         });
 
-        // Parcourt tous les checkboxes de la hiérarchie
         const checkboxes = treeContainer.querySelectorAll('input[type="checkbox"]');
         checkboxes.forEach(checkbox => {
           const checkboxId = checkbox.id;
