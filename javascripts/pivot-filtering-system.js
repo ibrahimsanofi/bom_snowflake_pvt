@@ -1719,38 +1719,60 @@ class EnhancedFilterSystem {
   }
   
 
-  /**
+/**
    * Handle search in filter dropdown
    * @param {Object} dimension - Dimension configuration
    * @param {string} searchTerm - Search term
    */
-  handleFilterSearch(dimension, searchTerm) {
-    const searchLower = searchTerm.toLowerCase();
-    
-    if (dimension.hierarchical) {
-      const treeNodes = document.querySelectorAll(`#${dimension.id}TreeContainer .filter-tree-node`);
-      
+handleFilterSearch(dimension, searchTerm) {
+  const searchLower = searchTerm.toLowerCase().trim();
+
+  if (dimension.hierarchical) {
+    const treeNodes = document.querySelectorAll(`#${dimension.id}TreeContainer .filter-tree-node`);
+    let found = false;
+    treeNodes.forEach(node => {
+      const label = node.querySelector('.filter-tree-label');
+      if (label) {
+        const text = label.textContent.toLowerCase().trim();
+        const match = searchLower === "" || text.startsWith(searchLower);
+        node.style.display = match ? '' : 'none';
+        if (match && searchLower !== "") found = true;
+      }
+    });
+    if (!found && searchLower !== "") {
       treeNodes.forEach(node => {
         const label = node.querySelector('.filter-tree-label');
         if (label) {
-          const text = label.textContent.toLowerCase();
+          const text = label.textContent.toLowerCase().trim();
           const match = text.includes(searchLower);
           node.style.display = match ? '' : 'none';
         }
       });
-    } else {
-      const checkboxOptions = document.querySelectorAll(`#${dimension.id}CheckboxList .checkbox-option`);
-      
+    }
+  } else {
+    const checkboxOptions = document.querySelectorAll(`#${dimension.id}CheckboxList .checkbox-option`);
+    let found = false;
+    checkboxOptions.forEach(option => {
+      const label = option.querySelector('label');
+      if (label) {
+        const text = label.textContent.toLowerCase().trim();
+        const match = searchLower === "" || text.startsWith(searchLower);
+        option.style.display = match ? '' : 'none';
+        if (match && searchLower !== "") found = true;
+      }
+    });
+    if (!found && searchLower !== "") {
       checkboxOptions.forEach(option => {
         const label = option.querySelector('label');
         if (label) {
-          const text = label.textContent.toLowerCase();
+          const text = label.textContent.toLowerCase().trim();
           const match = text.includes(searchLower);
           option.style.display = match ? '' : 'none';
         }
       });
     }
   }
+}
 
   
   /**
