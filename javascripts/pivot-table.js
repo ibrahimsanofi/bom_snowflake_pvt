@@ -2,6 +2,7 @@
 
 import data from './data.js';
 import stateModule from './state.js';
+import PivotTemplateSystem from './pivot-table-template.js';
 
 
 // Get reference to application state
@@ -31,7 +32,7 @@ const analyzeDimension = function(dimension, hierarchy) {
     if (!hierarchy || !hierarchy.nodesMap) {
         console.warn(`No hierarchy found for dimension: ${dimension}`);
         return null;
-    }
+    }K
     
     const rootNode = hierarchy.nodesMap['ROOT'];
     if (!rootNode) {
@@ -3998,14 +3999,79 @@ const pivotTable = {
     /**
      * Enhanced generatePivotTableEnhanced with proper state integration
      */
+    // generatePivotTable: function() {
+    //     if (!this.state) {
+    //         console.error("No state connection");
+    //         return;
+    //     }
+
+    //     console.log("🔄 Starting Excel-like multi-dimensional pivot table generation...");
+
+    //     this.resetTableStructure();
+
+    //     const elements = {
+    //         pivotTableHeader: document.getElementById('pivotTableHeader'),
+    //         pivotTableBody: document.getElementById('pivotTableBody')
+    //     };
+
+    //     if (!elements.pivotTableHeader || !elements.pivotTableBody) {
+    //         console.error("Cannot find pivot table DOM elements");
+    //         return;
+    //     }
+
+    //     const rowFields = this.state.rowFields || [];
+    //     const columnFields = this.state.columnFields || [];
+    //     const valueFields = this.state.valueFields || ['COST_UNIT'];
+        
+    //     console.log(`📊 Excel-like generation: ${rowFields.length} row fields, ${columnFields.length} column fields, ${valueFields.length} value fields`);
+
+    //     // Add multi-dimension class to container
+    //     const container = elements.pivotTableHeader.closest('.pivot-table-container');
+    //     if (container) {
+    //         container.classList.add('multi-dimension');
+    //         if (rowFields.length === 2) container.classList.add('two-dimensions');
+    //         if (rowFields.length === 3) container.classList.add('three-dimensions');
+    //     }
+
+    //     try {
+    //         this.processPivotData();
+            
+    //         // Determine rendering strategy based on dimensions
+    //         if (rowFields.length >= 2 && columnFields.length >= 2) {
+    //             console.log(`🌟 Using EXCEL-LIKE multi-row + multi-column rendering`);
+    //             this.renderExcelLikeMultiDimensionTable(elements, rowFields, columnFields, valueFields);
+    //         } else if (rowFields.length >= 2) {
+    //             console.log(`🌟 Using enhanced multi-row rendering (${rowFields.length} dimensions)`);
+    //             this.renderEnhancedMultiRowTable(elements, rowFields);
+    //         } else if (columnFields.length >= 2) {
+    //             console.log(`🌟 Using enhanced stacked column rendering`);
+    //             this.renderStackedColumnHeaders(elements, this.state.pivotData, columnFields, valueFields);
+    //             this.renderEnhancedStackedTableBody(elements, this.state.pivotData);
+    //         } else {
+    //             console.log(`📊 Using standard rendering`);
+    //             this.renderStandardTable(elements);
+    //         }
+
+    //         console.log("✅ Excel-like pivot table generation complete");
+
+    //     } catch (error) {
+    //         console.error("Error in Excel-like pivot generation:", error);
+    //         if (elements.pivotTableBody) {
+    //             elements.pivotTableBody.innerHTML = '<tr><td colspan="100%">Error generating pivot table</td></tr>';
+    //         }
+    //     }
+    // },
+    
+
     generatePivotTable: function() {
         if (!this.state) {
             console.error("No state connection");
             return;
         }
 
-        console.log("🔄 Starting Excel-like multi-dimensional pivot table generation...");
+        console.log("🔄 Starting template-based pivot table generation...");
 
+        // Reset table structure
         this.resetTableStructure();
 
         const elements = {
@@ -4022,42 +4088,212 @@ const pivotTable = {
         const columnFields = this.state.columnFields || [];
         const valueFields = this.state.valueFields || ['COST_UNIT'];
         
-        console.log(`📊 Excel-like generation: ${rowFields.length} row fields, ${columnFields.length} column fields, ${valueFields.length} value fields`);
-
-        // Add multi-dimension class to container
-        const container = elements.pivotTableHeader.closest('.pivot-table-container');
-        if (container) {
-            container.classList.add('multi-dimension');
-            if (rowFields.length === 2) container.classList.add('two-dimensions');
-            if (rowFields.length === 3) container.classList.add('three-dimensions');
-        }
+        console.log(`📊 Template-based generation: ${rowFields.length} row fields, ${columnFields.length} column fields, ${valueFields.length} value fields`);
 
         try {
+            // Process pivot data
             this.processPivotData();
             
-            // Determine rendering strategy based on dimensions
-            if (rowFields.length >= 2 && columnFields.length >= 2) {
-                console.log(`🌟 Using EXCEL-LIKE multi-row + multi-column rendering`);
-                this.renderExcelLikeMultiDimensionTable(elements, rowFields, columnFields, valueFields);
-            } else if (rowFields.length >= 2) {
-                console.log(`🌟 Using enhanced multi-row rendering (${rowFields.length} dimensions)`);
-                this.renderEnhancedMultiRowTable(elements, rowFields);
-            } else if (columnFields.length >= 2) {
-                console.log(`🌟 Using enhanced stacked column rendering`);
-                this.renderStackedColumnHeaders(elements, this.state.pivotData, columnFields, valueFields);
-                this.renderEnhancedStackedTableBody(elements, this.state.pivotData);
-            } else {
-                console.log(`📊 Using standard rendering`);
-                this.renderStandardTable(elements);
-            }
+            // Determine template type
+            const templateType = PivotTemplateSystem.getTemplateType(rowFields, columnFields, valueFields);
+            
+            // Render using appropriate template
+            PivotTemplateSystem.renderTemplate(
+                templateType, 
+                elements, 
+                this.state.pivotData, 
+                rowFields, 
+                columnFields, 
+                valueFields, 
+                this
+            );
 
-            console.log("✅ Excel-like pivot table generation complete");
+            // ⭐ HIDE ZERO ROWS AND COLUMNS
+            // setTimeout(() => {
+            //     const result = this.hideZeroRowsAndColumns();
+            //     if (result && result.totalHidden > 0) {
+            //         console.log(`🎯 Optimized view: ${result.hiddenRows} rows + ${result.hiddenColumns} columns hidden`);
+            //     }
+            // }, 100); // Small delay to ensure DOM is ready
+
+            console.log(`✅ Template-based pivot table generation complete using ${templateType.toUpperCase()}`);
 
         } catch (error) {
-            console.error("Error in Excel-like pivot generation:", error);
+            console.error("Error in template-based pivot generation:", error);
             if (elements.pivotTableBody) {
                 elements.pivotTableBody.innerHTML = '<tr><td colspan="100%">Error generating pivot table</td></tr>';
             }
+        }
+    },
+
+
+    /**
+     * Single function to hide all rows and columns that contain only zero values
+     * Call this from inside generatePivotTable() after the table is rendered
+     */
+    hideZeroRowsAndColumns: function() {
+        const container = document.querySelector('.pivot-table-container');
+        if (!container) {
+            console.warn('Pivot table container not found');
+            return;
+        }
+
+        const table = container.querySelector('table');
+        if (!table) {
+            console.warn('Pivot table not found');
+            return;
+        }
+
+        let hiddenRows = 0;
+        let hiddenColumns = 0;
+
+        // Clear any previous zero markings
+        table.querySelectorAll('.zero-row, .zero-column').forEach(el => {
+            el.classList.remove('zero-row', 'zero-column');
+        });
+
+        // 1. HIDE ZERO ROWS
+        const rows = table.querySelectorAll('tbody tr');
+        rows.forEach(row => {
+            const valueCells = row.querySelectorAll('.value-cell');
+            
+            if (valueCells.length === 0) return; // Skip rows without value cells
+            
+            // Check if all value cells in this row are zero
+            const isZeroRow = Array.from(valueCells).every(cell => {
+                // Use data-raw-value if available (more accurate)
+                const rawValue = cell.getAttribute('data-raw-value');
+                if (rawValue !== null) {
+                    return parseFloat(rawValue) === 0;
+                }
+                
+                // Fallback: parse text content
+                const textValue = cell.textContent.replace(/[,$kmb\s]/gi, '');
+                return parseFloat(textValue) === 0 || textValue === '' || textValue === '-';
+            });
+            
+            if (isZeroRow) {
+                row.classList.add('zero-row');
+                hiddenRows++;
+            }
+        });
+
+        // 2. HIDE ZERO COLUMNS
+        const valueFields = this.state?.valueFields || [];
+        const headerRow = table.querySelector('thead tr:last-child'); // Get the row with measure headers
+        
+        if (headerRow && valueFields.length > 0) {
+            // Find value column headers (skip hierarchy columns)
+            const allHeaders = headerRow.querySelectorAll('th');
+            const valueHeaders = Array.from(allHeaders).filter(header => 
+                !header.classList.contains('row-header') && 
+                !header.classList.contains('hierarchy-cell')
+            );
+
+            valueHeaders.forEach((header, colIndex) => {
+                // Check if this column contains only zeros across all rows
+                const isZeroColumn = Array.from(rows).every(row => {
+                    const valueCells = row.querySelectorAll('.value-cell');
+                    const cell = valueCells[colIndex];
+                    
+                    if (!cell) return true; // Consider missing cells as zero
+                    
+                    // Use data-raw-value if available
+                    const rawValue = cell.getAttribute('data-raw-value');
+                    if (rawValue !== null) {
+                        return parseFloat(rawValue) === 0;
+                    }
+                    
+                    // Fallback: parse text content
+                    const textValue = cell.textContent.replace(/[,$kmb\s]/gi, '');
+                    return parseFloat(textValue) === 0 || textValue === '' || textValue === '-';
+                });
+                
+                if (isZeroColumn) {
+                    // Mark the header
+                    header.classList.add('zero-column');
+                    
+                    // Mark all cells in this column
+                    rows.forEach(row => {
+                        const valueCells = row.querySelectorAll('.value-cell');
+                        const cell = valueCells[colIndex];
+                        if (cell) {
+                            cell.classList.add('zero-column');
+                        }
+                    });
+                    
+                    hiddenColumns++;
+                }
+            });
+        }
+
+        // 3. APPLY CSS HIDING
+        container.classList.add('hide-all-zeros');
+
+        // 4. ADD CSS IF NOT EXISTS
+        this.addZeroHidingCSS();
+
+        console.log(`✅ Hidden ${hiddenRows} zero rows and ${hiddenColumns} zero columns`);
+        
+        return {
+            hiddenRows,
+            hiddenColumns,
+            totalHidden: hiddenRows + hiddenColumns
+        };
+    },
+
+
+    /**
+     * Add CSS for hiding zero rows/columns (only adds once)
+     */
+    addZeroHidingCSS: function() {
+        if (document.getElementById('pivot-zero-hiding-css')) {
+            return; // Already exists
+        }
+
+        const style = document.createElement('style');
+        style.id = 'pivot-zero-hiding-css';
+        style.textContent = `
+            /* Hide zero rows and columns */
+            .hide-all-zeros .zero-row {
+                display: none !important;
+            }
+            
+            .hide-all-zeros .zero-column {
+                display: none !important;
+            }
+            
+            /* Optional: Visual indicators before hiding */
+            .zero-row:not(.hide-all-zeros .zero-row) {
+                background-color: #fff9f9 !important;
+                opacity: 0.7;
+            }
+            
+            .zero-column:not(.hide-all-zeros .zero-column) {
+                background-color: #fff9f9 !important;
+                opacity: 0.7;
+            }
+            
+            /* Smooth transitions */
+            .pivot-table-container table tr,
+            .pivot-table-container table th,
+            .pivot-table-container table td {
+                transition: opacity 0.2s ease;
+            }
+        `;
+        
+        document.head.appendChild(style);
+    },
+
+
+    /**
+     * Show all hidden rows and columns
+     */
+    showAllRowsAndColumns: function() {
+        const container = document.querySelector('.pivot-table-container');
+        if (container) {
+            container.classList.remove('hide-all-zeros');
+            console.log('✅ Showing all rows and columns');
         }
     },
 
@@ -4637,6 +4873,7 @@ const pivotTable = {
 
     /**
      * Calculate value for multi-dimensional cross-tabulation
+     * Status: RELEVANT
      */
     calculateMultiDimensionalValue: function(rowNodes, columnNodes, valueField) {
         // Start with all fact data
@@ -4766,6 +5003,7 @@ const pivotTable = {
 
     /**
      * Generate enhanced row combinations with proper hierarchy traversal
+     * Status: RETAINED
      */
     generateEnhancedRowCombinations: function(rowFields) {
         const combinations = [];

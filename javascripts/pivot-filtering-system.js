@@ -540,7 +540,7 @@ class EnhancedFilterSystem {
     dropdownContainer.className = 'multiselect-dropdown';
     dropdownContainer.id = `${dimension.id}Dropdown`;
     dropdownContainer.style.position = 'relative';
-    dropdownContainer.style.width = '100%';
+    dropdownContainer.style.width = '5%';
     
     // Create dropdown button
     const dropdownButton = document.createElement('button');
@@ -568,8 +568,8 @@ class EnhancedFilterSystem {
     dropdownContent.style.position = 'absolute';
     dropdownContent.style.top = '100%';
     dropdownContent.style.left = '0';
-    dropdownContent.style.width = '350px';
-    dropdownContent.style.maxWidth = '90vw';
+    dropdownContent.style.width = '20vw';
+    dropdownContent.style.maxWidth = '20vw';
     dropdownContent.style.backgroundColor = 'white';
     dropdownContent.style.border = '1px solid #cbd5e1';
     dropdownContent.style.borderRadius = '0.25rem';
@@ -631,7 +631,7 @@ class EnhancedFilterSystem {
       checkboxList.id = `${dimension.id}CheckboxList`;
       checkboxList.innerHTML = `
         <div class="checkbox-option" style="padding: 6px 0;">
-          <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; width: 100%; overflow: hidden;">
+          <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; width: 20%; overflow: hidden;">
             <input type="checkbox" disabled>
             <span style="white-space: normal; overflow: hidden; text-overflow: ellipsis; font-size: 0.9rem;">
               Loading options...
@@ -1406,59 +1406,141 @@ class EnhancedFilterSystem {
    * Populate a simple (non-hierarchical) filter with unique values
    * @param {Object} dimension - Dimension configuration
    */
-  populateSimpleFilter(dimension) {
-    console.log(`⏳ Status: Populating simple filter for ${dimension.label}...`);
+  // populateSimpleFilter(dimension) {
+  //   console.log(`⏳ Status: Populating simple filter for ${dimension.label}...`);
 
-    const previousSelection = this.filterSelections[dimension.id] || new Set();
+  //   const previousSelection = this.filterSelections[dimension.id] || new Set();
   
-    const checkboxList = document.getElementById(`${dimension.id}CheckboxList`);
-    if (!checkboxList) {
-      console.warn(`Checkbox list for ${dimension.id} not found`);
-      return;
-    }
+  //   const checkboxList = document.getElementById(`${dimension.id}CheckboxList`);
+  //   if (!checkboxList) {
+  //     console.warn(`Checkbox list for ${dimension.id} not found`);
+  //     return;
+  //   }
   
-    checkboxList.innerHTML = '';
+  //   checkboxList.innerHTML = '';
   
-    const uniqueValues = this.getUniqueValuesForDimension(dimension);
+  //   const uniqueValues = this.getUniqueValuesForDimension(dimension);
   
-    if (uniqueValues.length === 0) {
-      checkboxList.innerHTML = `<div class="no-values-message">No values available</div>`;
-      return;
-    }
+  //   if (uniqueValues.length === 0) {
+  //     checkboxList.innerHTML = `<div class="no-values-message">No values available</div>`;
+  //     return;
+  //   }
   
-    uniqueValues.sort((a, b) => {
-      return a.label.toString().toLowerCase().localeCompare(b.label.toString().toLowerCase());
-    });
+  //   uniqueValues.sort((a, b) => {
+  //     return a.label.toString().toLowerCase().localeCompare(b.label.toString().toLowerCase());
+  //   });
   
-    uniqueValues.forEach(item => {
-      const checkboxOption = document.createElement('div');
-      checkboxOption.className = 'checkbox-option';
+  //   uniqueValues.forEach(item => {
+  //     const checkboxOption = document.createElement('div');
+  //     checkboxOption.className = 'checkbox-option';
   
-      const safeId = (item.id || item.value).toString().replace(/[^a-zA-Z0-9]/g, '_');
+  //     const safeId = (item.id || item.value).toString().replace(/[^a-zA-Z0-9]/g, '_');
   
-      checkboxOption.innerHTML = `
-        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; width: 100%; overflow: hidden;">
-          <input type="checkbox" id="${dimension.id}_${safeId}" value="${item.value}" ${!previousSelection.has(item.value) ? 'checked' : ''}>
-          <span style="white-space: normal; overflow: hidden; text-overflow: ellipsis; font-size: 0.9rem;">
-            ${item.label}
-          </span>
-        </label>
-      `;
+  //     checkboxOption.innerHTML = `
+  //       <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; width: 100%; overflow: hidden;">
+  //         <input type="checkbox" id="${dimension.id}_${safeId}" value="${item.value}" ${!previousSelection.has(item.value) ? 'checked' : ''}>
+  //         <span style="white-space: normal; overflow: hidden; text-overflow: ellipsis; font-size: 0.9rem;">
+  //           ${item.label}
+  //         </span>
+  //       </label>
+  //     `;
   
-      const checkbox = checkboxOption.querySelector('input[type="checkbox"]');
-      checkbox.addEventListener('change', (e) => {
-        this.handleSimpleFilterCheckboxChange(dimension, item.value, e.target.checked);
-      });
+  //     const checkbox = checkboxOption.querySelector('input[type="checkbox"]');
+  //     checkbox.addEventListener('change', (e) => {
+  //       this.handleSimpleFilterCheckboxChange(dimension, item.value, e.target.checked);
+  //     });
   
-      checkboxList.appendChild(checkboxOption);
-    });
+  //     checkboxList.appendChild(checkboxOption);
+  //   });
   
-    this.filterSelections[dimension.id] = new Set(
-      uniqueValues
-        .map(item => item.value)
-        .filter(value => previousSelection.has(value))
-    );
+  //   this.filterSelections[dimension.id] = new Set(
+  //     uniqueValues
+  //       .map(item => item.value)
+  //       .filter(value => previousSelection.has(value))
+  //   );
+  // }
+  populateSimpleFilter(dimension) {
+  console.log(`⏳ Status: Populating simple filter for ${dimension.label}...`);
+
+  const previousSelection = this.filterSelections[dimension.id] || new Set();
+
+  const checkboxList = document.getElementById(`${dimension.id}CheckboxList`);
+  if (!checkboxList) {
+    console.warn(`Checkbox list for ${dimension.id} not found`);
+    return;
   }
+
+  checkboxList.innerHTML = '';
+
+  const uniqueValues = this.getUniqueValuesForDimension(dimension);
+
+  if (uniqueValues.length === 0) {
+    checkboxList.innerHTML = `<div class="no-values-message">No values available</div>`;
+    return;
+  }
+
+  // ENHANCED ALPHABETICAL SORTING
+  uniqueValues.sort((a, b) => {
+    // Get labels for comparison
+    const labelA = (a.label || a.value || '').toString().trim();
+    const labelB = (b.label || b.value || '').toString().trim();
+    
+    // Handle empty/null labels (put them at the end)
+    if (!labelA && !labelB) return 0;
+    if (!labelA) return 1;
+    if (!labelB) return -1;
+    
+    // Handle numeric sorting for labels that are numbers
+    const numA = parseFloat(labelA);
+    const numB = parseFloat(labelB);
+    
+    // If both are valid numbers, sort numerically
+    if (!isNaN(numA) && !isNaN(numB)) {
+      return numA - numB;
+    }
+    
+    // If one is a number and one isn't, numbers come first
+    if (!isNaN(numA) && isNaN(numB)) return -1;
+    if (isNaN(numA) && !isNaN(numB)) return 1;
+    
+    // For text comparison, use locale-aware case-insensitive sorting
+    return labelA.toLowerCase().localeCompare(labelB.toLowerCase(), undefined, {
+      numeric: true,        // Handle numbers within strings (e.g., "item2" vs "item10")
+      sensitivity: 'base',  // Case-insensitive, accent-insensitive
+      ignorePunctuation: false,
+      caseFirst: 'lower'   // Lowercase comes before uppercase for same letters
+    });
+  });
+
+  uniqueValues.forEach(item => {
+    const checkboxOption = document.createElement('div');
+    checkboxOption.className = 'checkbox-option';
+
+    const safeId = (item.id || item.value).toString().replace(/[^a-zA-Z0-9]/g, '_');
+
+    checkboxOption.innerHTML = `
+      <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; width: 100%; overflow: hidden;">
+        <input type="checkbox" id="${dimension.id}_${safeId}" value="${item.value}" ${!previousSelection.has(item.value) ? 'checked' : ''}>
+        <span style="white-space: normal; overflow: hidden; text-overflow: ellipsis; font-size: 0.9rem;">
+          ${item.label}
+        </span>
+      </label>
+    `;
+
+    const checkbox = checkboxOption.querySelector('input[type="checkbox"]');
+    checkbox.addEventListener('change', (e) => {
+      this.handleSimpleFilterCheckboxChange(dimension, item.value, e.target.checked);
+    });
+
+    checkboxList.appendChild(checkboxOption);
+  });
+
+  this.filterSelections[dimension.id] = new Set(
+    uniqueValues
+      .map(item => item.value)
+      .filter(value => previousSelection.has(value))
+  );
+}
 
   
   /**
