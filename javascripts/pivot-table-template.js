@@ -2399,1993 +2399,884 @@ const PivotTemplateSystem = {
      * Single row with multi-column cross-tabulation
      */
     renderTemplate6: function(elements, pivotData, rowFields, columnFields, valueFields, pivotTable) {
-    console.log(`📊 Template6 Enhanced: Single row × multi-column frozen panes (1 row × ${columnFields.length} columns × ${valueFields.length} values)`);
-    
-    // Create Excel-like frozen panes structure (30:70 split)
-    this.createTemplate6EnhancedFrozenStructure(elements);
-    
-    // Render frozen row dimension area (30% left side) - NO SCROLLBAR
-    this.renderTemplate6EnhancedFrozenRowDimensions(elements, pivotData, rowFields, columnFields, valueFields, pivotTable);
-    
-    // Render scrollable value area (70% right side)
-    this.renderTemplate6EnhancedScrollableValueArea(elements, pivotData, rowFields, columnFields, valueFields, pivotTable);
-    
-    // Setup synchronized scrolling (vertical only for frozen area)
-    this.setupTemplate6EnhancedSynchronizedScrolling(elements);
-    
-    console.log('✅ Template6 enhanced rendering complete');
-},
+        console.log(`📊 Template6 Enhanced: Single row × hierarchical multi-column (${rowFields.length} row × ${columnFields.length} columns × ${valueFields.length} values)`);
+        
+        // Apply Template 6 specific CSS
+        this.applyTemplate6CSS(elements, columnFields, valueFields);
+        
+        // Render hierarchical header structure
+        this.renderTemplate6HierarchicalHeader(elements, pivotData, rowFields, columnFields, valueFields, pivotTable);
+        
+        // Render body with cross-tabulated values
+        this.renderTemplate6HierarchicalBody(elements, pivotData, rowFields, columnFields, valueFields, pivotTable);
+        
+        console.log('✅ Template6 enhanced rendering complete');
+    },    
 
-/**
- * Create enhanced frozen panes structure for Template 6
- */
-createTemplate6EnhancedFrozenStructure: function(elements) {
-    const container = elements.pivotTableHeader?.closest('.pivot-table-container');
-    if (!container) return;
-    
-    // Clear existing content
-    container.innerHTML = '';
-    
-    // Create frozen row dimension area (30% left) - NO HORIZONTAL SCROLLBAR
-    const frozenArea = document.createElement('div');
-    frozenArea.className = 'frozen-row-dimensions template6-enhanced';
-    frozenArea.innerHTML = `
-        <table>
-            <thead id="template6FrozenHeader"></thead>
-            <tbody id="template6FrozenBody"></tbody>
-        </table>
-    `;
-    
-    // Create scrollable value area (70% right)
-    const scrollableArea = document.createElement('div');
-    scrollableArea.className = 'scrollable-value-area template6-enhanced';
-    scrollableArea.innerHTML = `
-        <table>
-            <thead id="template6ScrollableHeader"></thead>
-            <tbody id="template6ScrollableBody"></tbody>
-        </table>
-    `;
-    
-    // Create frozen separator (2px red line)
-    const separator = document.createElement('div');
-    separator.className = 'frozen-separator template6-enhanced';
-    separator.title = 'Frozen row dimension boundary';
-    
-    // Append all elements
-    container.appendChild(frozenArea);
-    container.appendChild(scrollableArea);
-    container.appendChild(separator);
-    
-    // Update elements references
-    elements.template6FrozenHeader = document.getElementById('template6FrozenHeader');
-    elements.template6FrozenBody = document.getElementById('template6FrozenBody');
-    elements.template6ScrollableHeader = document.getElementById('template6ScrollableHeader');
-    elements.template6ScrollableBody = document.getElementById('template6ScrollableBody');
-    
-    console.log('✅ Created Template6 enhanced frozen structure with 30:70 split');
-},
 
-/**
- * Render enhanced frozen row dimensions area (30% left side) - NO SCROLLBAR
- */
-renderTemplate6EnhancedFrozenRowDimensions: function(elements, pivotData, rowFields, columnFields, valueFields, pivotTable) {
-    if (!elements.template6FrozenHeader || !elements.template6FrozenBody) {
-        console.warn('⚠️ Template6 enhanced frozen elements not found');
-        return;
-    }
-    
-    console.log(`🏗️ Building Template6 enhanced frozen row dimension`);
-    
-    const rowDimName = this.getRealDimensionName(rowFields[0]);
-    
-    // Calculate correct rowspan
-    const totalHeaderRows = 2 + columnFields.length;
-    
-    let headerHtml = '';
-    
-    // Row 1: Contains the rowspan cell
-    headerHtml += '<tr>';
-    headerHtml += `<th class="t6-enhanced-row-header" rowspan="${totalHeaderRows}">`;
-    headerHtml += `<div class="t6-enhanced-header-content">${rowDimName}</div>`;
-    headerHtml += '</th>';
-    headerHtml += '</tr>';
-    
-    // Additional rows for alignment
-    for (let i = 1; i < totalHeaderRows; i++) {
-        headerHtml += '<tr></tr>';
-    }
-    
-    elements.template6FrozenHeader.innerHTML = headerHtml;
-    
-    // Body for frozen area - ENHANCED HIERARCHY WITH LEFT ALIGNMENT
-    const visibleRows = this.getTemplate6EnhancedVisibleRows(pivotData, rowFields, pivotTable);
-    let bodyHtml = '';
-    
-    if (!visibleRows || visibleRows.length === 0) {
-        bodyHtml = `<tr><td class="empty-message">No data to display.</td></tr>`;
-    } else {
-        visibleRows.forEach((row, rowIndex) => {
-            bodyHtml += `<tr class="${rowIndex % 2 === 0 ? 'even' : 'odd'}" data-row-index="${rowIndex}">`;
-            bodyHtml += this.renderTemplate6EnhancedFrozenRowCell(row, rowFields[0], pivotTable);
-            bodyHtml += '</tr>';
+    /**
+     * Apply Template 6 specific CSS classes
+     */
+    applyTemplate6CSS: function(elements, columnFields, valueFields) {
+        const container = elements.pivotTableHeader?.closest('.pivot-table-container');
+        if (!container) return;
+        
+        const columnCount = columnFields.length;
+        const valueCount = valueFields.length;
+        
+        // Remove existing classes
+        container.classList.remove(
+            'column-dimensions-1', 'column-dimensions-2', 'column-dimensions-3', 
+            'column-dimensions-4', 'column-dimensions-5'
+        );
+        
+        // Add current classes
+        container.classList.add(`column-dimensions-${Math.min(columnCount, 5)}`);
+        container.classList.add(`value-fields-${Math.min(valueCount, 5)}`);
+        
+        // IMPROVEMENT 1: Ensure row dimension takes minimum 25% width
+        container.classList.add('template6-row-width-constraint');
+        
+        console.log(`🎨 Applied Template6 CSS: column-dimensions-${columnCount}, value-fields-${valueCount}`);
+    }, 
+
+
+    /**
+     * Render hierarchical header structure for Template 6
+     */
+    renderTemplate6HierarchicalHeader: function(elements, pivotData, rowFields, columnFields, valueFields, pivotTable) {
+        console.log(`🏗️ Building Template6 hierarchical header: ${columnFields.length} column levels`);
+        
+        // Get hierarchical column combinations
+        const columnCombinations = this.generateTemplate6ColumnCombinations(pivotData, columnFields, pivotTable);
+        console.log(`📊 Generated ${columnCombinations.length} column combinations for Template6`);
+        
+        let headerHtml = '';
+        
+        // Calculate total header rows needed: 1 (row header) + 1 (measures) + N (value fields) + M (column dimensions)
+        const totalHeaderRows = 2 + valueFields.length + columnFields.length;
+        
+        // Row 1: Row dimension header with mega rowspan
+        headerHtml += '<tr>';
+        const rowDimName = this.getRealDimensionName(rowFields[0]);
+        headerHtml += `<th class="t6-row-header" rowspan="${totalHeaderRows}">${rowDimName}</th>`;
+        
+        // Measures header spanning all value cells
+        const totalValueCells = columnCombinations.length * valueFields.length;
+        headerHtml += `<th class="t6-measures-header" colspan="${totalValueCells}">MEASURES</th>`;
+        headerHtml += '</tr>';
+        
+        // Row 2: Value field headers
+        headerHtml += '<tr>';
+        valueFields.forEach((field, valueIndex) => {
+            const fieldLabel = pivotTable.getFieldLabel(field);
+            headerHtml += `<th class="t6-measure-header" colspan="${columnCombinations.length}" data-value-index="${valueIndex}">`;
+            headerHtml += `<div class="header-content">${fieldLabel}</div>`;
+            headerHtml += '</th>';
         });
-    }
-    
-    elements.template6FrozenBody.innerHTML = bodyHtml;
-    
-    if (pivotTable && typeof pivotTable.attachEventListeners === 'function') {
-        try {
-            pivotTable.attachEventListeners(elements.template6FrozenBody);
-        } catch (error) {
-            console.warn('⚠️ Error attaching event listeners:', error);
+        headerHtml += '</tr>';
+        
+        // Rows 3+: Hierarchical column dimension headers
+        headerHtml += this.buildTemplate6HierarchicalColumnHeaders(columnCombinations, columnFields, valueFields, pivotTable);
+        
+        elements.pivotTableHeader.innerHTML = headerHtml;
+        console.log(`✅ Template6 header built with ${totalHeaderRows} rows`);
+    },    
+
+
+    /**
+     * Generate hierarchical column combinations for Template 6
+     */
+    generateTemplate6ColumnCombinations: function(pivotData, columnFields, pivotTable) {
+        console.log(`🔍 Generating Template6 hierarchical column combinations for ${columnFields.length} dimensions`);
+        
+        // Filter out system columns
+        const columns = pivotData.columns.filter(col => {
+            return col._id !== 'ROOT' && 
+                col._id !== 'VALUE' && 
+                col.label !== 'VALUE' && 
+                col.label !== 'Value' &&
+                col._id !== 'default' && 
+                col._id !== 'no_columns' &&
+                col.label !== 'Measures' &&
+                col.hierarchyField;
+        });
+        
+        console.log(`🔍 Found ${columns.length} valid column nodes from ${columnFields.length} column fields`);
+        
+        if (columnFields.length === 1) {
+            // Single column dimension
+            return this.generateSingleColumnCombinations(columns, columnFields[0], pivotTable);
+        } else if (columnFields.length >= 2) {
+            // Multi-column hierarchical dimensions
+            return this.generateMultiColumnHierarchicalCombinations(columns, columnFields, pivotTable);
         }
-    }
-    
-    console.log(`✅ Template6 enhanced frozen area built`);
-},
+        
+        return [];
+    },
 
-/**
- * Render enhanced single row cell for frozen area - LEFT ALIGNED HIERARCHY
- */
-renderTemplate6EnhancedFrozenRowCell: function(row, field, pivotTable) {
-    if (!row) {
-        return `<td class="t6-enhanced-dimension-cell empty">
-            <div class="t6-enhanced-cell-content">-</div>
-        </td>`;
-    }
-    
-    const level = row.level || 0;
-    const dimName = this.extractDimensionNameSafe(field);
-    
-    // LEFT ALIGNED INDENTATION
-    const indentPx = level * 20; // 20px per level for clear hierarchy
-    
-    let cellHtml = `<td class="t6-enhanced-dimension-cell" data-level="${level}" data-dimension="${dimName}">`;
-    cellHtml += `<div class="t6-enhanced-cell-content" style="padding-left: ${indentPx}px; text-align: left; display: flex; align-items: center;">`;
-    
-    // Check if node has children
-    const hasChildren = this.nodeHasChildrenSafe(row, pivotTable, dimName);
-    
-    if (hasChildren) {
-        const expandClass = row.expanded ? 'expanded' : 'collapsed';
-        cellHtml += `<span class="t6-enhanced-expand-collapse ${expandClass}" 
-            data-node-id="${row._id || row.id}" 
-            data-hierarchy="${dimName}" 
-            data-zone="row"
-            onclick="window.handleExpandCollapseClick(event)"
-            title="Expand/collapse ${this.getDisplayLabelSafe(row)}"></span>`;
-        console.log(`🎯 Enhanced: Added expand/collapse to ${row.label || row._id}`);
-    } else {
-        cellHtml += '<span class="t6-enhanced-leaf-empty"></span>';
-    }
-    
-    const displayLabel = this.getDisplayLabelSafe(row);
-    cellHtml += `<span class="t6-enhanced-dimension-label">${displayLabel}</span>`;
-    
-    cellHtml += '</div>';
-    cellHtml += '</td>';
-    
-    return cellHtml;
-},
 
-/**
- * Render enhanced scrollable value area (70% right side)
- */
-renderTemplate6EnhancedScrollableValueArea: function(elements, pivotData, rowFields, columnFields, valueFields, pivotTable) {
-    if (!elements.template6ScrollableHeader || !elements.template6ScrollableBody) return;
-    
-    // Get column combinations for multi-column layout
-    const columnCombinations = this.generateTemplate6EnhancedColumnCombinations(pivotData, columnFields, pivotTable);
-    
-    console.log(`🏗️ Building Template6 enhanced scrollable value area: ${columnCombinations.length} column combinations × ${valueFields.length} values`);
-    
-    // Build enhanced multi-level header for scrollable area
-    let headerHtml = this.buildTemplate6EnhancedMultiLevelHeader(columnCombinations, columnFields, valueFields, pivotTable);
-    
-    elements.template6ScrollableHeader.innerHTML = headerHtml;
-    
-    // Body for scrollable area
-    const visibleRows = this.getTemplate6EnhancedVisibleRows(pivotData, rowFields, pivotTable);
-    let bodyHtml = '';
-    
-    const totalValueCells = columnCombinations.length * valueFields.length;
-    
-    if (visibleRows.length === 0) {
-        bodyHtml = `<tr><td colspan="${totalValueCells}" class="empty-message">No data to display.</td></tr>`;
-    } else {
-        visibleRows.forEach((row, rowIndex) => {
-            bodyHtml += `<tr class="${rowIndex % 2 === 0 ? 'even' : 'odd'}" data-row-index="${rowIndex}">`;
-            
-            // Cross-tabulated value cells
-            valueFields.forEach((field, valueIndex) => {
-                columnCombinations.forEach((colCombo, colIndex) => {
-                    const value = this.calculateTemplate6EnhancedValue(row, colCombo, field, pivotTable);
-                    bodyHtml += this.renderTemplate6EnhancedValueCell(value, valueIndex, colIndex, pivotTable);
-                });
+
+    /**
+     * Generate combinations for single column dimension
+     */
+    generateSingleColumnCombinations: function(columns, field, pivotTable) {
+        const dimName = pivotTable.extractDimensionName(field);
+        const visibleNodes = this.getVisibleColumnNodesForTemplate6(columns, field, pivotTable);
+        
+        console.log(`🔍 Single column dimension ${dimName}: ${visibleNodes.length} visible nodes`);
+        
+        return visibleNodes.map(col => ({
+            nodes: [col],
+            labels: [pivotTable.getDisplayLabel(col)],
+            key: col._id,
+            spanInfo: { level: 0, span: 1 }
+        }));
+    },
+
+
+    /**
+     * Generate hierarchical combinations for multiple column dimensions
+     */
+    generateMultiColumnHierarchicalCombinations: function(columns, columnFields, pivotTable) {
+        console.log(`🔍 Generating hierarchical combinations for ${columnFields.length} column dimensions`);
+        
+        // Group columns by dimension with hierarchy awareness
+        const dimensionColumns = this.groupColumnsByDimension(columns, columnFields, pivotTable);
+        
+        // Generate hierarchical cartesian product
+        const combinations = this.generateHierarchicalCartesianProduct(dimensionColumns, columnFields, pivotTable);
+        
+        console.log(`✅ Generated ${combinations.length} hierarchical combinations`);
+        return combinations;
+    },
+
+
+
+    /**
+     * Group columns by dimension with hierarchy awareness
+     */
+    groupColumnsByDimension: function(columns, columnFields, pivotTable) {
+        const dimensionColumns = {};
+        
+        columnFields.forEach(field => {
+            const dimName = pivotTable.extractDimensionName(field);
+            const dimColumns = columns.filter(col => {
+                if (!col.hierarchyField) return false;
+                const colDimName = pivotTable.extractDimensionName(col.hierarchyField);
+                return colDimName === dimName;
             });
             
-            bodyHtml += '</tr>';
-        });
-    }
-    
-    elements.template6ScrollableBody.innerHTML = bodyHtml;
-    
-    if (pivotTable && typeof pivotTable.attachEventListeners === 'function') {
-        pivotTable.attachEventListeners(elements.template6ScrollableBody);
-    }
-    
-    console.log(`✅ Template6 enhanced scrollable area built`);
-},
-
-/**
- * Build enhanced multi-level header with proper spanning and expand/collapse logic
- */
-buildTemplate6EnhancedMultiLevelHeader: function(columnCombinations, columnFields, valueFields, pivotTable) {
-    let headerHtml = '';
-    
-    const totalValueCells = columnCombinations.length * valueFields.length;
-    
-    // Row 1: Measures header
-    headerHtml += '<tr>';
-    headerHtml += `<th class="t6-enhanced-measures-header" colspan="${totalValueCells}">MEASURES</th>`;
-    headerHtml += '</tr>';
-    
-    // Row 2: Value field headers
-    headerHtml += '<tr>';
-    valueFields.forEach((field, index) => {
-        const fieldLabel = pivotTable.getFieldLabel ? pivotTable.getFieldLabel(field) : field;
-        headerHtml += `<th class="t6-enhanced-measure-header" colspan="${columnCombinations.length}" data-value-index="${index}">`;
-        headerHtml += `<div class="t6-enhanced-header-content">${fieldLabel}</div>`;
-        headerHtml += '</th>';
-    });
-    headerHtml += '</tr>';
-    
-    // Rows 3+: Enhanced column dimension levels with proper expand/collapse
-    headerHtml += this.buildTemplate6EnhancedColumnDimensionLevels(columnCombinations, columnFields, valueFields, pivotTable);
-    
-    return headerHtml;
-},
-
-/**
- * Build enhanced column dimension levels with proper spanning detection
- */
-buildTemplate6EnhancedColumnDimensionLevels: function(columnCombinations, columnFields, valueFields, pivotTable) {
-    let headerHtml = '';
-    
-    console.log(`🏗️ T6 Enhanced: Building ${columnFields.length} column dimension levels`);
-    
-    // Build each column dimension level
-    columnFields.forEach((field, levelIndex) => {
-        console.log(`🔍 T6 Enhanced Level ${levelIndex}: Processing field "${field}"`);
-        
-        headerHtml += '<tr>';
-        
-        // Each value field gets its own set of column headers
-        valueFields.forEach((valueField, valueIndex) => {
-            if (levelIndex === 0 && columnFields.length > 1) {
-                // FIRST LEVEL: Calculate spans for grouped headers - BLUE ARROW LEVEL
-                const topLevelSpans = this.calculateTemplate6EnhancedTopLevelSpans(columnCombinations, levelIndex);
-                console.log(`🔍 T6 Enhanced Level ${levelIndex}: Found ${topLevelSpans.length} spanning groups (BLUE ARROW LEVEL)`);
-                
-                topLevelSpans.forEach(spanInfo => {
-                    const node = spanInfo.node;
-                    const spanCount = spanInfo.spanCount;
-                    
-                    headerHtml += `<th class="t6-enhanced-column-header dimension-level-${levelIndex}" colspan="${spanCount}" data-node-id="${node._id}">`;
-                    
-                    // ENHANCED: Blue arrow level - add expand/collapse if node spans multiple children
-                    const shouldHaveExpandCollapse = this.shouldTemplate6NodeHaveExpandCollapse(node, spanCount, levelIndex, pivotTable, 'spanning');
-                    
-                    headerHtml += this.buildTemplate6EnhancedColumnHeaderContent(
-                        node, field, levelIndex, pivotTable, shouldHaveExpandCollapse, spanCount
-                    );
-                    
-                    headerHtml += '</th>';
-                });
-            } else {
-                // INDIVIDUAL LEVEL: Show each node separately - ORANGE ARROW LEVEL
-                console.log(`🔍 T6 Enhanced Level ${levelIndex}: Building individual cells (ORANGE ARROW LEVEL)`);
-                
-                columnCombinations.forEach((combo, colIndex) => {
-                    const node = combo.nodes[levelIndex];
-                    if (node) {
-                        headerHtml += `<th class="t6-enhanced-column-header dimension-level-${levelIndex}" data-column-index="${colIndex}" data-node-id="${node._id}">`;
-                        
-                        // ENHANCED: Orange arrow level - add expand/collapse if node has children
-                        const shouldHaveExpandCollapse = this.shouldTemplate6NodeHaveExpandCollapse(node, 1, levelIndex, pivotTable, 'individual');
-                        
-                        headerHtml += this.buildTemplate6EnhancedColumnHeaderContent(
-                            node, columnFields[levelIndex], levelIndex, pivotTable, shouldHaveExpandCollapse, 1
-                        );
-                        
-                        headerHtml += '</th>';
-                    } else {
-                        headerHtml += `<th class="t6-enhanced-column-header dimension-level-${levelIndex} empty">-</th>`;
-                    }
-                });
-            }
+            // Get hierarchically visible nodes for this dimension
+            dimensionColumns[field] = this.getHierarchicallyVisibleNodes(dimColumns, field, pivotTable);
+            console.log(`📊 Dimension ${dimName}: ${dimensionColumns[field].length} hierarchically visible nodes`);
         });
         
-        headerHtml += '</tr>';
-        console.log(`✅ T6 Enhanced Level ${levelIndex}: Row complete`);
-    });
-    
-    return headerHtml;
-},
+        return dimensionColumns;
+    },
 
-/**
- * Enhanced logic to determine if a node should have expand/collapse controls
- */
-shouldTemplate6NodeHaveExpandCollapse: function(node, spanCount, levelIndex, pivotTable, context) {
-    if (!node) {
-        console.log(`🔍 T6 Enhanced: No node provided (${context})`);
-        return false;
-    }
-    
-    console.log(`🔍 T6 Enhanced: Checking node ${node._id} (${node.label}) - context: ${context}, span: ${spanCount}, level: ${levelIndex}`);
-    
-    if (context === 'spanning') {
-        // BLUE ARROW LEVEL: Nodes that span multiple columns should have expand/collapse
-        if (spanCount > 1) {
-            console.log(`🎯 T6 Enhanced: Node ${node._id} spans ${spanCount} columns - SHOULD have expand/collapse (BLUE ARROW)`);
-            return true;
-        }
-    }
-    
-    if (context === 'individual') {
-        // ORANGE ARROW LEVEL: Nodes with children should have expand/collapse
-        const hasChildren = this.nodeHasChildrenEnhanced(node, pivotTable);
-        if (hasChildren) {
-            console.log(`🎯 T6 Enhanced: Node ${node._id} has children - SHOULD have expand/collapse (ORANGE ARROW)`);
-            return true;
-        }
-    }
-    
-    console.log(`🍃 T6 Enhanced: Node ${node._id} - no expand/collapse needed`);
-    return false;
-},
 
-/**
- * Enhanced check for node children
- */
-nodeHasChildrenEnhanced: function(node, pivotTable) {
-    if (!node) return false;
-    
-    // Method 1: Direct children property
-    if (node.children && Array.isArray(node.children) && node.children.length > 0) {
-        console.log(`✅ Enhanced: Node ${node._id} has direct children: ${node.children.length}`);
-        return true;
-    }
-    
-    // Method 2: Check via pivotTable hierarchy system
-    if (pivotTable && node.hierarchyField) {
-        const dimName = pivotTable.extractDimensionName ? pivotTable.extractDimensionName(node.hierarchyField) : node.hierarchyField;
+
+    /**
+     * Get hierarchically visible nodes respecting expand/collapse state
+     */
+    getHierarchicallyVisibleNodes: function(dimensionColumns, field, pivotTable) {
+        const dimName = pivotTable.extractDimensionName(field);
         const hierarchy = pivotTable.state?.hierarchies?.[dimName];
         
-        if (hierarchy && hierarchy.nodesMap) {
-            const originalNode = hierarchy.nodesMap[node._id];
-            if (originalNode && originalNode.children && originalNode.children.length > 0) {
-                console.log(`✅ Enhanced: Node ${node._id} in ${dimName}: ${originalNode.children.length} children via hierarchy`);
-                return true;
-            }
+        if (!hierarchy || !hierarchy.nodesMap) {
+            // Fallback to leaf nodes
+            return dimensionColumns.filter(col => 
+                !this.columnNodeHasExpandableChildren(col, pivotTable) || col.factId
+            ).slice(0, 10);
         }
-    }
-    
-    // Method 3: Check isLeaf property (inverse logic)
-    if (node.hasOwnProperty('isLeaf')) {
-        const hasChildren = !node.isLeaf;
-        if (hasChildren) {
-            console.log(`✅ Enhanced: Node ${node._id} isLeaf=${node.isLeaf}, hasChildren=${hasChildren}`);
-            return true;
-        }
-    }
-    
-    console.log(`❌ Enhanced: Node ${node._id} - no children found`);
-    return false;
-},
-
-/**
- * Build enhanced column header content with centered expand/collapse
- */
-buildTemplate6EnhancedColumnHeaderContent: function(node, field, levelIndex, pivotTable, shouldHaveExpandCollapse, spanCount) {
-    let contentHtml = '';
-    
-    // Container with flex layout for proper alignment
-    contentHtml += '<div class="t6-enhanced-column-header-container">';
-    
-    if (shouldHaveExpandCollapse) {
-        const expandClass = node.expanded ? 'expanded' : 'collapsed';
-        const dimName = pivotTable.extractDimensionName ? pivotTable.extractDimensionName(field) : field;
         
-        // Centered expand/collapse control
-        contentHtml += `<span class="t6-enhanced-expand-collapse ${expandClass}" 
+        const visibleNodes = [];
+        const rootNode = hierarchy.nodesMap['ROOT'];
+        
+        if (rootNode) {
+            this.traverseHierarchyForVisibleNodes(rootNode, hierarchy, dimensionColumns, visibleNodes, dimName, pivotTable);
+        }
+        
+        // Fallback if no nodes found
+        if (visibleNodes.length === 0) {
+            return dimensionColumns.filter(col => (col.level || 0) <= 1).slice(0, 5);
+        }
+        
+        return visibleNodes;
+    },
+
+
+
+    /**
+     * Traverse hierarchy to find currently visible nodes
+     */
+    traverseHierarchyForVisibleNodes: function(node, hierarchy, dimensionColumns, visibleNodes, dimName, pivotTable) {
+        if (!node) return;
+        
+        const columnNode = dimensionColumns.find(col => col._id === node.id);
+        if (!columnNode) return;
+        
+        const isExpanded = pivotTable.state?.expandedNodes?.[dimName]?.column?.[node.id] || false;
+        
+        if (node.isLeaf || !node.children || node.children.length === 0) {
+            // Leaf node - always include
+            visibleNodes.push(columnNode);
+        } else if (!isExpanded) {
+            // Collapsed parent - include the parent node itself
+            visibleNodes.push(columnNode);
+        } else {
+            // Expanded parent - include visible children
+            node.children.forEach(childId => {
+                const childNode = hierarchy.nodesMap[childId];
+                if (childNode) {
+                    this.traverseHierarchyForVisibleNodes(childNode, hierarchy, dimensionColumns, visibleNodes, dimName, pivotTable);
+                }
+            });
+        }
+    },
+    
+
+
+    /**
+     * Generate hierarchical cartesian product with spanning information
+     */
+    generateHierarchicalCartesianProduct: function(dimensionColumns, columnFields, pivotTable) {
+        const combinations = [];
+        
+        if (columnFields.length === 2) {
+            const [field1, field2] = columnFields;
+            const nodes1 = dimensionColumns[field1] || [];
+            const nodes2 = dimensionColumns[field2] || [];
+            
+            nodes1.forEach(node1 => {
+                nodes2.forEach(node2 => {
+                    combinations.push({
+                        nodes: [node1, node2],
+                        labels: [pivotTable.getDisplayLabel(node1), pivotTable.getDisplayLabel(node2)],
+                        key: `${node1._id}|${node2._id}`,
+                        spanInfo: {
+                            level1: { node: node1, span: nodes2.length },
+                            level2: { node: node2, span: 1 }
+                        }
+                    });
+                });
+            });
+        } else if (columnFields.length >= 3) {
+            // Recursive approach for 3+ dimensions
+            this.generateRecursiveCartesianProduct(dimensionColumns, columnFields, combinations, pivotTable, [], [], '', 0);
+        }
+        
+        return combinations;
+    },
+   
+
+
+    /**
+     * Recursive cartesian product generator for 3+ dimensions
+     */
+    generateRecursiveCartesianProduct: function(dimensionColumns, columnFields, combinations, pivotTable, currentNodes, currentLabels, currentKey, fieldIndex) {
+        if (fieldIndex >= columnFields.length) {
+            combinations.push({
+                nodes: [...currentNodes],
+                labels: [...currentLabels],
+                key: currentKey,
+                spanInfo: this.calculateSpanInfo(currentNodes, dimensionColumns, columnFields)
+            });
+            return;
+        }
+        
+        const field = columnFields[fieldIndex];
+        const nodes = dimensionColumns[field] || [];
+        
+        // Limit for performance
+        const maxNodes = fieldIndex === 0 ? 5 : 3;
+        const nodesToUse = nodes.slice(0, maxNodes);
+        
+        nodesToUse.forEach(node => {
+            this.generateRecursiveCartesianProduct(
+                dimensionColumns,
+                columnFields,
+                combinations,
+                pivotTable,
+                [...currentNodes, node],
+                [...currentLabels, pivotTable.getDisplayLabel(node)],
+                currentKey ? `${currentKey}|${node._id}` : node._id,
+                fieldIndex + 1
+            );
+        });
+    },
+   
+
+
+    /**
+     * Calculate spanning information for multi-level headers
+     */
+    calculateSpanInfo: function(nodes, dimensionColumns, columnFields) {
+        const spanInfo = {};
+        
+        nodes.forEach((node, index) => {
+            const field = columnFields[index];
+            const remainingNodes = columnFields.slice(index + 1).reduce((product, f) => {
+                const fieldNodes = dimensionColumns[f] || [];
+                return product * fieldNodes.length;
+            }, 1);
+            
+            spanInfo[`level${index + 1}`] = {
+                node: node,
+                span: Math.max(remainingNodes, 1)
+            };
+        });
+        
+        return spanInfo;
+    },
+    
+
+
+    /**
+     * Build hierarchical column headers with proper spanning
+     */
+    buildTemplate6HierarchicalColumnHeaders: function(columnCombinations, columnFields, valueFields, pivotTable) {
+        let headerHtml = '';
+        
+        // Build each column dimension level
+        columnFields.forEach((field, levelIndex) => {
+            headerHtml += '<tr>';
+            
+            valueFields.forEach((valueField, valueIndex) => {
+                if (levelIndex === 0) {
+                    // IMPROVEMENT 2: Top level - higher dimension nodes with expand/collapse (no leaf icons)
+                    const topLevelSpans = this.calculateTemplate6TopLevelSpans(columnCombinations, levelIndex);
+                    topLevelSpans.forEach(spanInfo => {
+                        headerHtml += this.renderTemplate6HigherDimensionHeader(spanInfo, field, levelIndex, valueIndex, pivotTable);
+                    });
+                } else {
+                    // IMPROVEMENT 3 & 4: Lower dimension nodes - repeated for each higher dimension node
+                    headerHtml += this.renderTemplate6LowerDimensionHeaders(columnCombinations, field, levelIndex, valueField, valueIndex, pivotTable);
+                }
+            });
+            
+            headerHtml += '</tr>';
+        });
+        
+        return headerHtml;
+    },
+    
+
+
+    /**
+     * Render higher dimension header (blue arrow level) - IMPROVEMENT 2
+     * Always show expand/collapse, never show leaf node icons
+     */
+    renderTemplate6HigherDimensionHeader: function(spanInfo, field, levelIndex, valueIndex, pivotTable) {
+        const node = spanInfo.node;
+        const spanCount = spanInfo.spanCount;
+        
+        let headerHtml = `<th class="t6-column-header dimension-level-${levelIndex}" colspan="${spanCount}" data-node-id="${node._id}" data-value-index="${valueIndex}">`;
+        
+        // IMPROVEMENT 2: Always add expand/collapse for higher dimension nodes (no leaf icons in column zone)
+        const dimName = pivotTable.extractDimensionName(field);
+        const isExpanded = this.isColumnNodeExpanded(node, dimName, pivotTable);
+        const expandClass = isExpanded ? 'expanded' : 'collapsed';
+        
+        headerHtml += `<span class="expand-collapse ${expandClass}" 
             data-node-id="${node._id}" 
             data-hierarchy="${dimName}" 
             data-zone="column"
-            data-level="${levelIndex}"
             onclick="window.handleExpandCollapseClick(event)"
-            title="Expand/collapse ${this.getDisplayLabelSafe(node)}${spanCount > 1 ? ` (spans ${spanCount} columns)` : ''}"></span>`;
-        console.log(`🎯 T6 Enhanced: Added expand/collapse to ${node.label} (level ${levelIndex})`);
-    }
-    
-    // Label
-    const displayLabel = this.getDisplayLabelSafe(node);
-    contentHtml += `<span class="t6-enhanced-column-label" title="${displayLabel}">${displayLabel}</span>`;
-    
-    contentHtml += '</div>';
-    
-    return contentHtml;
-},
-
-/**
- * Calculate enhanced top-level spans
- */
-calculateTemplate6EnhancedTopLevelSpans: function(columnCombinations, levelIndex) {
-    const spans = [];
-    const processedNodes = new Set();
-    
-    columnCombinations.forEach((combo, comboIndex) => {
-        const node = combo.nodes[levelIndex];
-        if (!node || processedNodes.has(node._id)) return;
+            title="Expand/collapse ${pivotTable.getDisplayLabel(node)} (spans ${spanCount} columns)"></span>`;
         
-        // Count how many combinations this node spans
-        let spanCount = 0;
-        columnCombinations.forEach(otherCombo => {
-            const otherNode = otherCombo.nodes[levelIndex];
-            if (otherNode && otherNode._id === node._id) {
-                spanCount++;
+        console.log(`🎯 Template6 Higher: Added expand/collapse to ${node.label} (span: ${spanCount})`);
+        
+        const displayLabel = pivotTable.getDisplayLabel(node);
+        headerHtml += `<span class="column-label">${displayLabel}</span>`;
+        headerHtml += '</th>';
+        
+        return headerHtml;
+    },
+    
+
+
+    /**
+     * Render lower dimension headers (orange arrow level) - IMPROVEMENTS 3 & 4
+     * Show expand/collapse only if has children, no leaf icons, repeat for each higher dimension
+     */
+    renderTemplate6LowerDimensionHeaders: function(columnCombinations, field, levelIndex, valueField, valueIndex, pivotTable) {
+        let headerHtml = '';
+        const dimName = pivotTable.extractDimensionName(field);
+        
+        // IMPROVEMENT 4: Get lower dimension nodes for this specific value field
+        const lowerDimensionNodes = this.getLowerDimensionNodesForValue(columnCombinations, levelIndex, valueField, valueIndex);
+        
+        lowerDimensionNodes.forEach((nodeInfo, nodeIndex) => {
+            const node = nodeInfo.node;
+            
+            headerHtml += `<th class="t6-column-header dimension-level-${levelIndex}" data-column-index="${nodeInfo.comboIndex}" data-node-id="${node._id}" data-value-index="${valueIndex}">`;
+            
+            // IMPROVEMENT 3: Only add expand/collapse if node has children, never show leaf icons in column zone
+            if (this.columnNodeHasExpandableChildren(node, pivotTable)) {
+                const isExpanded = this.isColumnNodeExpanded(node, dimName, pivotTable);
+                const expandClass = isExpanded ? 'expanded' : 'collapsed';
+                headerHtml += `<span class="expand-collapse ${expandClass}" 
+                    data-node-id="${node._id}" 
+                    data-hierarchy="${dimName}" 
+                    data-zone="column"
+                    onclick="window.handleExpandCollapseClick(event)"
+                    title="Expand/collapse ${pivotTable.getDisplayLabel(node)}"></span>`;
+            }
+            // IMPROVEMENT 3: No leaf node icons in column zone - just empty space
+            
+            const displayLabel = pivotTable.getDisplayLabel(node);
+            headerHtml += `<span class="column-label" title="${displayLabel}">${displayLabel}</span>`;
+            headerHtml += '</th>';
+        });
+        
+        return headerHtml;
+    },
+    
+
+
+    /**
+     * Check if column node is expanded - helper function
+     */
+    isColumnNodeExpanded: function(node, dimName, pivotTable) {
+        if (!pivotTable || !pivotTable.state || !pivotTable.state.expandedNodes) {
+            return false;
+        }
+        
+        const expandedNodes = pivotTable.state.expandedNodes[dimName];
+        if (!expandedNodes || !expandedNodes.column) {
+            return false;
+        }
+        
+        return expandedNodes.column[node._id] || false;
+    },
+   
+
+    /**
+     * Get lower dimension nodes for specific value field - IMPROVEMENT 4
+     */
+    getLowerDimensionNodesForValue: function(columnCombinations, levelIndex, valueField, valueIndex) {
+        const nodes = [];
+        
+        // Filter combinations for this specific value field context
+        const relevantCombinations = columnCombinations.filter((combo, index) => {
+            // Include all combinations for the current value field
+            return true;
+        });
+        
+        relevantCombinations.forEach((combo, comboIndex) => {
+            const node = combo.nodes[levelIndex];
+            if (node) {
+                nodes.push({
+                    node: node,
+                    comboIndex: comboIndex,
+                    valueIndex: valueIndex,
+                    parentNode: levelIndex > 0 ? combo.nodes[levelIndex - 1] : null
+                });
             }
         });
         
-        spans.push({
-            node: node,
-            spanCount: spanCount,
-            startIndex: comboIndex
-        });
-        
-        console.log(`🔍 T6 Enhanced: Node ${node._id} (${node.label}) spans ${spanCount} combinations`);
-        processedNodes.add(node._id);
-    });
+        return nodes;
+    },
     
-    return spans;
-},
 
-/**
- * Enhanced column combinations generation
- */
-generateTemplate6EnhancedColumnCombinations: function(pivotData, columnFields, pivotTable) {
-    console.log(`🏗️ T6 Enhanced: Generating combinations for ${columnFields.length} fields`);
-    
-    // Filter valid columns
-    const columns = pivotData.columns.filter(col => {
-        return col._id !== 'ROOT' && 
-            col._id !== 'VALUE' && 
-            col.label !== 'VALUE' && 
-            col.hierarchyField;
-    });
-    
-    console.log(`🔍 T6 Enhanced: Found ${columns.length} valid column nodes`);
-    
-    if (columnFields.length >= 2) {
-        return this.generateTemplate6EnhancedHierarchicalCombinations(columns, columnFields, pivotTable);
-    }
-    
-    return [];
-},
 
-/**
- * Generate enhanced hierarchical combinations
- */
-generateTemplate6EnhancedHierarchicalCombinations: function(columns, columnFields, pivotTable) {
-    const combinations = [];
-    
-    // Group columns by dimension
-    const dimensionColumns = {};
-    columnFields.forEach(field => {
-        const dimName = pivotTable.extractDimensionName ? pivotTable.extractDimensionName(field) : field;
-        dimensionColumns[field] = columns.filter(col => {
-            if (!col.hierarchyField) return false;
-            const colDimName = pivotTable.extractDimensionName ? 
-                pivotTable.extractDimensionName(col.hierarchyField) : col.hierarchyField;
-            return colDimName === dimName;
-        });
-        console.log(`🔍 T6 Enhanced dimension ${dimName}: ${dimensionColumns[field].length} columns`);
-    });
-    
-    // Generate cartesian product
-    if (columnFields.length === 2) {
-        const [field1, field2] = columnFields;
-        const cols1 = this.getVisibleColumnNodesEnhanced(dimensionColumns[field1] || [], field1, pivotTable);
-        const cols2 = this.getVisibleColumnNodesEnhanced(dimensionColumns[field2] || [], field2, pivotTable);
+
+
+    /**
+     * Calculate top-level spans for Template 6
+     */
+    calculateTemplate6TopLevelSpans: function(columnCombinations, levelIndex) {
+        const spans = [];
+        const processedNodes = new Set();
         
-        console.log(`🔍 T6 Enhanced: ${cols1.length} × ${cols2.length} = ${cols1.length * cols2.length} combinations`);
-        
-        cols1.forEach(col1 => {
-            cols2.forEach(col2 => {
-                combinations.push({
-                    nodes: [col1, col2],
-                    labels: [this.getDisplayLabelSafe(col1), this.getDisplayLabelSafe(col2)],
-                    key: `${col1._id}|${col2._id}`
-                });
+        columnCombinations.forEach((combo, comboIndex) => {
+            const node = combo.nodes[levelIndex];
+            if (!node || processedNodes.has(node._id)) return;
+            
+            // Calculate span count
+            let spanCount = 0;
+            let startIndex = comboIndex;
+            
+            for (let i = comboIndex; i < columnCombinations.length; i++) {
+                const otherNode = columnCombinations[i].nodes[levelIndex];
+                if (otherNode && otherNode._id === node._id) {
+                    spanCount++;
+                } else {
+                    break; // Stop when we hit a different node
+                }
+            }
+            
+            spans.push({
+                node: node,
+                spanCount: spanCount,
+                startIndex: startIndex
             });
+            
+            processedNodes.add(node._id);
         });
-    }
+        
+        return spans;
+    },
     
-    console.log(`✅ T6 Enhanced: Generated ${combinations.length} combinations`);
-    return combinations;
-},
 
-/**
- * Get enhanced visible column nodes
- */
-getVisibleColumnNodesEnhanced: function(dimensionColumns, field, pivotTable) {
-    return dimensionColumns.filter(col => {
-        return !this.nodeHasChildrenEnhanced(col, pivotTable) || col.factId;
-    }).slice(0, 10);
-},
 
-/**
- * Enhanced visible rows getter
- */
-getTemplate6EnhancedVisibleRows: function(pivotData, rowFields, pivotTable) {
-    if (!pivotData || !pivotData.rows) return [];
-    
-    if (pivotTable && typeof pivotTable.getVisibleRowsWithoutDuplicates === 'function') {
-        try {
-            return pivotTable.getVisibleRowsWithoutDuplicates(pivotData.rows);
-        } catch (error) {
-            console.warn('⚠️ Error getting visible rows:', error);
-        }
-    }
-    
-    return pivotData.rows.filter(row => {
-        return row && (row._id || row.label) && row._id !== 'ROOT' && row._id !== 'VALUE';
-    }).slice(0, 20);
-},
-
-/**
- * Enhanced value calculation
- */
-calculateTemplate6EnhancedValue: function(row, columnCombo, field, pivotTable) {
-    if (!pivotTable || !pivotTable.calculateMultiDimensionalValue) {
-        return Math.floor(Math.random() * 10000);
-    }
-    
-    try {
-        return pivotTable.calculateMultiDimensionalValue([row], columnCombo.nodes, field);
-    } catch (error) {
-        console.warn('⚠️ Error calculating value:', error);
-        return 0;
-    }
-},
-
-/**
- * Enhanced value cell rendering
- */
-renderTemplate6EnhancedValueCell: function(value, valueIndex, columnIndex, pivotTable) {
-    let numericValue = typeof value === 'number' ? value : parseFloat(value) || 0;
-    
-    let cellClass = 'value-cell t6-enhanced-value-cell';
-    if (numericValue !== 0) {
-        cellClass += ' non-zero-value';
-        if (numericValue < 0) cellClass += ' negative-value';
-    }
-    
-    const formattedValue = pivotTable && pivotTable.formatValue ? 
-        pivotTable.formatValue(numericValue) : 
-        numericValue.toLocaleString();
-    
-    return `<td class="${cellClass}" data-raw-value="${numericValue}" data-value-index="${valueIndex}" data-column-index="${columnIndex}">
-        <div class="t6-enhanced-cell-content">${formattedValue}</div>
-    </td>`;
-},
-
-/**
- * Setup enhanced synchronized scrolling - NO HORIZONTAL SCROLLBAR for frozen area
- */
-setupTemplate6EnhancedSynchronizedScrolling: function(elements) {
-    const frozenArea = elements.template6FrozenBody?.closest('.frozen-row-dimensions.template6-enhanced');
-    const scrollableArea = elements.template6ScrollableBody?.closest('.scrollable-value-area.template6-enhanced');
-    
-    if (!frozenArea || !scrollableArea) {
-        console.warn('⚠️ Cannot setup Template6 enhanced synchronized scrolling');
-        return;
-    }
-    
-    let isScrolling = false;
-    
-    // ONLY VERTICAL SYNC - frozen area should NOT have horizontal scrollbar
-    const syncVerticalScroll = (source, target) => {
-        if (isScrolling) return;
-        isScrolling = true;
-        target.scrollTop = source.scrollTop;
-        requestAnimationFrame(() => {
-            isScrolling = false;
+    /**
+     * Group nodes by their parent for proper hierarchy display
+     */
+    groupNodesByParent: function(columnCombinations, levelIndex) {
+        const groups = [];
+        const processedNodes = new Set();
+        
+        columnCombinations.forEach((combo, comboIndex) => {
+            const node = combo.nodes[levelIndex];
+            if (!node || processedNodes.has(node._id)) return;
+            
+            groups.push({
+                node: node,
+                comboIndex: comboIndex,
+                parentNode: levelIndex > 0 ? combo.nodes[levelIndex - 1] : null
+            });
+            
+            processedNodes.add(node._id);
         });
-    };
+        
+        return groups;
+    },
     
-    // Frozen area vertical scroll -> sync scrollable area
-    frozenArea.addEventListener('scroll', () => {
-        syncVerticalScroll(frozenArea, scrollableArea);
-        this.alignTemplate6EnhancedRowHeights(frozenArea, scrollableArea);
-    });
-    
-    // Scrollable area vertical scroll -> sync frozen area
-    scrollableArea.addEventListener('scroll', () => {
-        syncVerticalScroll(scrollableArea, frozenArea);
-        this.alignTemplate6EnhancedRowHeights(frozenArea, scrollableArea);
-    });
-    
-    // Initial alignment
-    this.alignTemplate6EnhancedRowHeights(frozenArea, scrollableArea);
-    
-    console.log('✅ Template6 enhanced synchronized scrolling setup complete');
-},
 
-/**
- * Enhanced row height alignment
- */
-alignTemplate6EnhancedRowHeights: function(frozenArea, scrollableArea) {
-    try {
-        const frozenRows = frozenArea.querySelectorAll('tbody tr');
-        const scrollableRows = scrollableArea.querySelectorAll('tbody tr');
+    /**
+     * Render spanning header cell for top-level nodes
+     */
+    renderTemplate6SpanningHeader: function(spanInfo, field, levelIndex, pivotTable) {
+        const node = spanInfo.node;
+        const spanCount = spanInfo.spanCount;
         
-        const maxRows = Math.min(frozenRows.length, scrollableRows.length);
+        let headerHtml = `<th class="t6-column-header dimension-level-${levelIndex}" colspan="${spanCount}" data-node-id="${node._id}">`;
         
-        for (let i = 0; i < maxRows; i++) {
-            const frozenRow = frozenRows[i];
-            const scrollableRow = scrollableRows[i];
-            
-            if (!frozenRow || !scrollableRow) continue;
-            
-            // Reset heights
-            frozenRow.style.height = 'auto';
-            scrollableRow.style.height = 'auto';
-            
-            // Get natural heights and apply maximum
-            const frozenHeight = frozenRow.offsetHeight;
-            const scrollableHeight = scrollableRow.offsetHeight;
-            const maxHeight = Math.max(frozenHeight, scrollableHeight, 40);
-            
-            frozenRow.style.height = `${maxHeight}px`;
-            scrollableRow.style.height = `${maxHeight}px`;
+        // Add expand/collapse control if node has children
+        if (this.columnNodeHasExpandableChildren(node, pivotTable)) {
+            const expandClass = node.expanded ? 'expanded' : 'collapsed';
+            const dimName = pivotTable.extractDimensionName(field);
+            headerHtml += `<span class="expand-collapse ${expandClass}" 
+                data-node-id="${node._id}" 
+                data-hierarchy="${dimName}" 
+                data-zone="column"
+                onclick="window.handleExpandCollapseClick(event)"
+                title="Expand/collapse ${pivotTable.getDisplayLabel(node)} (spans ${spanCount} columns)"></span>`;
+            console.log(`🎯 Template6: Added expand/collapse to spanning node ${node.label} (span: ${spanCount})`);
+        } else {
+            headerHtml += '<span class="leaf-node-empty"></span>';
         }
-    } catch (error) {
-        console.error('Error aligning enhanced row heights:', error);
-    }
-},
-
-    // renderTemplate6: function(elements, pivotData, rowFields, columnFields, valueFields, pivotTable) {
-    //     console.log(`📊 Template6 Enhanced: Single row × multi-column frozen panes (1 row × ${columnFields.length} columns × ${valueFields.length} values)`);
         
-    //     // Create Excel-like frozen panes structure (30:70 split)
-    //     this.createTemplate6FrozenStructure(elements);
+        const displayLabel = pivotTable.getDisplayLabel(node);
+        headerHtml += `<span class="column-label">${displayLabel}</span>`;
+        headerHtml += '</th>';
         
-    //     // Render frozen row dimension area (30% left side)
-    //     this.renderTemplate6FrozenRowDimensions(elements, pivotData, rowFields, columnFields, valueFields, pivotTable);
-        
-    //     // Render scrollable value area (70% right side)
-    //     this.renderTemplate6ScrollableValueArea(elements, pivotData, rowFields, columnFields, valueFields, pivotTable);
-        
-    //     // Setup synchronized scrolling
-    //     this.setupTemplate6SynchronizedScrolling(elements);
-        
-    //     console.log('✅ Template6 enhanced rendering complete');
-    // },
+        return headerHtml;
+    },
 
 
-    // /**
-    //  * Create Excel-like frozen panes structure for Template 6
-    //  */
-    // createTemplate6FrozenStructure: function(elements) {
-    //     const container = elements.pivotTableHeader?.closest('.pivot-table-container');
-    //     if (!container) return;
+    /**
+     * Render grouped header cell for lower-level nodes
+     */
+    renderTemplate6GroupedHeader: function(group, field, levelIndex, pivotTable) {
+        const node = group.node;
         
-    //     // Clear existing content
-    //     container.innerHTML = '';
+        let headerHtml = `<th class="t6-column-header dimension-level-${levelIndex}" data-column-index="${group.comboIndex}" data-node-id="${node._id}">`;
         
-    //     // Create frozen row dimension area (30% left)
-    //     const frozenArea = document.createElement('div');
-    //     frozenArea.className = 'frozen-row-dimensions';
-    //     frozenArea.innerHTML = `
-    //         <table>
-    //             <thead id="template6FrozenHeader"></thead>
-    //             <tbody id="template6FrozenBody"></tbody>
-    //         </table>
-    //     `;
+        // Add expand/collapse control if node has children
+        if (this.columnNodeHasExpandableChildren(node, pivotTable)) {
+            const expandClass = node.expanded ? 'expanded' : 'collapsed';
+            const dimName = pivotTable.extractDimensionName(field);
+            headerHtml += `<span class="expand-collapse ${expandClass}" 
+                data-node-id="${node._id}" 
+                data-hierarchy="${dimName}" 
+                data-zone="column"
+                onclick="window.handleExpandCollapseClick(event)"
+                title="Expand/collapse ${pivotTable.getDisplayLabel(node)}"></span>`;
+        } else {
+            headerHtml += '<span class="leaf-node-empty"></span>';
+        }
         
-    //     // Create scrollable value area (70% right)
-    //     const scrollableArea = document.createElement('div');
-    //     scrollableArea.className = 'scrollable-value-area';
-    //     scrollableArea.innerHTML = `
-    //         <table>
-    //             <thead id="template6ScrollableHeader"></thead>
-    //             <tbody id="template6ScrollableBody"></tbody>
-    //         </table>
-    //     `;
+        const displayLabel = pivotTable.getDisplayLabel(node);
+        headerHtml += `<span class="column-label" title="${displayLabel}">${displayLabel}</span>`;
+        headerHtml += '</th>';
         
-    //     // Create frozen separator (2px red line matching the border)
-    //     const separator = document.createElement('div');
-    //     separator.className = 'frozen-separator';
-    //     separator.title = 'Frozen row dimension boundary';
-        
-    //     // Append all elements
-    //     container.appendChild(frozenArea);
-    //     container.appendChild(scrollableArea);
-    //     container.appendChild(separator);
-        
-    //     // Update elements references
-    //     elements.template6FrozenHeader = document.getElementById('template6FrozenHeader');
-    //     elements.template6FrozenBody = document.getElementById('template6FrozenBody');
-    //     elements.template6ScrollableHeader = document.getElementById('template6ScrollableHeader');
-    //     elements.template6ScrollableBody = document.getElementById('template6ScrollableBody');
-        
-    //     console.log('✅ Created Template6 frozen structure with 30:70 split');
-    // },
+        return headerHtml;
+    },
 
 
-    // /**
-    //  * Render frozen row dimension area (30% left side)
-    //  */
-    // renderTemplate6FrozenRowDimensions: function(elements, pivotData, rowFields, columnFields, valueFields, pivotTable) {
-    //     if (!elements.template6FrozenHeader || !elements.template6FrozenBody) {
-    //         console.warn('⚠️ Template6 frozen elements not found');
-    //         return;
-    //     }
-        
-    //     console.log(`🏗️ Building Template6 frozen row dimension with CORRECT ROWSPAN`);
-        
-    //     const rowDimName = this.getRealDimensionName(rowFields[0]);
-        
-    //     // FIXED: Correct rowspan calculation
-    //     // Structure: MEASURES (1 row) + Value fields (1 row) + Column dimensions (N rows)
-    //     // So total = 1 + 1 + columnFields.length = 2 + columnFields.length
-    //     const totalHeaderRows = 2 + columnFields.length;
-        
-    //     console.log(`📊 CORRECTED: Creating ${totalHeaderRows} header rows:`);
-    //     console.log(`   Row 1: MEASURES`);
-    //     console.log(`   Row 2: Value field names`);
-    //     for (let i = 0; i < columnFields.length; i++) {
-    //         console.log(`   Row ${3 + i}: Column dimension ${i + 1}`);
-    //     }
-        
-    //     let headerHtml = '';
-        
-    //     // Row 1: Contains the rowspan cell with CORRECT span
-    //     headerHtml += '<tr>';
-    //     headerHtml += `<th class="t6-row-header" rowspan="${totalHeaderRows}" style="
-    //         vertical-align: middle;
-    //         text-align: center;
-    //         background: linear-gradient(135deg, #fff5f5 0%, #ffebeb 100%);
-    //         border: 1px solid #ff9999;
-    //         color: #cc0000;
-    //         font-weight: 700;
-    //         text-transform: uppercase;
-    //         padding: 12px 8px;
-    //         border-right: 2px solid #ff9999;
-    //     ">`;
-    //     headerHtml += `<div class="header-content">${rowDimName}</div>`;
-    //     headerHtml += '</th>';
-    //     headerHtml += '</tr>';
-        
-    //     // FIXED: Create exactly the right number of additional rows
-    //     for (let i = 1; i < totalHeaderRows; i++) {
-    //         headerHtml += `<tr><!-- Row ${i + 1}: Covered by rowspan --></tr>`;
-    //     }
-        
-    //     console.log(`✅ CORRECTED: Created ${totalHeaderRows} header rows with rowspan=${totalHeaderRows}`);
-    //     elements.template6FrozenHeader.innerHTML = headerHtml;
-        
-    //     // Body remains the same
-    //     const visibleRows = this.getTemplate6VisibleRows(pivotData, rowFields, pivotTable);
-    //     let bodyHtml = '';
-        
-    //     if (!visibleRows || visibleRows.length === 0) {
-    //         bodyHtml = `<tr><td class="empty-message" style="padding: 8px; border: 1px solid #ccc;">No data to display.</td></tr>`;
-    //     } else {
-    //         visibleRows.forEach((row, rowIndex) => {
-    //             bodyHtml += `<tr class="${rowIndex % 2 === 0 ? 'even' : 'odd'}" data-row-index="${rowIndex}">`;
-    //             bodyHtml += this.renderTemplate6FrozenRowCell(row, rowFields[0], pivotTable);
-    //             bodyHtml += '</tr>';
-    //         });
-    //     }
-        
-    //     elements.template6FrozenBody.innerHTML = bodyHtml;
-        
-    //     if (pivotTable && typeof pivotTable.attachEventListeners === 'function') {
-    //         try {
-    //             pivotTable.attachEventListeners(elements.template6FrozenBody);
-    //         } catch (error) {
-    //             console.warn('⚠️ Error attaching event listeners:', error);
-    //         }
-    //     }
-        
-    //     console.log(`✅ Template6 frozen area built with CORRECTED ${totalHeaderRows} rows`);
-    // },
-
-
-    // // Helper method: Check if a node spans multiple children at the next level
-    // nodeSpansMultipleChildren: function(node, columnCombinations, currentLevelIndex) {
-    //     if (!columnCombinations || currentLevelIndex === undefined) return false;
-        
-    //     // Find all combinations where this node appears at the current level
-    //     const matchingCombinations = columnCombinations.filter(combo => {
-    //         const nodeAtLevel = combo.nodes[currentLevelIndex];
-    //         return nodeAtLevel && nodeAtLevel._id === node._id;
-    //     });
-        
-    //     if (matchingCombinations.length <= 1) return false;
-        
-    //     // Check if there are different child nodes at the next level
-    //     const nextLevelIndex = currentLevelIndex + 1;
-    //     if (nextLevelIndex >= matchingCombinations[0]?.nodes?.length) return false;
-        
-    //     const uniqueNextLevelNodes = new Set();
-    //     matchingCombinations.forEach(combo => {
-    //         const nextLevelNode = combo.nodes[nextLevelIndex];
-    //         if (nextLevelNode) {
-    //             uniqueNextLevelNodes.add(nextLevelNode._id);
-    //         }
-    //     });
-        
-    //     const spansMultiple = uniqueNextLevelNodes.size > 1;
-    //     console.log(`🔍 Node ${node._id} spans ${uniqueNextLevelNodes.size} different child nodes: ${spansMultiple}`);
-        
-    //     return spansMultiple;
-    // },
-
-
-    // columnNodeHasExpandableChildrenOrSpans: function(node, pivotTable, columnCombinations, currentLevelIndex) {
-    // if (!node) {
-    //     console.log(`🔍 T6: No node provided`);
-    //     return false;
-    // }
-
-    // // Method 1: Check if this node spans over multiple child nodes at the next level
-    // if (columnCombinations && currentLevelIndex !== undefined) {
-    //     const spansMultipleChildren = this.nodeSpansMultipleChildren(node, columnCombinations, currentLevelIndex);
-    //     if (spansMultipleChildren) {
-    //         console.log(`🎯 T6: Node ${node._id} (${node.label}) SPANS multiple children - should have expand/collapse`);
-    //         return true;
-    //     }
-    // }
-
-    // // Method 2: Direct children property check
-    // if (node.children && Array.isArray(node.children) && node.children.length > 0) {
-    //     console.log(`🎯 T6: Node ${node._id} has direct children: ${node.children.length}`);
-    //     return true;
-    // }
-
-    // // Method 3: Check via pivotTable hierarchy system
-    // if (pivotTable && pivotTable.extractDimensionName && node.hierarchyField) {
-    //     const dimName = pivotTable.extractDimensionName(node.hierarchyField);
-    //     const hierarchy = pivotTable.state?.hierarchies?.[dimName];
-        
-    //     if (hierarchy && hierarchy.nodesMap) {
-    //         const originalNode = hierarchy.nodesMap[node._id];
-    //         if (originalNode) {
-    //             const hasChildren = originalNode.children && originalNode.children.length > 0;
-    //             if (hasChildren) {
-    //                 // Check if children are meaningful (not just empty placeholders)
-    //                 const meaningfulChildren = originalNode.children.filter(childId => {
-    //                     const childNode = hierarchy.nodesMap[childId];
-    //                     return childNode && (childNode.factId || childNode.label || childNode.isLeaf !== undefined);
-    //                 });
-                    
-    //                 if (meaningfulChildren.length > 0) {
-    //                     console.log(`🎯 T6: Node ${node._id} in ${dimName}: ${meaningfulChildren.length} meaningful children`);
-    //                     return true;
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
-
-    // // Method 4: Check isLeaf property (inverse logic)
-    // if (node.hasOwnProperty('isLeaf')) {
-    //     const hasChildren = !node.isLeaf;
-    //     if (hasChildren) {
-    //         console.log(`🎯 T6: Node ${node._id} isLeaf=${node.isLeaf}, hasChildren=${hasChildren}`);
-    //         return true;
-    //     }
-    // }
-
-    // // Method 5: Level-based heuristics for spanning nodes
-    // const level = node.level || 0;
-    // if (level <= 1 && node.label && !node.factId) {
-    //     // High-level nodes without factId often span children
-    //     console.log(`🎯 T6: High-level node ${node._id} (level ${level}) likely spans children`);
-    //     return true;
-    // }
-
-    // console.log(`🍃 T6: Node ${node._id} - no expandable children or spans`);
-    // return false;
-    // },
-
-
-    // /**
-    //  * Render scrollable value area (70% right side)
-    //  */
-    // renderTemplate6ScrollableValueArea: function(elements, pivotData, rowFields, columnFields, valueFields, pivotTable) {
-    //     if (!elements.template6ScrollableHeader || !elements.template6ScrollableBody) return;
-        
-    //     // Get multi-level column combinations
-    //     const columnCombinations = this.generateTemplate6ColumnCombinations(pivotData, columnFields, pivotTable);
-        
-    //     console.log(`🏗️ Building Template6 scrollable value area: ${columnCombinations.length} column combinations × ${valueFields.length} values`);
-        
-    //     // Build multi-level header for scrollable area
-    //     let headerHtml = this.buildTemplate6MultiLevelHeader(columnCombinations, columnFields, valueFields, pivotTable);
-        
-    //     elements.template6ScrollableHeader.innerHTML = headerHtml;
-        
-    //     // Body for scrollable area - cross-tabulated values
-    //     const visibleRows = this.getTemplate6VisibleRows(pivotData, rowFields, pivotTable);
-    //     let bodyHtml = '';
-        
-    //     const totalValueCells = columnCombinations.length * valueFields.length;
-        
-    //     if (visibleRows.length === 0) {
-    //         bodyHtml = `<tr><td colspan="${totalValueCells}" class="empty-message">No data to display.</td></tr>`;
-    //     } else {
-    //         visibleRows.forEach((row, rowIndex) => {
-    //             bodyHtml += `<tr class="${rowIndex % 2 === 0 ? 'even' : 'odd'}" data-row-index="${rowIndex}">`;
-                
-    //             // Cross-tabulated value cells
-    //             valueFields.forEach((field, valueIndex) => {
-    //                 columnCombinations.forEach((colCombo, colIndex) => {
-    //                     const value = this.calculateTemplate6Value(row, colCombo, field, pivotTable);
-    //                     bodyHtml += this.renderTemplate6ValueCell(value, valueIndex, colIndex, pivotTable);
-    //                 });
-    //             });
-                
-    //             bodyHtml += '</tr>';
-    //         });
-    //     }
-        
-    //     elements.template6ScrollableBody.innerHTML = bodyHtml;
-        
-    //     // Attach event listeners
-    //     if (pivotTable && typeof pivotTable.attachEventListeners === 'function') {
-    //         pivotTable.attachEventListeners(elements.template6ScrollableBody);
-    //     }
-        
-    //     console.log(`✅ Template6 scrollable area built with ${totalValueCells} columns`);
-    // },
-
-
-    // /**
-    //  * ENHANCED: Check if column node has expandable children with better detection
-    //  */
-    // columnNodeHasExpandableChildrenTemplate6: function(node, pivotTable) {
-    //     if (!node || !node.hierarchyField) {
-    //         console.log(`🔍 T6: Node ${node?._id} has no hierarchyField - no children`);
-    //         return false;
-    //     }
-        
-    //     // Method 1: Direct children property check
-    //     if (node.children && Array.isArray(node.children) && node.children.length > 0) {
-    //         console.log(`🔍 T6: Node ${node._id} has direct children: ${node.children.length}`);
-    //         return true;
-    //     }
-        
-    //     // Method 2: Check via pivotTable hierarchy system
-    //     if (pivotTable && pivotTable.extractDimensionName) {
-    //         const dimName = pivotTable.extractDimensionName(node.hierarchyField);
-    //         const hierarchy = pivotTable.state?.hierarchies?.[dimName];
-            
-    //         if (hierarchy && hierarchy.nodesMap) {
-    //             const originalNode = hierarchy.nodesMap[node._id];
-    //             if (originalNode) {
-    //                 const hasChildren = originalNode.children && originalNode.children.length > 0;
-    //                 if (hasChildren) {
-    //                     // ENHANCED: Check if children are meaningful (not just empty placeholders)
-    //                     const meaningfulChildren = originalNode.children.filter(childId => {
-    //                         const childNode = hierarchy.nodesMap[childId];
-    //                         return childNode && (childNode.factId || childNode.label || childNode.isLeaf !== undefined);
-    //                     });
-                        
-    //                     console.log(`🔍 T6: Node ${node._id} in ${dimName}: ${originalNode.children.length} total children, ${meaningfulChildren.length} meaningful`);
-    //                     return meaningfulChildren.length > 0;
-    //                 }
-    //             }
-    //         }
-    //     }
-        
-    //     // Method 3: Check isLeaf property (inverse logic)
-    //     if (node.hasOwnProperty('isLeaf')) {
-    //         const hasChildren = !node.isLeaf;
-    //         console.log(`🔍 T6: Node ${node._id} isLeaf=${node.isLeaf}, hasChildren=${hasChildren}`);
-    //         return hasChildren;
-    //     }
-        
-    //     // Method 4: Nodes with factId are typically leaf nodes (no children)
-    //     if (node.factId) {
-    //         console.log(`🔍 T6: Node ${node._id} has factId - likely leaf node`);
-    //         return false;
-    //     }
-        
-    //     // Method 5: Check level-based heuristics
-    //     const level = node.level || 0;
-    //     if (level >= 3) {
-    //         // Deep levels are usually leaf nodes
-    //         console.log(`🔍 T6: Node ${node._id} at deep level ${level} - likely leaf`);
-    //         return false;
-    //     }
-        
-    //     // Default: assume no children for safety
-    //     console.log(`🔍 T6: Node ${node._id} - no clear children indicator, defaulting to false`);
-    //     return false;
-    // },
-
-
-    // /**
-    //  * Get visible rows for Template 6 (single row dimension)
-    //  */
-    // getTemplate6VisibleRows: function(pivotData, rowFields, pivotTable) {
-    //     if (!pivotData || !pivotData.rows) {
-    //         console.warn('⚠️ No pivot data rows available');
-    //         return [];
-    //     }
-        
-    //     // Use existing method if available
-    //     if (pivotTable && typeof pivotTable.getVisibleRowsWithoutDuplicates === 'function') {
-    //         try {
-    //             return pivotTable.getVisibleRowsWithoutDuplicates(pivotData.rows);
-    //         } catch (error) {
-    //             console.warn('⚠️ Error getting visible rows:', error);
-    //         }
-    //     }
-        
-    //     // Fallback: filter valid rows
-    //     return pivotData.rows.filter(row => {
-    //         return row && (row._id || row.label) && row._id !== 'ROOT' && row._id !== 'VALUE';
-    //     }).slice(0, 20); // Limit for performance
-    // },
-
-
-    // /**
-    //  * Render single row cell for frozen area
-    //  */
-    // renderTemplate6FrozenRowCell: function(row, field, pivotTable) {
-    //     if (!row) {
-    //         return `<td class="t6-dimension-cell empty">
-    //             <div class="cell-content">-</div>
-    //         </td>`;
-    //     }
-        
-    //     const level = row.level || 0;
-    //     const dimName = pivotTable.extractDimensionName(field);
-        
-    //     // Calculate indentation based on level
-    //     const indentPx = level * 12;
-        
-    //     let cellHtml = `<td class="t6-dimension-cell" data-level="${level}" data-dimension="${dimName}">`;
-    //     cellHtml += `<div class="cell-content" style="padding-left: ${indentPx}px;">`;
-        
-    //     // Add expand/collapse control or leaf indicator
-    //     const hasChildren = pivotTable.nodeHasChildren(row, pivotTable, dimName);
-        
-    //     if (hasChildren) {
-    //         const expandClass = row.expanded ? 'expanded' : 'collapsed';
-    //         cellHtml += `<span class="expand-collapse ${expandClass}" 
-    //             data-node-id="${row._id || row.id}" 
-    //             data-hierarchy="${dimName}" 
-    //             data-zone="row"
-    //             onclick="window.handleExpandCollapseClick(event)"
-    //             title="Expand/collapse ${pivotTable.getDisplayLabel(row)}"></span>`;
-    //     } else {
-    //         cellHtml += '<span class="leaf-node-empty"></span>';
-    //     }
-        
-    //     const displayLabel = pivotTable.getDisplayLabel(row);
-    //     cellHtml += `<span class="dimension-label" title="${displayLabel}">${displayLabel}</span>`;
-        
-    //     cellHtml += '</div>';
-    //     cellHtml += '</td>';
-        
-    //     return cellHtml;
-    // },
-
-
-    // /**
-    //  * Generate column combinations for Template 6 multi-column layout
-    //  */
-    // generateTemplate6ColumnCombinations: function(pivotData, columnFields, pivotTable) {
-    //     console.log(`🏗️ T6 Column Combinations: Starting with ${columnFields.length} fields`);
-        
-    //     // Filter valid columns
-    //     const columns = pivotData.columns.filter(col => {
-    //         const isValid = col._id !== 'ROOT' && 
-    //             col._id !== 'VALUE' && 
-    //             col.label !== 'VALUE' && 
-    //             col.label !== 'Value' &&
-    //             col._id !== 'default' && 
-    //             col._id !== 'no_columns' &&
-    //             col.label !== 'Measures' &&
-    //             col.hierarchyField;
-            
-    //         if (isValid) {
-    //             console.log(`✅ Valid column: ${col._id} (${col.label}) - hierarchy: ${col.hierarchyField}`);
-    //         }
-    //         return isValid;
-    //     });
-        
-    //     console.log(`🔍 T6: Found ${columns.length} valid column nodes from ${pivotData.columns.length} total columns`);
-        
-    //     if (columnFields.length === 1) {
-    //         // Single column dimension
-    //         console.warn('⚠️ Template6 called with single column dimension - should use Template3');
-    //         const visibleNodes = this.getVisibleColumnNodesForTemplate6(columns, columnFields[0], pivotTable);
-    //         const combinations = visibleNodes.map(col => ({
-    //             nodes: [col],
-    //             labels: [this.getDisplayLabelSafe(col)],
-    //             key: col._id
-    //         }));
-    //         console.log(`🔍 T6 Single: Generated ${combinations.length} combinations`);
-    //         return combinations;
-    //     } else if (columnFields.length >= 2) {
-    //         // Multi-column dimensions - ENSURE ALL LEVELS ARE REPRESENTED
-    //         console.log(`🔍 T6 Multi: Generating combinations for ${columnFields.length} column dimensions...`);
-    //         const combinations = this.generateTemplate6EnhancedHierarchicalCombinations(columns, columnFields, pivotTable);
-    //         console.log(`✅ T6 Multi: Generated ${combinations.length} hierarchical combinations`);
-    //         return combinations;
-    //     }
-        
-    //     return [];
-    // },
-
-
-    // // Enhanced hierarchical combination generation
-    // generateTemplate6EnhancedHierarchicalCombinations: function(columns, columnFields, pivotTable) {
-    //     const combinations = [];
-        
-    //     console.log(`🏗️ T6 Enhanced: Building combinations for ${columnFields.length} dimensions`);
-        
-    //     // Group columns by dimension with better hierarchy detection
-    //     const dimensionColumns = {};
-    //     columnFields.forEach((field, fieldIndex) => {
-    //         const dimName = pivotTable.extractDimensionName ? pivotTable.extractDimensionName(field) : field;
-    //         dimensionColumns[field] = columns.filter(col => {
-    //             if (!col.hierarchyField) return false;
-    //             const colDimName = pivotTable.extractDimensionName ? pivotTable.extractDimensionName(col.hierarchyField) : col.hierarchyField;
-    //             const matches = colDimName === dimName;
-    //             if (matches) {
-    //                 console.log(`🔍 T6 Dimension ${fieldIndex} (${dimName}): Including column ${col._id} (${col.label})`);
-    //             }
-    //             return matches;
-    //         });
-            
-    //         console.log(`🔍 T6 Enhanced dimension ${dimName}: ${dimensionColumns[field].length} columns`);
-            
-    //         // If no columns found, try a more lenient match
-    //         if (dimensionColumns[field].length === 0) {
-    //             console.warn(`⚠️ No columns found for dimension ${dimName}, trying lenient matching...`);
-    //             dimensionColumns[field] = columns.filter(col => {
-    //                 return col.hierarchyField && col.hierarchyField.toString().toLowerCase().includes(dimName.toLowerCase());
-    //             });
-    //             console.log(`🔍 T6 Enhanced dimension ${dimName} (lenient): ${dimensionColumns[field].length} columns`);
-    //         }
-    //     });
-        
-    //     // Generate cartesian product ensuring all dimensions are represented
-    //     if (columnFields.length === 2) {
-    //         const [field1, field2] = columnFields;
-    //         const cols1 = this.getVisibleColumnNodesForTemplate6(dimensionColumns[field1] || [], field1, pivotTable);
-    //         const cols2 = this.getVisibleColumnNodesForTemplate6(dimensionColumns[field2] || [], field2, pivotTable);
-            
-    //         console.log(`🔍 T6 Enhanced: Two dimensions: ${cols1.length} × ${cols2.length} = ${cols1.length * cols2.length} combinations`);
-            
-    //         // Ensure we have nodes from both dimensions
-    //         if (cols1.length === 0) {
-    //             console.warn(`⚠️ No nodes for first dimension, creating fallback`);
-    //             cols1.push({ _id: 'fallback_1', label: 'Dimension 1', hierarchyField: field1 });
-    //         }
-    //         if (cols2.length === 0) {
-    //             console.warn(`⚠️ No nodes for second dimension, creating fallback`);
-    //             cols2.push({ _id: 'fallback_2', label: 'Dimension 2', hierarchyField: field2 });
-    //         }
-            
-    //         cols1.forEach(col1 => {
-    //             cols2.forEach(col2 => {
-    //                 combinations.push({
-    //                     nodes: [col1, col2],
-    //                     labels: [this.getDisplayLabelSafe(col1), this.getDisplayLabelSafe(col2)],
-    //                     key: `${col1._id}|${col2._id}`
-    //                 });
-    //             });
-    //         });
-    //     } else if (columnFields.length >= 3) {
-    //         // Handle 3+ dimensions
-    //         this.generateTemplate6RecursiveEnhancedCombinations(dimensionColumns, columnFields, combinations, pivotTable);
-    //     }
-        
-    //     console.log(`✅ T6 Enhanced: Generated ${combinations.length} combinations with all dimension levels`);
-    //     return combinations;
-    // },
-
-
-    // // Recursive combination generation for 3+ dimensions
-    // generateTemplate6RecursiveEnhancedCombinations: function(dimensionColumns, columnFields, combinations, pivotTable) {
-    //     const generateRecursive = (currentCombo, currentLabels, currentKey, fieldIndex) => {
-    //         if (fieldIndex >= columnFields.length) {
-    //             combinations.push({
-    //                 nodes: [...currentCombo],
-    //                 labels: [...currentLabels],
-    //                 key: currentKey
-    //             });
-    //             return;
-    //         }
-            
-    //         const field = columnFields[fieldIndex];
-    //         const nodes = this.getVisibleColumnNodesForTemplate6(dimensionColumns[field] || [], field, pivotTable);
-            
-    //         // Ensure we have at least one node per dimension
-    //         if (nodes.length === 0) {
-    //             nodes.push({ 
-    //                 _id: `fallback_${fieldIndex}`, 
-    //                 label: `Dimension ${fieldIndex + 1}`, 
-    //                 hierarchyField: field 
-    //             });
-    //         }
-            
-    //         // Limit for performance but ensure representation
-    //         const maxNodes = fieldIndex === 0 ? 4 : 2;
-    //         const nodesToUse = nodes.slice(0, maxNodes);
-            
-    //         nodesToUse.forEach(node => {
-    //             generateRecursive(
-    //                 [...currentCombo, node],
-    //                 [...currentLabels, this.getDisplayLabelSafe(node)],
-    //                 currentKey ? `${currentKey}|${node._id}` : node._id,
-    //                 fieldIndex + 1
-    //             );
-    //         });
-    //     };
-        
-    //     generateRecursive([], [], '', 0);
-    // },
-
-
-    // /**
-    //  * Get visible column nodes for Template 6 with hierarchy awareness
-    //  */
-    // getVisibleColumnNodesForTemplate6: function(dimensionColumns, field, pivotTable) {
-    //     if (!pivotTable || !pivotTable.extractDimensionName) {
-    //         // Fallback to simple filtering
-    //         return dimensionColumns.filter(col => col.factId || (col.level || 0) <= 1).slice(0, 10);
-    //     }
-        
-    //     const dimName = pivotTable.extractDimensionName(field);
-    //     const hierarchy = pivotTable.state?.hierarchies?.[dimName];
-        
-    //     if (!hierarchy || !hierarchy.nodesMap) {
-    //         // Fallback to simple filtering
-    //         return dimensionColumns.filter(col => col.factId || (col.level || 0) <= 1).slice(0, 10);
-    //     }
-        
-    //     const visibleNodes = [];
-        
-    //     // Start from root and traverse based on expand/collapse state
-    //     const rootNode = hierarchy.nodesMap['ROOT'];
-    //     if (rootNode) {
-    //         this.traverseTemplate6ColumnHierarchy(rootNode, hierarchy, dimensionColumns, visibleNodes, dimName, pivotTable);
-    //     }
-        
-    //     // If no nodes found through traversal, fall back to direct filtering
-    //     if (visibleNodes.length === 0) {
-    //         return dimensionColumns.filter(col => {
-    //             return !this.columnNodeHasExpandableChildren(col, pivotTable) || col.factId;
-    //         }).slice(0, 10); // Limit for performance
-    //     }
-        
-    //     return visibleNodes;
-    // },
-
-
-    // /**
-    //  * Traverse column hierarchy for Template 6
-    //  */
-    // traverseTemplate6ColumnHierarchy: function(node, hierarchy, dimensionColumns, visibleNodes, dimName, pivotTable) {
-    //     if (!node) return;
-        
-    //     // Find the corresponding column in dimensionColumns
-    //     const columnNode = dimensionColumns.find(col => col._id === node.id);
-    //     if (!columnNode) return;
-        
-    //     // Check if this node is expanded
-    //     const isExpanded = pivotTable.state?.expandedNodes?.[dimName]?.column?.[node.id] || false;
-        
-    //     if (node.isLeaf || !node.children || node.children.length === 0) {
-    //         // Leaf node - always include
-    //         visibleNodes.push(columnNode);
-    //     } else if (!isExpanded) {
-    //         // Collapsed parent - include the parent node itself
-    //         visibleNodes.push(columnNode);
-    //     } else {
-    //         // Expanded parent - include children
-    //         node.children.forEach(childId => {
-    //             const childNode = hierarchy.nodesMap[childId];
-    //             if (childNode) {
-    //                 this.traverseTemplate6ColumnHierarchy(childNode, hierarchy, dimensionColumns, visibleNodes, dimName, pivotTable);
-    //             }
-    //         });
-    //     }
-    // },
-
+    /**
+     * Get visible column nodes for Template 6
+     */
+    getVisibleColumnNodesForTemplate6: function(dimensionColumns, field, pivotTable) {
+        return dimensionColumns.filter(col => {
+            // Include leaf nodes or expanded parent nodes
+            return !this.columnNodeHasExpandableChildren(col, pivotTable) || 
+                col.factId || 
+                col.expanded;
+        }).slice(0, 15); // Slightly higher limit for Template 6
+    },
     
-    // /**
-    //  * Generate hierarchical combinations for Template 6 multi-column dimensions
-    //  */
-    // generateTemplate6HierarchicalColumnCombinations: function(columns, columnFields, pivotTable) {
-    //     const combinations = [];
-        
-    //     // Group columns by dimension with hierarchical awareness
-    //     const dimensionColumns = {};
-    //     columnFields.forEach(field => {
-    //         const dimName = pivotTable.extractDimensionName(field);
-    //         dimensionColumns[field] = this.getVisibleColumnNodesForTemplate6(
-    //             columns.filter(col => {
-    //                 if (!col.hierarchyField) return false;
-    //                 const colDimName = pivotTable.extractDimensionName(col.hierarchyField);
-    //                 return colDimName === dimName;
-    //             }),
-    //             field,
-    //             pivotTable
-    //         );
-    //         console.log(`🔍 Template6 hierarchical dimension ${dimName}: ${dimensionColumns[field].length} visible nodes`);
-    //     });
-        
-    //     // Generate cartesian product of visible column nodes
-    //     if (columnFields.length === 2) {
-    //         const [field1, field2] = columnFields;
-    //         const cols1 = dimensionColumns[field1] || [];
-    //         const cols2 = dimensionColumns[field2] || [];
-            
-    //         console.log(`🔍 Template6 two hierarchical dimensions: ${cols1.length} × ${cols2.length} = ${cols1.length * cols2.length} combinations`);
-            
-    //         cols1.forEach(col1 => {
-    //             cols2.forEach(col2 => {
-    //                 combinations.push({
-    //                     nodes: [col1, col2],
-    //                     labels: [this.getDisplayLabelSafe(col1), this.getDisplayLabelSafe(col2)],
-    //                     key: `${col1._id}|${col2._id}`
-    //                 });
-    //             });
-    //         });
-    //     } else if (columnFields.length >= 3) {
-    //         // Handle 3+ dimensions with recursive approach
-    //         this.generateTemplate6RecursiveHierarchicalCombinations(dimensionColumns, columnFields, combinations, pivotTable);
-    //     }
-        
-    //     console.log(`🔍 Template6 generated ${combinations.length} hierarchical column combinations`);
-    //     return combinations;
-    // },
 
 
-    // /**
-    //  * Generate recursive hierarchical combinations for Template 6 (3+ column dimensions)
-    //  */
-    // generateTemplate6RecursiveHierarchicalCombinations: function(dimensionColumns, columnFields, combinations, pivotTable) {
-    //     const generateRecursive = (currentCombo, currentLabels, currentKey, fieldIndex) => {
-    //         if (fieldIndex >= columnFields.length) {
-    //             combinations.push({
-    //                 nodes: [...currentCombo],
-    //                 labels: [...currentLabels],
-    //                 key: currentKey
-    //             });
-    //             return;
-    //         }
-            
-    //         const field = columnFields[fieldIndex];
-    //         const nodes = dimensionColumns[field] || [];
-            
-    //         // Limit combinations for performance - more restrictive for Template6
-    //         const maxNodes = fieldIndex === 0 ? 4 : 2;
-    //         const nodesToUse = nodes.slice(0, maxNodes);
-            
-    //         nodesToUse.forEach(node => {
-    //             generateRecursive(
-    //                 [...currentCombo, node],
-    //                 [...currentLabels, this.getDisplayLabelSafe(node)],
-    //                 currentKey ? `${currentKey}|${node._id}` : node._id,
-    //                 fieldIndex + 1
-    //             );
-    //         });
-    //     };
+    /**
+     * Render body with hierarchical cross-tabulation
+     */
+    renderTemplate6HierarchicalBody: function(elements, pivotData, rowFields, columnFields, valueFields, pivotTable) {
+        console.log(`🏗️ Building Template6 hierarchical body...`);
         
-    //     generateRecursive([], [], '', 0);
-    // },
-
-
-    // /**
-    //  * Build multi-level header for Template 6 scrollable area
-    //  */
-    // buildTemplate6MultiLevelHeader: function(columnCombinations, columnFields, valueFields, pivotTable) {
-    //     let headerHtml = '';
+        const visibleRows = pivotTable.getVisibleRowsWithoutDuplicates(pivotData.rows);
+        const columnCombinations = this.generateTemplate6ColumnCombinations(pivotData, columnFields, pivotTable);
         
-    //     const totalColumnCombinations = columnCombinations.length;
-    //     const totalValueFields = valueFields.length;
-    //     const totalValueCells = totalColumnCombinations * totalValueFields;
+        let bodyHtml = '';
         
-    //     console.log(`🏗️ T6 Header: ${totalColumnCombinations} column combinations × ${totalValueFields} value fields = ${totalValueCells} total cells`);
-    //     console.log(`🏗️ T6 Column Fields: ${columnFields.length} levels:`, columnFields.map(f => f.toString()));
-        
-    //     // Row 1: Measures header spanning all value cells
-    //     headerHtml += '<tr>';
-    //     headerHtml += `<th class="t6-measures-header" colspan="${totalValueCells}">MEASURES<br></th>`;
-    //     headerHtml += '</tr>';
-        
-    //     // Row 2: Value field headers - each spans the number of column combinations
-    //     headerHtml += '<tr>';
-    //     valueFields.forEach((field, index) => {
-    //         const fieldLabel = pivotTable.getFieldLabel ? pivotTable.getFieldLabel(field) : field;
-    //         headerHtml += `<th class="t6-measure-header" colspan="${totalColumnCombinations}" data-value-index="${index}">`;
-    //         headerHtml += `<div class="header-content">${fieldLabel}</div>`;
-    //         headerHtml += '</th>';
-    //     });
-    //     headerHtml += '</tr>';
-        
-    //     // Rows 3+: FIXED Multi-level column headers - ENSURE ALL LEVELS SHOW
-    //     headerHtml += this.buildTemplate6AllColumnDimensionLevels(columnCombinations, columnFields, valueFields, pivotTable);
-        
-    //     return headerHtml;
-    // },
-
-
-    // // Build ALL column dimension levels with proper icon positioning
-    // buildTemplate6AllColumnDimensionLevels: function(columnCombinations, columnFields, valueFields, pivotTable) {
-    //     let headerHtml = '';
-        
-    //     const totalColumnCombinations = columnCombinations.length;
-    //     const totalValueFields = valueFields.length;
-        
-    //     console.log(`🏗️ T6 ALL LEVELS: Building ${columnFields.length} column dimension levels`);
-        
-    //     // Build EACH column dimension level separately
-    //     columnFields.forEach((field, levelIndex) => {
-    //         console.log(`🔍 T6 Level ${levelIndex}: Processing field "${field}"`);
-            
-    //         headerHtml += '<tr>';
-            
-    //         // Each value field gets its own set of column headers
-    //         valueFields.forEach((valueField, valueIndex) => {
-    //             console.log(`🔍 T6 Level ${levelIndex}, Value ${valueIndex}: Building headers`);
+        if (visibleRows.length === 0 || columnCombinations.length === 0) {
+            const totalCols = 1 + (columnCombinations.length * valueFields.length);
+            bodyHtml = `<tr><td colspan="${totalCols}" class="empty-message">No data to display. Try expanding some dimensions.</td></tr>`;
+        } else {
+            visibleRows.forEach((row, index) => {
+                bodyHtml += `<tr class="${index % 2 === 0 ? 'even' : 'odd'}">`;
                 
-    //             if (levelIndex === 0 && columnFields.length > 1) {
-    //                 // FIRST LEVEL: Calculate spans for grouped headers
-    //                 const topLevelSpans = this.calculateTemplate6TopLevelSpans(columnCombinations, levelIndex);
-    //                 console.log(`🔍 T6 Level ${levelIndex}: Found ${topLevelSpans.length} spanning groups`);
-                    
-    //                 topLevelSpans.forEach(spanInfo => {
-    //                     const node = spanInfo.node;
-    //                     const spanCount = spanInfo.spanCount;
-                        
-    //                     headerHtml += `<th class="t6-column-header dimension-level-${levelIndex}" colspan="${spanCount}" data-node-id="${node._id}" style="width: auto; min-width: fit-content;">`;
-    //                     headerHtml += this.buildColumnHeaderContent(node, field, levelIndex, pivotTable, true, spanCount);
-    //                     headerHtml += '</th>';
-    //                 });
-    //             } else {
-    //                 // INDIVIDUAL LEVEL: Show each node separately
-    //                 console.log(`🔍 T6 Level ${levelIndex}: Building ${totalColumnCombinations} individual cells`);
-                    
-    //                 columnCombinations.forEach((combo, colIndex) => {
-    //                     const node = combo.nodes[levelIndex];
-    //                     if (node) {
-    //                         headerHtml += `<th class="t6-column-header dimension-level-${levelIndex}" data-column-index="${colIndex}" data-node-id="${node._id}" style="width: auto; min-width: fit-content; text-align: center;">`;
-    //                         headerHtml += this.buildColumnHeaderContent(node, columnFields[levelIndex], levelIndex, pivotTable, false, 1);
-    //                         headerHtml += '</th>';
-    //                     } else {
-    //                         headerHtml += `<th class="t6-column-header dimension-level-${levelIndex} empty" style="width: auto;">-</th>`;
-    //                     }
-    //                 });
-    //             }
-    //         });
-            
-    //         headerHtml += '</tr>';
-    //         console.log(`✅ T6 Level ${levelIndex}: Row complete`);
-    //     });
-        
-    //     console.log(`✅ T6 ALL LEVELS: Built ${columnFields.length} column levels successfully`);
-    //     return headerHtml;
-    // },
-
-
-    // // Build column header content with proper icon positioning
-    // buildColumnHeaderContent: function(node, field, levelIndex, pivotTable, isSpanning, spanCount) {
-    //     let contentHtml = '';
-        
-    //     // Container with proper flex layout for icon + label
-    //     contentHtml += '<div class="column-header-container" style="display: flex; align-items: center; justify-content: center; gap: 4px; width: 100%; min-height: 24px;">';
-        
-    //     // Check if this node should have expand/collapse
-    //     const isExpandable = this.columnNodeHasExpandableChildrenOrSpans(node, pivotTable, null, levelIndex);
-        
-    //     if (isExpandable) {
-    //         const expandClass = node.expanded ? 'expanded' : 'collapsed';
-    //         const dimName = pivotTable.extractDimensionName ? pivotTable.extractDimensionName(field) : field;
-            
-    //         // Icon positioned BESIDE the label
-    //         contentHtml += `<span class="expand-collapse ${expandClass}" 
-    //             data-node-id="${node._id}" 
-    //             data-hierarchy="${dimName}" 
-    //             data-zone="column"
-    //             data-level="${levelIndex}"
-    //             onclick="window.handleExpandCollapseClick(event)"
-    //             title="Expand/collapse ${this.getDisplayLabelSafe(node)}${isSpanning ? ` (spans ${spanCount} columns)` : ''}"
-    //             style="width: 16px; height: 16px; margin: 0; flex-shrink: 0;"></span>`;
-    //         console.log(`🎯 T6 Level ${levelIndex}: Added expand/collapse to ${node.label} (expandable: ${isExpandable})`);
-    //     } else {
-    //         // Empty space to maintain alignment (same width as icon)
-    //         contentHtml += '<span style="width: 16px; height: 16px; flex-shrink: 0;"></span>';
-    //         console.log(`🍃 T6 Level ${levelIndex}: No expand/collapse for ${node.label} (not expandable)`);
-    //     }
-        
-    //     // Label positioned BESIDE the icon
-    //     const displayLabel = this.getDisplayLabelSafe(node);
-    //     contentHtml += `<span class="column-label" style="flex: 1; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${displayLabel}">${displayLabel}</span>`;
-        
-    //     contentHtml += '</div>';
-        
-    //     return contentHtml;
-    // },
-
-
-    // /**
-    //  * FIXED: Build hierarchical column headers with equal width distribution and proper expand/collapse
-    //  */
-    // buildTemplate6FixedHierarchicalColumnHeaders: function(columnCombinations, columnFields, valueFields, pivotTable) {
-    //     let headerHtml = '';
-        
-    //     const totalColumnCombinations = columnCombinations.length;
-    //     const totalValueFields = valueFields.length;
-        
-    //     console.log(`🏗️ T6 ENHANCED Headers: Building ${columnFields.length} column dimension levels`);
-        
-    //     // Build each column dimension level
-    //     columnFields.forEach((field, levelIndex) => {
-    //         headerHtml += '<tr>';
-            
-    //         valueFields.forEach((valueField, valueIndex) => {
-    //             if (levelIndex === 0 && columnFields.length > 1) {
-    //                 // Top level - calculate spans with expand/collapse for spanning nodes
-    //                 const topLevelSpans = this.calculateTemplate6FixedTopLevelSpans(columnCombinations, columnFields, levelIndex);
-                    
-    //                 topLevelSpans.forEach(spanInfo => {
-    //                     const node = spanInfo.node;
-    //                     const spanCount = spanInfo.spanCount;
-                        
-    //                     headerHtml += `<th class="t6-column-header dimension-level-${levelIndex}" colspan="${spanCount}" data-node-id="${node._id}">`;
-                        
-    //                     // ENHANCED: Check for expandable children OR spanning behavior
-    //                     const isExpandable = this.columnNodeHasExpandableChildrenOrSpans(node, pivotTable, columnCombinations, levelIndex);
-                        
-    //                     if (isExpandable) {
-    //                         const expandClass = node.expanded ? 'expanded' : 'collapsed';
-    //                         const dimName = pivotTable.extractDimensionName ? pivotTable.extractDimensionName(field) : field;
-    //                         headerHtml += `<span class="expand-collapse ${expandClass}" 
-    //                             data-node-id="${node._id}" 
-    //                             data-hierarchy="${dimName}" 
-    //                             data-zone="column"
-    //                             data-level="${levelIndex}"
-    //                             onclick="window.handleExpandCollapseClick(event)"
-    //                             title="Expand/collapse ${this.getDisplayLabelSafe(node)} (spans ${spanCount} columns)"></span>`;
-    //                         console.log(`🎯 T6 ENHANCED: Added expand/collapse to spanning node ${node.label} (spans ${spanCount})`);
-    //                     } else {
-    //                         // Show empty space for leaf nodes
-    //                         console.log(`🍃 T6 ENHANCED: Leaf spanning node ${node.label} - no expand/collapse needed`);
-    //                     }
-                        
-    //                     const displayLabel = this.getDisplayLabelSafe(node);
-    //                     headerHtml += `<span class="column-label">${displayLabel}</span>`;
-    //                     headerHtml += '</th>';
-    //                 });
-    //             } else {
-    //                 // Individual cells with enhanced expand/collapse logic
-    //                 columnCombinations.forEach((combo, colIndex) => {
-    //                     const node = combo.nodes[levelIndex];
-    //                     if (node) {
-    //                         const equalWidth = 100 / totalColumnCombinations;
-                            
-    //                         headerHtml += `<th class="t6-column-header dimension-level-${levelIndex}" data-column-index="${colIndex}" data-node-id="${node._id}" style="width: ${equalWidth}%;">`;
-                            
-    //                         // ENHANCED: Check for expandable children with spanning context
-    //                         const isExpandable = this.columnNodeHasExpandableChildrenOrSpans(node, pivotTable, columnCombinations, levelIndex);
-                            
-    //                         if (isExpandable) {
-    //                             const expandClass = node.expanded ? 'expanded' : 'collapsed';
-    //                             const dimName = pivotTable.extractDimensionName ? pivotTable.extractDimensionName(columnFields[levelIndex]) : columnFields[levelIndex];
-    //                             headerHtml += `<span class="expand-collapse ${expandClass}" 
-    //                                 data-node-id="${node._id}" 
-    //                                 data-hierarchy="${dimName}" 
-    //                                 data-zone="column"
-    //                                 data-level="${levelIndex}"
-    //                                 onclick="window.handleExpandCollapseClick(event)"
-    //                                 title="Expand/collapse ${this.getDisplayLabelSafe(node)}"></span>`;
-    //                             console.log(`🎯 T6 ENHANCED: Added expand/collapse to node ${node.label} (${node._id})`);
-    //                         } else {
-    //                             // No icon for true leaf nodes
-    //                             console.log(`🍃 T6 ENHANCED: True leaf node ${node.label} (${node._id}) - no expand/collapse`);
-    //                         }
-                            
-    //                         const displayLabel = this.getDisplayLabelSafe(node);
-    //                         headerHtml += `<span class="column-label" title="${displayLabel}">${displayLabel}</span>`;
-    //                         headerHtml += '</th>';
-    //                     } else {
-    //                         const equalWidth = 100 / totalColumnCombinations;
-    //                         headerHtml += `<th class="t6-column-header dimension-level-${levelIndex} empty" style="width: ${equalWidth}%;">-</th>`;
-    //                     }
-    //                 });
-    //             }
-    //         });
-            
-    //         headerHtml += '</tr>';
-    //     });
-        
-    //     console.log(`✅ T6 ENHANCED: Built ${columnFields.length} column levels with correct expand/collapse logic`);
-    //     return headerHtml;
-    // },
-
-
-    // /**
-    //  * FIXED: Calculate spanning information with equal width distribution
-    //  */
-    // calculateTemplate6FixedTopLevelSpans: function(columnCombinations, columnFields, levelIndex) {
-    //     const spans = [];
-    //     const processedNodes = new Set();
-    //     const totalCombinations = columnCombinations.length;
-        
-    //     columnCombinations.forEach((combo, comboIndex) => {
-    //         const node = combo.nodes[levelIndex];
-    //         if (!node || processedNodes.has(node._id)) return;
-            
-    //         // Calculate how many combinations this node spans
-    //         let spanCount = 0;
-    //         const spannedCombinations = [];
-            
-    //         columnCombinations.forEach((otherCombo, otherIndex) => {
-    //             const otherNode = otherCombo.nodes[levelIndex];
-    //             if (otherNode && otherNode._id === node._id) {
-    //                 spanCount++;
-    //                 spannedCombinations.push(otherCombo);
-    //             }
-    //         });
-            
-    //         // Only create span if it actually spans multiple combinations
-    //         if (spanCount > 1) {
-    //             spans.push({
-    //                 node: node,
-    //                 spanCount: spanCount,
-    //                 startIndex: comboIndex,
-    //                 widthPercentage: (spanCount / totalCombinations) * 100,
-    //                 spannedCombinations: spannedCombinations
-    //             });
+                // Row cell with hierarchy support
+                bodyHtml += this.renderTemplate6RowCell(row, rowFields[0]);
                 
-    //             console.log(`🔍 T6 ENHANCED: Node ${node._id} (${node.label}) spans ${spanCount} combinations = ${(spanCount / totalCombinations) * 100}% width`);
-    //         }
-            
-    //         processedNodes.add(node._id);
-    //     });
-        
-    //     return spans;
-    // },
-
-
-    // /**
-    //  * Build hierarchical column headers for Template 6 multi-level dimensions
-    //  */
-    // buildTemplate6HierarchicalColumnHeaders: function(columnCombinations, columnFields, valueFields, pivotTable) {
-    //     let headerHtml = '';
-        
-    //     // Build each column dimension level
-    //     columnFields.forEach((field, levelIndex) => {
-    //         headerHtml += '<tr>';
-            
-    //         valueFields.forEach(() => {
-    //             if (levelIndex === 0 && columnFields.length > 1) {
-    //                 // Top level - calculate spans for grouped headers
-    //                 const topLevelSpans = this.calculateTemplate6TopLevelSpans(columnCombinations, columnFields, levelIndex);
-    //                 topLevelSpans.forEach(spanInfo => {
-    //                     const node = spanInfo.node;
-    //                     const spanCount = spanInfo.spanCount;
-                        
-    //                     headerHtml += `<th class="t6-column-header dimension-level-${levelIndex}" colspan="${spanCount}" data-node-id="${node._id}">`;
-                        
-    //                     // Add expand/collapse for any spanning node with children
-    //                     if (this.columnNodeHasExpandableChildren(node, pivotTable)) {
-    //                         const expandClass = node.expanded ? 'expanded' : 'collapsed';
-    //                         const dimName = pivotTable.extractDimensionName ? pivotTable.extractDimensionName(field) : field;
-    //                         headerHtml += `<span class="expand-collapse ${expandClass}" 
-    //                             data-node-id="${node._id}" 
-    //                             data-hierarchy="${dimName}" 
-    //                             data-zone="column"
-    //                             onclick="window.handleExpandCollapseClick(event)"
-    //                             title="Expand/collapse ${this.getDisplayLabelSafe(node)} (${dimName} dimension)"></span>`;
-    //                         console.log(`🎯 Template6 added expand/collapse to spanning node ${node.label} (${node._id}) in ${dimName}`);
-    //                     } else {
-    //                         headerHtml += '<span class="leaf-node-empty"></span>';
-    //                         console.log(`🍃 Template6 spanning leaf node: ${node.label} (${node._id})`);
-    //                     }
-                        
-    //                     const displayLabel = this.getDisplayLabelSafe(node);
-    //                     headerHtml += `<span class="column-label">${displayLabel}</span>`;
-    //                     headerHtml += '</th>';
-    //                 });
-    //             } else {
-    //                 // Individual cells for lower levels or single-level scenarios
-    //                 columnCombinations.forEach((combo, colIndex) => {
-    //                     const node = combo.nodes[levelIndex];
-    //                     if (node) {
-    //                         headerHtml += `<th class="t6-column-header dimension-level-${levelIndex}" data-column-index="${colIndex}" data-node-id="${node._id}">`;
-                            
-    //                         // Add expand/collapse for nodes with children
-    //                         if (this.columnNodeHasExpandableChildren(node, pivotTable)) {
-    //                             const expandClass = node.expanded ? 'expanded' : 'collapsed';
-    //                             const dimName = pivotTable.extractDimensionName ? pivotTable.extractDimensionName(columnFields[levelIndex]) : columnFields[levelIndex];
-    //                             headerHtml += `<span class="expand-collapse ${expandClass}" 
-    //                                 data-node-id="${node._id}" 
-    //                                 data-hierarchy="${dimName}" 
-    //                                 data-zone="column"
-    //                                 onclick="window.handleExpandCollapseClick(event)"
-    //                                 title="Expand/collapse ${this.getDisplayLabelSafe(node)}"></span>`;
-    //                         } else {
-    //                             headerHtml += '<span class="leaf-node-empty"></span>';
-    //                         }
-                            
-    //                         const displayLabel = this.getDisplayLabelSafe(node);
-    //                         headerHtml += `<span class="column-label" title="${displayLabel}">${displayLabel}</span>`;
-    //                         headerHtml += '</th>';
-    //                     } else {
-    //                         headerHtml += `<th class="t6-column-header dimension-level-${levelIndex} empty">-</th>`;
-    //                     }
-    //                 });
-    //             }
-    //         });
-            
-    //         headerHtml += '</tr>';
-    //     });
-        
-    //     return headerHtml;
-    // },
-
-
-    // /**
-    //  * Calculate spanning information for Template 6 top-level column headers
-    //  */
-    // calculateTemplate6TopLevelSpans: function(columnCombinations, levelIndex) {
-    //     const spans = [];
-    //     const processedNodes = new Set();
-        
-    //     console.log(`🔍 Calculating spans for level ${levelIndex} with ${columnCombinations.length} combinations`);
-        
-    //     columnCombinations.forEach((combo, comboIndex) => {
-    //         const node = combo.nodes[levelIndex];
-    //         if (!node || processedNodes.has(node._id)) return;
-            
-    //         // Count how many combinations this node appears in
-    //         let spanCount = 0;
-    //         const matchingCombinations = [];
-            
-    //         columnCombinations.forEach((otherCombo, otherIndex) => {
-    //             const otherNode = otherCombo.nodes[levelIndex];
-    //             if (otherNode && otherNode._id === node._id) {
-    //                 spanCount++;
-    //                 matchingCombinations.push(otherCombo);
-    //             }
-    //         });
-            
-    //         // Add to spans if it actually spans multiple combinations
-    //         if (spanCount >= 1) { // Include even single spans for completeness
-    //             spans.push({
-    //                 node: node,
-    //                 spanCount: spanCount,
-    //                 startIndex: comboIndex,
-    //                 matchingCombinations: matchingCombinations
-    //             });
+                // Cross-tabulated value cells
+                valueFields.forEach(field => {
+                    columnCombinations.forEach((combo, colIndex) => {
+                        const value = pivotTable.calculateMultiDimensionalValue([row], combo.nodes, field);
+                        bodyHtml += this.renderTemplate6ValueCell(value, field, colIndex, pivotTable);
+                    });
+                });
                 
-    //             console.log(`🔍 Node ${node._id} (${node.label}) spans ${spanCount} combinations at level ${levelIndex}`);
-    //         }
+                bodyHtml += '</tr>';
+            });
+        }
+        
+        elements.pivotTableBody.innerHTML = bodyHtml;
+        pivotTable.attachEventListeners(elements.pivotTableBody);
+        
+        console.log(`✅ Template6 body built with ${visibleRows.length} rows × ${columnCombinations.length} column combinations`);
+    },
+    
+
+
+    /**
+     * Render value cell with total support
+     */
+    renderTemplate6ValueCellWithTotal: function(value, field, columnIndex, combo, pivotTable) {
+        let numericValue;
+
+        if (value === undefined || value === null) {
+            numericValue = 0;
+        } else if (typeof value === 'number') {
+            numericValue = value;
+        } else {
+            numericValue = parseFloat(String(value));
+            if (isNaN(numericValue)) numericValue = 0;
+        }
+
+        let cellClass = 'value-cell t6-value-cell';
+        
+        // Add special styling for totals
+        if (combo.isTotal) {
+            cellClass += ' t6-total-cell';
+        } else if (combo.isCollapsedTotal) {
+            cellClass += ' t6-collapsed-total-cell';
+        }
+        
+        if (numericValue !== 0) {
+            cellClass += ' non-zero-value';
+            if (numericValue < 0) {
+                cellClass += ' negative-value';
+            }
+            if (Math.abs(numericValue) >= 1000000) {
+                cellClass += ' large-value';
+            } else if (Math.abs(numericValue) >= 1000) {
+                cellClass += ' medium-value';
+            }
+        }
+
+        const formattedValue = pivotTable.formatValue(numericValue);
+
+        return `<td class="${cellClass}" data-raw-value="${numericValue}" data-column-index="${columnIndex}" data-field="${field}" data-is-total="${combo.isTotal || false}" data-is-collapsed-total="${combo.isCollapsedTotal || false}">
+            <div class="cell-content">${formattedValue}</div>
+        </td>`;
+    },
+
+
+
+    /**
+     * Calculate total for collapsed parent (all children, including hidden ones)
+     */
+    calculateTotalForCollapsedParent: function(row, parentNode, field, pivotTable) {
+        // Calculate total including all children (visible and hidden)
+        const dimName = pivotTable.extractDimensionName(parentNode.hierarchyField);
+        const hierarchy = pivotTable.state?.hierarchies?.[dimName];
+        
+        if (!hierarchy || !hierarchy.nodesMap) {
+            // Fallback calculation
+            return pivotTable.calculateMultiDimensionalValue([row], [parentNode], field);
+        }
+        
+        const originalNode = hierarchy.nodesMap[parentNode._id];
+        if (!originalNode || !originalNode.children) {
+            return pivotTable.calculateMultiDimensionalValue([row], [parentNode], field);
+        }
+        
+        let total = 0;
+        originalNode.children.forEach(childId => {
+            // Create mock child node for calculation
+            const mockChildNode = {
+                _id: childId,
+                hierarchyField: parentNode.hierarchyField
+            };
             
-    //         processedNodes.add(node._id);
-    //     });
+            const childValue = pivotTable.calculateMultiDimensionalValue([row], [parentNode, mockChildNode], field);
+            if (typeof childValue === 'number') {
+                total += childValue;
+            }
+        });
         
-    //     console.log(`✅ Found ${spans.length} spanning nodes at level ${levelIndex}`);
-    //     return spans;
-    // },
+        return total;
+    },
 
 
-    // /**
-    //  * Calculate cross-tabulated value for Template 6
-    //  */
-    // calculateTemplate6Value: function(row, columnCombo, field, pivotTable) {
-    //     if (!pivotTable || !pivotTable.calculateMultiDimensionalValue) {
-    //         // Fallback calculation
-    //         return Math.floor(Math.random() * 10000); // Mock value for testing
-    //     }
+
+    /**
+     * Calculate total for expanded parent (sum of visible children)
+     */
+    calculateTotalForExpandedParent: function(row, parentNode, field, pivotTable) {
+        // Get all child nodes for this parent
+        const childNodes = this.getChildNodesForParent(parentNode, [], pivotTable);
         
-    //     try {
-    //         return pivotTable.calculateMultiDimensionalValue([row], columnCombo.nodes, field);
-    //     } catch (error) {
-    //         console.warn('⚠️ Error calculating Template6 value:', error);
-    //         return 0;
-    //     }
-    // },
-
-
-    // /**
-    //  * Render value cell for Template 6 scrollable area
-    //  */
-    // renderTemplate6ValueCell: function(value, valueIndex, columnIndex, pivotTable) {
-    //     let numericValue;
-
-    //     if (value === undefined || value === null) {
-    //         numericValue = 0;
-    //     } else if (typeof value === 'number') {
-    //         numericValue = value;
-    //     } else {
-    //         numericValue = parseFloat(String(value));
-    //         if (isNaN(numericValue)) numericValue = 0;
-    //     }
-
-    //     let cellClass = 'value-cell';
-    //     if (numericValue !== 0) {
-    //         cellClass += ' non-zero-value';
-    //         if (numericValue < 0) {
-    //             cellClass += ' negative-value';
-    //         }
-    //         if (Math.abs(numericValue) >= 1000000) {
-    //             cellClass += ' large-value';
-    //         } else if (Math.abs(numericValue) >= 1000) {
-    //             cellClass += ' medium-value';
-    //         }
-    //     }
-
-    //     const formattedValue = pivotTable && pivotTable.formatValue ? 
-    //         pivotTable.formatValue(numericValue) : 
-    //         numericValue.toLocaleString();
-
-    //     // FIXED: Apply equal width styling to value cells
-    //     return `<td class="${cellClass}" data-raw-value="${numericValue}" data-value-index="${valueIndex}" data-column-index="${columnIndex}" style="width: auto; min-width: 100px; max-width: none;">
-    //         <div class="cell-content">${formattedValue}</div>
-    //     </td>`;
-    // },
-
-
-    // /**
-    //  * Setup synchronized scrolling for Template 6
-    //  */
-    // setupTemplate6SynchronizedScrolling: function(elements) {
-    //     const frozenArea = elements.template6FrozenBody?.closest('.frozen-row-dimensions');
-    //     const scrollableArea = elements.template6ScrollableBody?.closest('.scrollable-value-area');
+        let total = 0;
+        childNodes.forEach(childNode => {
+            const childValue = pivotTable.calculateMultiDimensionalValue([row], [parentNode, childNode], field);
+            if (typeof childValue === 'number') {
+                total += childValue;
+            }
+        });
         
-    //     if (!frozenArea || !scrollableArea) {
-    //         console.warn('⚠️ Cannot setup Template6 synchronized scrolling - missing areas');
-    //         return;
-    //     }
+        return total;
+    },
+
+
+    /**
+     * Render row cell for Template 6
+     */
+    renderTemplate6RowCell: function(row, field) {
+        const level = row.level || 0;
+        const indentationPx = 4 + (level * 30);
+        const dimName = pivotTable.extractDimensionName(field);
         
-    //     let isScrolling = false;
-    //     let scrollTimeout = null;
+        let cellHtml = `<td class="t6-hierarchy-cell" data-level="${level}" style="padding-left: ${indentationPx}px !important;">`;
         
-    //     // Enhanced vertical scroll synchronization
-    //     const syncVerticalScroll = (source, target) => {
-    //         if (isScrolling) return;
+        if (row.hasChildren) {
+            const expandClass = row.expanded ? 'expanded' : 'collapsed';
+            cellHtml += `<span class="expand-collapse ${expandClass}" 
+                data-node-id="${row._id}" 
+                data-hierarchy="${dimName}" 
+                data-zone="row"
+                onclick="window.handleExpandCollapseClick(event)"></span>`;
+        } else {
+            cellHtml += '<span class="leaf-node-empty"></span>';
+        }
+        
+        cellHtml += `<span class="dimension-label">${pivotTable.getDisplayLabel(row)}</span>`;
+        cellHtml += '</td>';
+        
+        return cellHtml;
+    },
+    
+
+
+    /**
+     * Render value cell for Template 6
+     */
+    renderTemplate6ValueCell: function(value, field, columnIndex, pivotTable) {
+        let numericValue;
+
+        if (value === undefined || value === null) {
+            numericValue = 0;
+        } else if (typeof value === 'number') {
+            numericValue = value;
+        } else {
+            numericValue = parseFloat(String(value));
+            if (isNaN(numericValue)) numericValue = 0;
+        }
+
+        let cellClass = 'value-cell t6-value-cell';
+        if (numericValue !== 0) {
+            cellClass += ' non-zero-value';
+            if (numericValue < 0) {
+                cellClass += ' negative-value';
+            }
+            if (Math.abs(numericValue) >= 1000000) {
+                cellClass += ' large-value';
+            } else if (Math.abs(numericValue) >= 1000) {
+                cellClass += ' medium-value';
+            }
+        }
+
+        const formattedValue = pivotTable.formatValue(numericValue);
+
+        return `<td class="${cellClass}" data-raw-value="${numericValue}" data-column-index="${columnIndex}" data-field="${field}">
+            <div class="cell-content">${formattedValue}</div>
+        </td>`;
+    },
+
+    /**
+     * Enhanced check for node children
+     */
+    nodeHasChildrenEnhanced: function(node, pivotTable) {
+        if (!node) return false;
+        
+        // Method 1: Direct children property
+        if (node.children && Array.isArray(node.children) && node.children.length > 0) {
+            console.log(`✅ Enhanced: Node ${node._id} has direct children: ${node.children.length}`);
+            return true;
+        }
+        
+        // Method 2: Check via pivotTable hierarchy system
+        if (pivotTable && node.hierarchyField) {
+            const dimName = pivotTable.extractDimensionName ? pivotTable.extractDimensionName(node.hierarchyField) : node.hierarchyField;
+            const hierarchy = pivotTable.state?.hierarchies?.[dimName];
             
-    //         isScrolling = true;
-    //         target.scrollTop = source.scrollTop;
-            
-    //         // Clear any existing timeout
-    //         if (scrollTimeout) {
-    //             clearTimeout(scrollTimeout);
-    //         }
-            
-    //         // Reset scrolling flag after animation frame
-    //         scrollTimeout = setTimeout(() => {
-    //             isScrolling = false;
-    //         }, 16); // ~60fps
-    //     };
+            if (hierarchy && hierarchy.nodesMap) {
+                const originalNode = hierarchy.nodesMap[node._id];
+                if (originalNode && originalNode.children && originalNode.children.length > 0) {
+                    console.log(`✅ Enhanced: Node ${node._id} in ${dimName}: ${originalNode.children.length} children via hierarchy`);
+                    return true;
+                }
+            }
+        }
         
-    //     // Frozen area scroll -> sync scrollable area
-    //     frozenArea.addEventListener('scroll', (e) => {
-    //         syncVerticalScroll(frozenArea, scrollableArea);
-    //         this.alignTemplate6RowHeights(frozenArea, scrollableArea);
-    //     });
+        // Method 3: Check isLeaf property (inverse logic)
+        if (node.hasOwnProperty('isLeaf')) {
+            const hasChildren = !node.isLeaf;
+            if (hasChildren) {
+                console.log(`✅ Enhanced: Node ${node._id} isLeaf=${node.isLeaf}, hasChildren=${hasChildren}`);
+                return true;
+            }
+        }
         
-    //     // Scrollable area scroll -> sync frozen area
-    //     scrollableArea.addEventListener('scroll', (e) => {
-    //         syncVerticalScroll(scrollableArea, frozenArea);
-    //         this.alignTemplate6RowHeights(frozenArea, scrollableArea);
-    //     });
-        
-    //     // Initial alignment
-    //     this.alignTemplate6RowHeights(frozenArea, scrollableArea);
-        
-    //     // Setup resize observer for dynamic row height synchronization
-    //     if (window.ResizeObserver) {
-    //         const resizeObserver = new ResizeObserver(entries => {
-    //             // Debounce the resize handling
-    //             clearTimeout(this._template6ResizeTimeout);
-    //             this._template6ResizeTimeout = setTimeout(() => {
-    //                 this.alignTemplate6RowHeights(frozenArea, scrollableArea);
-    //             }, 100);
-    //         });
-            
-    //         resizeObserver.observe(frozenArea);
-    //         resizeObserver.observe(scrollableArea);
-            
-    //         // Store observer for cleanup
-    //         this._template6ResizeObserver = resizeObserver;
-    //     }
-        
-    //     console.log('✅ Template6 enhanced synchronized scrolling setup complete');
-    // },
+        console.log(`❌ Enhanced: Node ${node._id} - no children found`);
+        return false;
+    },
 
 
-    // /**
-    //  * Align row heights between frozen and scrollable areas for Template 6
-    //  */
-    // alignTemplate6RowHeights: function(frozenArea, scrollableArea) {
-    //     try {
-    //         const frozenRows = frozenArea.querySelectorAll('tbody tr');
-    //         const scrollableRows = scrollableArea.querySelectorAll('tbody tr');
-            
-    //         if (frozenRows.length !== scrollableRows.length) {
-    //             console.warn(`⚠️ Template6 row count mismatch: frozen(${frozenRows.length}) vs scrollable(${scrollableRows.length})`);
-    //         }
-            
-    //         // Reset all heights first
-    //         [...frozenRows, ...scrollableRows].forEach(row => {
-    //             row.style.height = 'auto';
-    //             row.style.minHeight = '40px';
-    //         });
-            
-    //         // Calculate and apply maximum height for each row pair
-    //         const maxRows = Math.min(frozenRows.length, scrollableRows.length);
-            
-    //         for (let i = 0; i < maxRows; i++) {
-    //             const frozenRow = frozenRows[i];
-    //             const scrollableRow = scrollableRows[i];
-                
-    //             if (!frozenRow || !scrollableRow) continue;
-                
-    //             // Get natural heights
-    //             const frozenHeight = frozenRow.offsetHeight;
-    //             const scrollableHeight = scrollableRow.offsetHeight;
-    //             const maxHeight = Math.max(frozenHeight, scrollableHeight, 40); // Minimum 40px
-                
-    //             // Apply the same height to both rows
-    //             frozenRow.style.height = `${maxHeight}px`;
-    //             frozenRow.style.minHeight = `${maxHeight}px`;
-    //             frozenRow.style.maxHeight = `${maxHeight}px`;
-                
-    //             scrollableRow.style.height = `${maxHeight}px`;
-    //             scrollableRow.style.minHeight = `${maxHeight}px`;
-    //             scrollableRow.style.maxHeight = `${maxHeight}px`;
-    //         }
-            
-    //     } catch (error) {
-    //         console.error('Error aligning Template6 row heights:', error);
-    //     }
-    // },
+    /**
+     * Get enhanced visible column nodes
+     */
+    getVisibleColumnNodesEnhanced: function(dimensionColumns, field, pivotTable) {
+        return dimensionColumns.filter(col => {
+            return !this.nodeHasChildrenEnhanced(col, pivotTable) || col.factId;
+        }).slice(0, 10);
+    },
 
-
-    // /**
-    //  * Cleanup function for Template 6
-    //  */
-    // cleanupTemplate6: function() {
-    //     // Clear any stored timeouts
-    //     if (this._template6ResizeTimeout) {
-    //         clearTimeout(this._template6ResizeTimeout);
-    //         this._template6ResizeTimeout = null;
-    //     }
-        
-    //     // Disconnect resize observer
-    //     if (this._template6ResizeObserver) {
-    //         this._template6ResizeObserver.disconnect();
-    //         this._template6ResizeObserver = null;
-    //     }
-        
-    //     console.log('🧹 Template6 cleanup complete');
-    // },
 };
 
 // Export the template system

@@ -1591,7 +1591,7 @@ class EnhancedFilterSystem {
                 this.state.dimensions.smartcode.forEach(item => {
                     if (item.SMARTCODE && !valueSet.has(item.SMARTCODE)) {
                         valueSet.add(item.SMARTCODE);
-                        labelMap.set(item.SMARTCODE, item.SMARTCODE_DESC || item.SMARTCODE);
+                        labelMap.set(item.SMARTCODE, item.SMARTCODE);
                     }
                 });
                 break;

@@ -2866,7 +2866,9 @@ function buildManagementCentreHierarchy(data) {
         pathSeparator: '//',
         data: data
     });
-    config.rootLabel = 'All Management Centres';
+
+    // config.rootLabel = 'All Management Centres';
+
     // Build hierarchy with segment labels
     const hierarchy = buildPathHierarchyWithSegmentLabels(data, config);
     
@@ -2882,7 +2884,7 @@ function buildManagementCentreHierarchy(data) {
  * @returns {Object} - Complete hierarchy object
  */
 function buildCostElementHierarchy(data) {
-    console.log(`⏳ Status: Building Cost Element hierarchy from ${data?.length || 0} records...`);
+    console.log(`⏳ Status: Building COST_ELEMENT hierarchy from ${data?.length || 0} records...`);
     
     // Create config for path segment labels
     const config = createPathSegmentLabelConfig({
@@ -2896,7 +2898,8 @@ function buildCostElementHierarchy(data) {
     const hierarchy = buildPathHierarchyWithSegmentLabels(data, config);
     
     // The buildPathHierarchyWithSegmentLabels now ensures ROOT ID consistency
-    console.log(`✅ Status: Cost Element hierarchy built with ROOT node`);
+    console.log(`✅ Status: COST_ELEMENT hierarchy built with ROOT node`);
+
     return hierarchy;
 }
 
@@ -2910,25 +2913,18 @@ function buildGmidDisplayHierarchy(data) {
     console.log(`⏳ Status: Building GMID Display hierarchy from ${data?.length || 0} records...`);
     
     // Check if data has PATH_GMID structure
-    const hasPathData = data && Array.isArray(data) && 
-                         data.some(item => item && item.PATH_GMID && 
-                                  typeof item.PATH_GMID === 'string' && 
-                                  item.PATH_GMID.includes('/'));
+    // const hasPathData = data && Array.isArray(data) && 
+    //                      data.some(item => item && item.PATH_GMID && 
+    //                               typeof item.PATH_GMID === 'string' && 
+    //                               item.PATH_GMID.includes('/'));
     
-    if (!hasPathData) {
-        console.log("GMID data appears to be flat. Using flat hierarchy builder.");
-        const hierarchy = buildStandaloneFlatHierarchy(data, 'GMID_DISPLAY', 'GMID', 'DIM_GMID_DISPLAY');
-        // The buildStandaloneFlatHierarchy now ensures ROOT ID consistency
-        return hierarchy;
-    }
+    // if (!hasPathData) {
+    //     console.log("GMID data appears to be flat. Using flat hierarchy builder.");
+    //     const hierarchy = buildStandaloneFlatHierarchy(data, 'GMID_DISPLAY', 'GMID', 'DIM_GMID_DISPLAY');
+    //     // The buildStandaloneFlatHierarchy now ensures ROOT ID consistency
+    //     return hierarchy;
+    // }
     
-    // Create config for path segment labels
-    // const config = createPathSegmentLabelConfig({
-    //     pathField: 'PATH_GMID',
-    //     idField: 'GMID',
-    //     pathSeparator: '/',
-    //     data: data
-    // });
     const config = createPathSegmentLabelConfig({
         pathField: 'DISPLAY',
         idField: 'COMPONENT_GMID',
@@ -2946,29 +2942,69 @@ function buildGmidDisplayHierarchy(data) {
 
 
 function buildItemCostTypeHierarchy(data) {
-    const hierarchy = buildStandaloneFlatHierarchy(
-        data, 
-        'ITEM_COST_TYPE',
-        'ITEM_COST_TYPE',
-        'ITEM_COST_TYPE_DESC'
-    );
+    console.log(`⏳ Status: Building ITEM_COST_TYPE hierarchy from ${data?.length || 0} records...`);
     
-    // The buildStandaloneFlatHierarchy now ensures ROOT ID consistency
+    // Create config for path segment labels
+    const config = createPathSegmentLabelConfig({
+        pathField: 'PATH',
+        idField: 'ITEM_COST_TYPE',
+        pathSeparator: '//',
+        data: data
+    });
+    
+    // Build hierarchy with segment labels
+    const hierarchy = buildPathHierarchyWithSegmentLabels(data, config);
+    
+    // The buildPathHierarchyWithSegmentLabels now ensures ROOT ID consistency
+    console.log(`✅ Status: ITEM_COST_TYPE hierarchy built with ROOT node`);
     return hierarchy;
 }
+
+
+// function buildItemCostTypeHierarchy(data) {
+//     const hierarchy = buildStandaloneFlatHierarchy(
+//         data, 
+//         'ITEM_COST_TYPE',
+//         'ITEM_COST_TYPE',
+//         'ITEM_COST_TYPE_DESC'
+//     );
+    
+//     // The buildStandaloneFlatHierarchy now ensures ROOT ID consistency
+//     return hierarchy;
+// }
 
 
 function buildMaterialTypeHierarchy(data) {
-    const hierarchy = buildStandaloneFlatHierarchy(
-        data, 
-        'MATERIAL_TYPE',
-        'MATERIAL_TYPE',
-        'MATERIAL_TYPE_DESC'
-    );
+    console.log(`⏳ Status: Building MATERIAL_TYPE hierarchy from ${data?.length || 0} records...`);
     
-    // The buildStandaloneFlatHierarchy now ensures ROOT ID consistency
+    // Create config for path segment labels
+    const config = createPathSegmentLabelConfig({
+        pathField: 'PATH',
+        idField: 'MATERIAL_TYPE',
+        pathSeparator: '//',
+        data: data
+    });
+    
+    // Build hierarchy with segment labels
+    const hierarchy = buildPathHierarchyWithSegmentLabels(data, config);
+    
+    // The buildPathHierarchyWithSegmentLabels now ensures ROOT ID consistency
+    console.log(`✅ Status: MATERIAL_TYPE hierarchy built with ROOT node`);
     return hierarchy;
 }
+
+
+// function buildMaterialTypeHierarchy(data) {
+//     const hierarchy = buildStandaloneFlatHierarchy(
+//         data, 
+//         'MATERIAL_TYPE',
+//         'MATERIAL_TYPE',
+//         'MATERIAL_TYPE_DESC'
+//     );
+    
+//     // The buildStandaloneFlatHierarchy now ensures ROOT ID consistency
+//     return hierarchy;
+// }
 
 
 function buildBusinessYearHierarchy(data) {

@@ -1399,251 +1399,63 @@
 }
 
 /* ===========================================
-   TEMPLATE 6 ENHANCED CSS - REFINED IMPLEMENTATION
-   1 row + 2+ columns + values with NO scrollbar on frozen area
+   ENHANCED TEMPLATE 6 CSS - HIERARCHICAL MULTI-COLUMN
+   1 row + 2+ columns + values with Excel-like column spanning
    =========================================== */
 
 
-/* ---------- CONTAINER SETUP ---------- */
+/* ---------- CONTAINER AND TABLE LAYOUT ---------- */
 .template6 {
     width: 100% !important;
     height: auto !important;
-    max-height: 45vh !important;
-    min-height: 300px !important;
-    position: relative !important;
-    overflow: hidden !important;
+    max-height: 60vh !important;
+    min-height: 250px !important;
+    overflow: auto !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 0.375rem !important;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important;
 }
 
 .template6 .pivot-table-container {
     width: 100% !important;
     height: 100% !important;
-    position: relative !important;
-    overflow: hidden !important;
-    background: white !important;
-    border: 1px solid #e5e7eb !important;
-    border-radius: 0.375rem !important;
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important;
-    margin: 0 !important;
-    padding: 0 !important;
-}
-
-/* ---------- ENHANCED FROZEN ROW DIMENSIONS (30% LEFT) - NO HORIZONTAL SCROLLBAR ---------- */
-.template6 .frozen-row-dimensions.template6-enhanced {
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 30% !important;
-    height: 100% !important;
-    background: white !important;
-    border-right: 2px solid #ff9999 !important;
-    z-index: 100 !important;
-    
-    /* CRITICAL: ONLY VERTICAL SCROLLING, NO HORIZONTAL */
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    
-    margin: 0 !important;
-    padding: 0 !important;
-}
-
-/* ---------- ENHANCED SCROLLABLE VALUE AREA (70% RIGHT) ---------- */
-.template6 .scrollable-value-area.template6-enhanced {
-    position: absolute !important;
-    top: 0 !important;
-    left: 30% !important;
-    width: 70% !important;
-    height: 100% !important;
     overflow: auto !important;
     background: white !important;
-    z-index: 50 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    border-left: none !important;
 }
 
-/* ---------- ENHANCED FROZEN SEPARATOR ---------- */
-.template6 .frozen-separator.template6-enhanced {
-    position: absolute !important;
-    top: 0 !important;
-    left: 30% !important;
-    width: 2px !important;
-    height: 100% !important;
-    background: #ff9999 !important;
-    z-index: 200 !important;
-    cursor: col-resize !important;
-    pointer-events: none !important;
-    margin: 0 !important;
-    transform: translateX(-1px) !important;
-}
-
-/* ---------- TABLE LAYOUTS ---------- */
-.template6 .frozen-row-dimensions.template6-enhanced table,
-.template6 .scrollable-value-area.template6-enhanced table {
+.template6 table {
     width: 100% !important;
+    table-layout: auto !important;
     border-collapse: separate !important;
     border-spacing: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
+    min-width: fit-content !important;
 }
 
-/* Scrollable area auto-sizes columns */
-.template6 .scrollable-value-area.template6-enhanced table {
-    table-layout: auto !important;
-    min-width: 100% !important;
-}
-
-/* ---------- ENHANCED ROW DIMENSION HEADER ---------- */
-.template6 .t6-enhanced-row-header {
-    vertical-align: middle !important;
-    text-align: center !important;
-    background: linear-gradient(135deg, #fff5f5 0%, #ffebeb 100%) !important;
-    border: 1px solid #ff9999 !important;
-    color: #cc0000 !important;
-    font-weight: 700 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 1px !important;
-    border-right: 2px solid #ff9999 !important;
-    padding: 8px 12px !important;
-    box-sizing: border-box !important;
-    line-height: 1.2 !important;
-    height: auto !important;
-    width: 100% !important;
-    font-size: 0.9rem !important;
-}
-
-.template6 .t6-enhanced-header-content {
-    width: 100% !important;
-    height: auto !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    text-align: center !important;
-    word-wrap: break-word !important;
-    overflow-wrap: break-word !important;
-    hyphens: auto !important;
-}
-
-/* ---------- ENHANCED ROW DIMENSION CELLS - LEFT ALIGNED HIERARCHY ---------- */
-.template6 .t6-enhanced-dimension-cell {
-    background: white !important;
-    border: 1px solid #e5e7eb !important;
-    padding: 0 !important; /* No padding - controlled by content div */
-    box-sizing: border-box !important;
-    vertical-align: middle !important;
-    line-height: 1.2 !important;
-    width: 100% !important;
-    min-height: 40px !important;
-}
-
-.template6 .t6-enhanced-cell-content {
-    width: 100% !important;
-    min-height: 40px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: flex-start !important; /* LEFT ALIGNED */
-    padding: 8px 12px !important;
-    box-sizing: border-box !important;
-    /* TEXT ALIGNMENT: LEFT */
-    text-align: left !important;
-}
-
-/* ---------- ENHANCED EXPAND/COLLAPSE CONTROLS FOR ROW DIMENSIONS ---------- */
-.template6 .t6-enhanced-expand-collapse {
-    /* SIZE AND POSITIONING */
-    width: 18px !important;
-    height: 18px !important;
-    margin-right: 8px !important;
-    flex-shrink: 0 !important;
-    
-    /* LAYOUT */
-    display: inline-flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-    vertical-align: middle !important;
-    
-    /* STYLING */
-    border: 1px solid #6c757d !important;
-    border-radius: 3px !important;
-    background: white !important;
-    cursor: pointer !important;
-    font-size: 12px !important;
-    font-weight: bold !important;
-    line-height: 1 !important;
-    transition: all 0.2s ease !important;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
-    
-    /* POSITIONING */
-    position: relative !important;
-    top: 0 !important;
-    left: 0 !important;
-}
-
-/* ---------- ENHANCED LEAF NODE PLACEHOLDER ---------- */
-.template6 .t6-enhanced-leaf-empty {
-    width: 18px !important;
-    height: 18px !important;
-    margin-right: 8px !important;
-    flex-shrink: 0 !important;
-    display: inline-block !important;
-    /* INVISIBLE PLACEHOLDER - maintains spacing */
-    background: transparent !important;
-    border: none !important;
-}
-
-/* ---------- ENHANCED DIMENSION LABELS - LEFT ALIGNED ---------- */
-.template6 .t6-enhanced-dimension-label {
-    /* LAYOUT */
-    flex: 1 !important;
-    display: inline-block !important;
-    vertical-align: middle !important;
-    
-    /* TEXT ALIGNMENT */
-    text-align: left !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    
-    /* SPACING */
-    margin: 0 !important;
-    padding: 0 !important;
-    line-height: 1.3 !important;
-    
-    /* FONT */
-    font-weight: 500 !important;
-    color: #374151 !important;
-}
-
-/* ---------- ENHANCED EXPAND/COLLAPSE STATES FOR ROWS ---------- */
-.template6 .t6-enhanced-expand-collapse.collapsed {
+/* ---------- ROW DIMENSION HEADER (STICKY LEFT) ---------- */
+.template6 .t6-row-header {
     background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
-    border-color: #d97706 !important;
+    border: 2px solid #d97706 !important;
     color: #92400e !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1.5px !important;
+    padding: 15px 12px !important;
+    position: sticky !important;
+    left: 0 !important;
+    top: 0 !important;
+    z-index: 60 !important;
+    min-width: 500px !important;
+    max-width: 650px !important;
+    width: 500px !important;
+    vertical-align: middle !important;
+    box-sizing: border-box !important;
 }
 
-.template6 .t6-enhanced-expand-collapse.collapsed::before {
-    content: "+" !important;
-    display: block !important;
-    line-height: 1 !important;
-    font-size: 12px !important;
-    font-weight: bold !important;
-}
-
-.template6 .t6-enhanced-expand-collapse.expanded {
-    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%) !important;
-    border-color: #16a34a !important;
-    color: #15803d !important;
-}
-
-.template6 .t6-enhanced-expand-collapse.expanded::before {
-    content: "−" !important;
-    display: block !important;
-    line-height: 1 !important;
-    font-size: 14px !important;
-    font-weight: bold !important;
-}
-
-/* ---------- ENHANCED SCROLLABLE AREA HEADERS ---------- */
-.template6 .t6-enhanced-measures-header {
+/* ---------- MEASURES HEADER ---------- */
+.template6 .t6-measures-header {
     background: linear-gradient(135deg, #f8f0ff 0%, #e6ccff 100%) !important;
     border: 2px solid #9966cc !important;
     color: #663399 !important;
@@ -1651,172 +1463,97 @@
     text-align: center !important;
     text-transform: uppercase !important;
     letter-spacing: 1.5px !important;
-    padding: 8px 12px !important;
+    padding: 12px 15px !important;
     position: sticky !important;
     top: 0 !important;
     z-index: 15 !important;
-    white-space: normal !important;
-    word-wrap: break-word !important;
-    overflow-wrap: break-word !important;
+    box-sizing: border-box !important;
 }
 
-.template6 .t6-enhanced-measure-header {
+/* ---------- VALUE FIELD HEADERS ---------- */
+.template6 .t6-measure-header {
     background: linear-gradient(135deg, #fff5e6 0%, #ffe0b3 100%) !important;
     border: 1px solid #ff9933 !important;
     color: #cc6600 !important;
     font-weight: 600 !important;
     text-align: center !important;
     text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+    padding: 10px 12px !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 15 !important;
+    min-width: 100px !important;
+    box-sizing: border-box !important;
+}
+
+/* ---------- HIERARCHICAL COLUMN HEADERS WITH SPANNING ---------- */
+.template6 .t6-column-header {
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%) !important;
+    border: 1px solid #22c55e !important;
+    color: #15803d !important;
+    font-weight: 600 !important;
+    text-align: center !important;
     padding: 8px 12px !important;
     position: sticky !important;
     top: 0 !important;
     z-index: 15 !important;
-    white-space: normal !important;
-    word-wrap: break-word !important;
-    overflow-wrap: break-word !important;
-}
-
-/* ---------- ENHANCED COLUMN HEADERS ---------- */
-.template6 .t6-enhanced-column-header {
-    background: linear-gradient(135deg, #f0fff4 0%, #dcfce7 100%) !important;
-    border: 1px solid #22c55e !important;
-    color: #15803d !important;
-    font-weight: 600 !important;
-    text-align: center !important;
-    padding: 8px 10px !important;
-    position: sticky !important;
-    top: 0 !important;
-    z-index: 15 !important;
-    white-space: normal !important;
-    word-wrap: break-word !important;
-    overflow-wrap: break-word !important;
-    hyphens: auto !important;
-    line-height: 1.3 !important;
-    
-    /* AUTO WIDTH */
-    width: auto !important;
-    min-width: fit-content !important;
-    max-width: none !important;
+    min-width: 80px !important;
     box-sizing: border-box !important;
-}
-
-/* ---------- ENHANCED COLUMN HEADER CONTAINER ---------- */
-.template6 .t6-enhanced-column-header-container {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 6px !important;
-    width: 100% !important;
-    min-height: 24px !important;
-    padding: 2px !important;
-    box-sizing: border-box !important;
-}
-
-/* ---------- ENHANCED COLUMN EXPAND/COLLAPSE CONTROLS ---------- */
-.template6 .t6-enhanced-column-header .t6-enhanced-expand-collapse {
-    /* SIZE - CENTERED IN SQUARE */
-    width: 16px !important;
-    height: 16px !important;
-    
-    /* POSITIONING */
-    margin: 0 !important;
-    flex-shrink: 0 !important;
-    
-    /* LAYOUT */
-    display: inline-flex !important;
-    justify-content: center !important;
-    align-items: center !important;
     vertical-align: middle !important;
-    
-    /* STYLING */
-    border: 1px solid #6c757d !important;
-    border-radius: 2px !important;
-    background: white !important;
-    cursor: pointer !important;
-    font-size: 11px !important;
-    font-weight: bold !important;
-    line-height: 1 !important;
-    transition: all 0.2s ease !important;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
-    
-    /* CENTERING */
-    position: relative !important;
-    top: 0 !important;
-    left: 0 !important;
+    white-space: nowrap !important;
 }
 
-/* ---------- ENHANCED COLUMN EXPAND/COLLAPSE STATES ---------- */
-.template6 .t6-enhanced-column-header .t6-enhanced-expand-collapse.collapsed {
-    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
-    border-color: #d97706 !important;
-    color: #92400e !important;
-}
-
-.template6 .t6-enhanced-column-header .t6-enhanced-expand-collapse.collapsed::before {
-    content: "+" !important;
-    display: block !important;
-    line-height: 1 !important;
-    font-size: 11px !important;
-    font-weight: bold !important;
-}
-
-.template6 .t6-enhanced-column-header .t6-enhanced-expand-collapse.expanded {
-    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%) !important;
-    border-color: #16a34a !important;
-    color: #15803d !important;
-}
-
-.template6 .t6-enhanced-column-header .t6-enhanced-expand-collapse.expanded::before {
-    content: "−" !important;
-    display: block !important;
-    line-height: 1 !important;
-    font-size: 12px !important;
-    font-weight: bold !important;
-}
-
-/* ---------- ENHANCED COLUMN LABELS ---------- */
-.template6 .t6-enhanced-column-label {
-    flex: 1 !important;
-    text-align: center !important;
-    white-space: normal !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-    font-weight: inherit !important;
-    color: inherit !important;
-    word-wrap: break-word !important;
-    overflow-wrap: break-word !important;
-    hyphens: auto !important;
-    line-height: 1.3 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-}
-
-/* ---------- ENHANCED COLUMN HEADER LEVELS ---------- */
-.template6 .t6-enhanced-column-header.dimension-level-0 {
-    background: linear-gradient(135deg, #e6f7ff 0%, #ccf0ff 100%) !important;
-    border: 1px solid #66ccff !important;
-    color: #0099cc !important;
+/* Different styling for different dimension levels */
+.template6 .t6-column-header.dimension-level-0 {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+    border: 2px solid #3b82f6 !important;
+    color: #1e40af !important;
     font-weight: 700 !important;
-    text-transform: uppercase !important;
+    font-size: 0.9rem !important;
     letter-spacing: 0.5px !important;
+    padding: 10px 12px !important;
 }
 
-.template6 .t6-enhanced-column-header.dimension-level-1 {
-    background: linear-gradient(135deg, #f0fff4 0%, #dcfce7 100%) !important;
-    border: 1px solid #22c55e !important;
-    color: #15803d !important;
+.template6 .t6-column-header.dimension-level-1 {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%) !important;
+    border: 1px solid #16a34a !important;
+    color: #166534 !important;
     font-weight: 600 !important;
+    font-size: 0.85rem !important;
+    padding: 8px 10px !important;
 }
 
-.template6 .t6-enhanced-column-header.dimension-level-2 {
+.template6 .t6-column-header.dimension-level-2 {
     background: linear-gradient(135deg, #fefce8 0%, #fef3c7 100%) !important;
     border: 1px solid #eab308 !important;
     color: #a16207 !important;
-    font-weight: 500 !important;
+    font-weight: 600 !important;
+    font-size: 0.8rem !important;
+    padding: 6px 8px !important;
 }
 
-/* ---------- ENHANCED VALUE CELLS ---------- */
-.template6 .t6-enhanced-value-cell {
+/* ---------- ROW HIERARCHY CELL (STICKY LEFT) ---------- */
+.template6 .t6-hierarchy-cell {
+    background: white !important;
+    border: 1px solid #e5e7eb !important;
+    border-right: 2px solid #d97706 !important;
+    padding: 8px 12px !important;
+    position: sticky !important;
+    left: 0 !important;
+    z-index: 20 !important;
+    min-width: 180px !important;
+    max-width: 250px !important;
+    width: 200px !important;
+    box-sizing: border-box !important;
+    vertical-align: middle !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    white-space: normal !important;
+}
+
+/* ---------- VALUE CELLS ---------- */
+.template6 .t6-value-cell {
     background: white !important;
     border: 1px solid #e5e7eb !important;
     text-align: right !important;
@@ -1825,217 +1562,393 @@
     font-weight: 500 !important;
     box-sizing: border-box !important;
     vertical-align: middle !important;
-    white-space: nowrap !important;
-    
-    /* AUTO WIDTH */
-    width: auto !important;
-    min-width: fit-content !important;
-    max-width: none !important;
-    
-    /* OVERFLOW HANDLING */
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-}
-
-.template6 .t6-enhanced-cell-content {
-    width: 100% !important;
-    height: 100% !important;
-    display: flex !important;
-    align-items: center !important;
-    box-sizing: border-box !important;
-}
-
-.template6 .t6-enhanced-value-cell .t6-enhanced-cell-content {
-    justify-content: flex-end !important; /* Right-align values */
+    min-width: 80px !important;
     white-space: nowrap !important;
 }
 
-/* ---------- ENHANCED VALUE CELL STATES ---------- */
-.template6 .t6-enhanced-value-cell.non-zero-value {
+/* Enhanced value cell styling */
+.template6 .t6-value-cell.non-zero-value {
     background: linear-gradient(135deg, #f0fff4 0%, #e6ffe6 100%) !important;
-    color: #006600 !important;
+    color: #15803d !important;
     font-weight: 600 !important;
 }
 
-.template6 .t6-enhanced-value-cell.negative-value {
+.template6 .t6-value-cell.large-value {
+    background: linear-gradient(135deg, #fff8dc 0%, #f0e68c 100%) !important;
+    color: #b8860b !important;
+    font-weight: 700 !important;
+}
+
+.template6 .t6-value-cell.negative-value {
     color: #dc2626 !important;
     font-weight: 700 !important;
     background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%) !important;
 }
 
-/* ---------- ENHANCED SCROLLBARS ---------- */
-/* Frozen area - ONLY VERTICAL, thinner scrollbar */
-.template6 .frozen-row-dimensions.template6-enhanced::-webkit-scrollbar {
-    width: 6px !important;
-    height: 0px !important; /* NO HORIZONTAL SCROLLBAR */
-    background: transparent !important;
-}
-
-.template6 .frozen-row-dimensions.template6-enhanced::-webkit-scrollbar-track {
-    background: #f8f9fa !important;
+/* ---------- ENHANCED EXPAND/COLLAPSE CONTROLS - IMPROVEMENTS 2 & 3 ---------- */
+.template6 .expand-collapse {
+    display: inline-flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 16px !important;
+    height: 16px !important;
+    margin-right: 8px !important;
+    vertical-align: middle !important;
+    border: 1px solid #6c757d !important;
     border-radius: 3px !important;
+    background: white !important;
+    cursor: pointer !important;
+    font-size: 12px !important;
+    font-weight: bold !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+    flex-shrink: 0 !important;
 }
 
-.template6 .frozen-row-dimensions.template6-enhanced::-webkit-scrollbar-thumb {
-    background: #cbd5e1 !important;
-    border-radius: 3px !important;
+.template6 .expand-collapse.collapsed {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
+    border-color: #d97706 !important;
+    color: #92400e !important;
 }
 
-.template6 .frozen-row-dimensions.template6-enhanced::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8 !important;
+.template6 .expand-collapse.collapsed::before {
+    content: "+" !important;
+    display: block !important;
+    line-height: 1 !important;
+    font-size: 14px !important;
+    font-weight: bold !important;
 }
 
-/* Scrollable area - both directions */
-.template6 .scrollable-value-area.template6-enhanced::-webkit-scrollbar {
-    width: 8px !important;
-    height: 8px !important;
+.template6 .expand-collapse.expanded {
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%) !important;
+    border-color: #16a34a !important;
+    color: #15803d !important;
 }
 
-.template6 .scrollable-value-area.template6-enhanced::-webkit-scrollbar-track {
-    background: #f8f9fa !important;
-    border-radius: 4px !important;
+.template6 .expand-collapse.expanded::before {
+    content: "−" !important;
+    display: block !important;
+    line-height: 1 !important;
+    font-size: 16px !important;
+    font-weight: bold !important;
 }
 
-.template6 .scrollable-value-area.template6-enhanced::-webkit-scrollbar-thumb {
-    background: #cbd5e1 !important;
-    border-radius: 4px !important;
-    border: 1px solid #f8f9fa !important;
-}
-
-.template6 .scrollable-value-area.template6-enhanced::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8 !important;
-}
-
-.template6 .scrollable-value-area.template6-enhanced::-webkit-scrollbar-corner {
-    background: #f8f9fa !important;
-}
-
-/* ---------- ENHANCED ROW HEIGHT CONSISTENCY ---------- */
-.template6 .frozen-row-dimensions.template6-enhanced tbody tr,
-.template6 .scrollable-value-area.template6-enhanced tbody tr {
-    height: 40px !important;
-    min-height: 40px !important;
-    max-height: 40px !important;
-    box-sizing: border-box !important;
-}
-
-.template6 .frozen-row-dimensions.template6-enhanced thead tr,
-.template6 .scrollable-value-area.template6-enhanced thead tr {
-    height: auto !important;
-    min-height: 45px !important;
-    box-sizing: border-box !important;
-}
-
-/* ---------- ENHANCED HOVER EFFECTS ---------- */
-.template6 .frozen-row-dimensions.template6-enhanced tr:hover .t6-enhanced-dimension-cell {
-    background-color: rgba(204, 0, 0, 0.05) !important;
-}
-
-.template6 .scrollable-value-area.template6-enhanced tr:hover .t6-enhanced-value-cell {
-    background-color: rgba(204, 0, 0, 0.05) !important;
-}
-
-.template6 .t6-enhanced-expand-collapse:hover {
+.template6 .expand-collapse:hover {
     transform: scale(1.1) !important;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
-    z-index: 10 !important;
-    position: relative !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15) !important;
 }
 
-/* ---------- ENHANCED RESPONSIVE ADJUSTMENTS ---------- */
+/* IMPROVEMENT 3: Remove leaf node styling from column headers - only in column zone */
+.template6 .t6-column-header .leaf-node-empty {
+    display: none !important;
+}
+
+/* Keep leaf node styling only for row hierarchy cells */
+.template6 .t6-hierarchy-cell .leaf-node-empty {
+    display: inline-block !important;
+    width: 16px !important;
+    height: 16px !important;
+    margin-right: 8px !important;
+    border: 1px solid #6c757d !important;
+    border-radius: 3px !important;
+    background: white !important;
+    vertical-align: middle !important;
+    flex-shrink: 0 !important;
+    box-sizing: border-box !important;
+}
+
+/* ---------- DIMENSION AND COLUMN LABELS ---------- */
+.template6 .dimension-label {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    display: inline-block !important;
+    vertical-align: middle !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    line-height: 1.3 !important;
+    max-width: calc(100% - 30px) !important;
+}
+
+.template6 .column-label {
+    display: inline-block !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    font-weight: inherit !important;
+    color: inherit !important;
+    max-width: none !important;
+}
+
+/* ---------- CELL CONTENT WRAPPER ---------- */
+.template6 .cell-content {
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
+}
+
+.template6 .t6-value-cell .cell-content {
+    justify-content: flex-end !important;
+}
+
+.template6 .t6-column-header .cell-content,
+.template6 .t6-measure-header .cell-content,
+.template6 .t6-measures-header .cell-content {
+    justify-content: center !important;
+}
+
+/* ---------- STICKY POSITIONING ---------- */
+.template6 thead th {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 10 !important;
+    background-clip: padding-box !important;
+}
+
+/* Ensure row header stays on top of everything */
+.template6 .t6-row-header {
+    z-index: 60 !important;
+}
+
+/* Ensure hierarchy cells stay sticky */
+.template6 .t6-hierarchy-cell {
+    z-index: 20 !important;
+}
+
+/* ---------- HOVER EFFECTS ---------- */
+.template6 tbody tr:hover {
+    background-color: rgba(251, 191, 36, 0.05) !important;
+}
+
+.template6 tbody tr:hover .t6-hierarchy-cell {
+    background-color: rgba(251, 191, 36, 0.08) !important;
+}
+
+.template6 tbody tr:hover .t6-value-cell {
+    background-color: rgba(251, 191, 36, 0.03) !important;
+}
+
+.template6 .t6-column-header:hover {
+    background-color: rgba(34, 197, 94, 0.15) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* ---------- VISUAL HIERARCHY FOR ROW LEVELS ---------- */
+.template6 [data-level="0"] {
+    font-weight: 700 !important;
+    background-color: #fffbeb !important;
+}
+
+.template6 [data-level="1"] {
+    font-weight: 600 !important;
+    padding-left: 20px !important;
+}
+
+.template6 [data-level="2"] {
+    font-weight: 500 !important;
+    padding-left: 32px !important;
+}
+
+.template6 [data-level="3"] {
+    font-weight: 400 !important;
+    padding-left: 44px !important;
+}
+
+.template6 [data-level="4"] {
+    font-weight: 400 !important;
+    padding-left: 56px !important;
+    font-size: 0.9rem !important;
+}
+
+/* ---------- RESPONSIVE ADJUSTMENTS ---------- */
 @media (max-width: 1400px) {
-    .template6 .frozen-row-dimensions.template6-enhanced {
-        width: 25% !important;
+    .template6 .t6-row-header,
+    .template6 .t6-hierarchy-cell {
+        min-width: 35% !important;
+        max-width: 40% !important;
     }
     
-    .template6 .scrollable-value-area.template6-enhanced {
-        left: 25% !important;
-        width: 75% !important;
-    }
-    
-    .template6 .frozen-separator.template6-enhanced {
-        left: 25% !important;
+    .template6 .t6-column-header,
+    .template6 .t6-value-cell {
+        min-width: 70px !important;
+        padding: 6px 8px !important;
     }
 }
 
 @media (max-width: 1024px) {
-    .template6 .frozen-row-dimensions.template6-enhanced {
-        width: 20% !important;
+    .template6 {
+        max-height: 50vh !important;
     }
     
-    .template6 .scrollable-value-area.template6-enhanced {
-        left: 20% !important;
-        width: 80% !important;
+    .template6 .t6-row-header,
+    .template6 .t6-hierarchy-cell {
+        min-width: 35% !important;
+        max-width: 40% !important;
+        font-size: 0.85rem !important;
     }
     
-    .template6 .frozen-separator.template6-enhanced {
-        left: 20% !important;
+    .template6 .t6-column-header,
+    .template6 .t6-value-cell {
+        min-width: 60px !important;
+        padding: 4px 6px !important;
+        font-size: 0.8rem !important;
     }
     
-    .template6 .t6-enhanced-expand-collapse {
+    .template6 .expand-collapse,
+    .template6 .leaf-node-empty {
         width: 14px !important;
         height: 14px !important;
-        font-size: 10px !important;
-    }
-    
-    .template6 .t6-enhanced-column-header .t6-enhanced-expand-collapse {
-        width: 14px !important;
-        height: 14px !important;
+        margin-right: 6px !important;
         font-size: 10px !important;
     }
 }
 
 @media (max-width: 768px) {
-    .template6 .t6-enhanced-expand-collapse {
-        width: 12px !important;
-        height: 12px !important;
-        font-size: 9px !important;
+    .template6 {
+        max-height: 40vh !important;
     }
     
-    .template6 .t6-enhanced-column-header .t6-enhanced-expand-collapse {
-        width: 12px !important;
-        height: 12px !important;
-        font-size: 9px !important;
+    .template6 .t6-row-header,
+    .template6 .t6-hierarchy-cell {
+        min-width: 35% !important;
+        max-width: 40% !important;
+        font-size: 0.8rem !important;
     }
     
-    .template6 th,
-    .template6 td {
-        padding: 4px 6px !important;
+    .template6 .t6-column-header,
+    .template6 .t6-value-cell {
+        min-width: 50px !important;
+        padding: 3px 4px !important;
         font-size: 0.75rem !important;
     }
+    
+    .template6 .expand-collapse,
+    .template6 .leaf-node-empty {
+        width: 12px !important;
+        height: 12px !important;
+        margin-right: 4px !important;
+        font-size: 8px !important;
+    }
 }
 
-/* ---------- ENHANCED OVERRIDE PROTECTION ---------- */
-/* Ensure no other CSS interferes with enhanced template */
-.template6.template6-enhanced * {
-    box-sizing: border-box !important;
+/* ---------- PRINT STYLES ---------- */
+@media print {
+    .template6 {
+        max-height: none !important;
+        overflow: visible !important;
+        box-shadow: none !important;
+        border: 1px solid #000 !important;
+    }
+    
+    .template6 .expand-collapse {
+        display: none !important;
+    }
+    
+    .template6 .leaf-node-empty {
+        display: none !important;
+    }
 }
 
-.template6.template6-enhanced table * {
-    margin: 0 !important;
-    border-spacing: 0 !important;
+/* ---------- ACCESSIBILITY ENHANCEMENTS ---------- */
+.template6 .expand-collapse:focus {
+    outline: 2px solid #3b82f6 !important;
+    outline-offset: 2px !important;
 }
 
-/* ---------- DEBUG HELPERS (REMOVE IN PRODUCTION) ---------- */
-.template6.debug-enhanced .frozen-row-dimensions.template6-enhanced {
-    background: rgba(255, 0, 0, 0.1) !important;
-    outline: 2px solid red !important;
+.template6 .t6-column-header:focus-within {
+    outline: 2px solid #22c55e !important;
+    outline-offset: 1px !important;
 }
 
-.template6.debug-enhanced .scrollable-value-area.template6-enhanced {
-    background: rgba(0, 0, 255, 0.1) !important;
-    outline: 2px solid blue !important;
+/* ---------- HIGH CONTRAST MODE ---------- */
+@media (prefers-contrast: high) {
+    .template6 .t6-row-header {
+        background: #000 !important;
+        color: #fff !important;
+        border: 2px solid #fff !important;
+    }
+    
+    .template6 .t6-column-header {
+        background: #fff !important;
+        color: #000 !important;
+        border: 2px solid #000 !important;
+    }
+    
+    .template6 .t6-value-cell {
+        background: #fff !important;
+        color: #000 !important;
+        border: 1px solid #000 !important;
+    }
 }
 
-.template6.debug-enhanced .t6-enhanced-expand-collapse {
-    outline: 1px solid lime !important;
-    background: rgba(0, 255, 0, 0.2) !important;
+/* ---------- ANIMATION FOR EXPAND/COLLAPSE ---------- */
+@keyframes expandCollapse {
+    0% { transform: scale(1) rotate(0deg); }
+    50% { transform: scale(1.2) rotate(180deg); }
+    100% { transform: scale(1) rotate(360deg); }
 }
 
-.template6.debug-enhanced .t6-enhanced-dimension-label {
-    outline: 1px solid orange !important;
-    background: rgba(255, 165, 0, 0.1) !important;
+.template6 .expand-collapse.animating {
+    animation: expandCollapse 0.3s ease-in-out !important;
 }
+
+/* ---------- SPANNING HEADER VISUAL SEPARATION ---------- */
+.template6 .t6-column-header[colspan] {
+    position: relative !important;
+}
+
+.template6 .t6-column-header[colspan]::after {
+    content: "" !important;
+    position: absolute !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 2px !important;
+    background: linear-gradient(90deg, transparent 0%, currentColor 50%, transparent 100%) !important;
+    opacity: 0.3 !important;
+}
+
+/* ---------- OPTIMIZED TABLE RENDERING ---------- */
+.template6 table {
+    will-change: scroll-position !important;
+    contain: layout !important;
+}
+
+.template6 .t6-value-cell {
+    contain: paint !important;
+}
+
+/* ---------- SCROLLBAR STYLING ---------- */
+.template6::-webkit-scrollbar {
+    width: 10px !important;
+    height: 10px !important;
+}
+
+.template6::-webkit-scrollbar-track {
+    background: #f8f9fa !important;
+    border-radius: 5px !important;
+}
+
+.template6::-webkit-scrollbar-thumb {
+    background: #d97706 !important;
+    border-radius: 5px !important;
+    border: 2px solid #f8f9fa !important;
+}
+
+.template6::-webkit-scrollbar-thumb:hover {
+    background: #b45309 !important;
+}
+
+.template6::-webkit-scrollbar-corner {
+    background: #f8f9fa !important;
+}
+
 
 /* ---------- UNIVERSAL FIXES FOR ALL TEMPLATES ---------- */
 /* Apply the original fixes to all templates */
