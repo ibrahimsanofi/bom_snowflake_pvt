@@ -61,20 +61,20 @@ const nodeHasChildren = function(node, state) {
 
 
 // Universal dimension name extractor
-const extractDimensionName = function(dimensionField) {
-    if (!dimensionField) {
-        return 'unknown'; // Return a safe default
-    }
+// const extractDimensionName = function(dimensionField) {
+//     if (!dimensionField) {
+//         return 'unknown'; // Return a safe default
+//     }
     
-    // Handle both DIM_ prefixed and direct dimension names
-    let dimName = dimensionField;
-    if (dimName.startsWith('DIM_')) {
-        dimName = dimName.replace(/^DIM_/, '');
-    }
+//     // Handle both DIM_ prefixed and direct dimension names
+//     let dimName = dimensionField;
+//     if (dimName.startsWith('DIM_')) {
+//         dimName = dimName.replace(/^DIM_/, '');
+//     }
     
-    // Convert to lowercase for consistency
-    return dimName.toLowerCase();
-};
+//     // Convert to lowercase for consistency
+//     return dimName.toLowerCase();
+// };
 
 
 // Universal expansion state checker
@@ -293,7 +293,7 @@ const pivotTable = {
     nodeHasChildren: function(node) {
         if (!node || !node.hierarchyField) return false;
         
-        const dimName = this.extractDimensionName(node.hierarchyField);
+        const dimName = data.extractDimensionName(node.hierarchyField);
         const hierarchy = this.state?.hierarchies?.[dimName];
         
         if (!hierarchy || !hierarchy.nodesMap) return false;
@@ -755,304 +755,6 @@ const pivotTable = {
         }
         
         return result;
-    },
-
-
-    // Dimension filter functions (simplified for brevity)
-    filterByLegalEntity: function (records, node) {
-        // console.log(`🔍 LE Filter: Processing node ${node.label} (${node._id})`);
-        
-        // Don't filter ROOT nodes
-        if (node._id === 'ROOT' || node.label === 'WORLDWIDE') {
-            // console.log(`🔍 LE Filter: ROOT node - returning all ${records.length} records`);
-            return records;
-        }
-        
-        // For leaf nodes with factId, filter directly
-        if (node.isLeaf && node.factId) {
-            const filtered = records.filter(r => r.LE === node.factId);
-            // console.log(`🔍 LE Filter: Leaf node filtering ${records.length} → ${filtered.length} records by LE=${node.factId}`);
-            return filtered;
-        }
-        
-        // For hierarchy nodes, use mapping
-        const mapping = this.state.mappings?.legalEntity;
-        if (!mapping) {
-            // console.log("🔍 LE Filter: No LE mapping available - returning all records");
-            return records;
-        }
-        
-        // Try to get LE codes for this node
-        const leCodes = new Set();
-        
-        // Method 1: Direct path mapping
-        if (mapping.pathToLeCodes && mapping.pathToLeCodes[node.label]) {
-            mapping.pathToLeCodes[node.label].forEach(le => leCodes.add(le));
-            // console.log(`🔍 LE Filter: Found ${leCodes.size} LEs via pathToLeCodes for "${node.label}"`);
-        }
-        
-        // Method 2: Reverse path lookup
-        if (leCodes.size === 0 && mapping.leToPaths) {
-            Object.entries(mapping.leToPaths).forEach(([le, paths]) => {
-                if (paths.includes(node.label)) {
-                    leCodes.add(le);
-                }
-            });
-            // console.log(`🔍 LE Filter: Found ${leCodes.size} LEs via leToPaths for "${node.label}"`);
-        }
-        
-        if (leCodes.size > 0) {
-            const filtered = records.filter(r => leCodes.has(r.LE));
-            // console.log(`🔍 LE Filter: Filtered ${records.length} → ${filtered.length} records using ${leCodes.size} LE codes`);
-            return filtered;
-        }
-        
-        // console.log(`🔍 LE Filter: No matching LE codes found for "${node.label}" - returning all records`);
-        return records;
-    },
-
-
-    filterByCostElement: function (records, node) {
-        if (node._id === 'ROOT') return records;
-        if (node.isLeaf && node.factId) return records.filter(r => r.COST_ELEMENT === node.factId);
-        const mapping = this.state.mappings?.costElement;
-        const costElements = mapping?.nodeToCostElements[node.label];
-        return costElements ? records.filter(r => costElements.has(r.COST_ELEMENT)) : records;
-    },
-
-
-    filterBySmartCode: function (records, node) {
-        if (node._id === 'ROOT') return records;
-        if (node.isLeaf && node.factId) return records.filter(r => r.ROOT_SMARTCODE === node.factId);
-        const mapping = this.state.mappings?.smartCode;
-        const smartCodes = mapping?.nodeToSmartCodes[node.label];
-        return smartCodes ? records.filter(r => smartCodes.has(r.ROOT_SMARTCODE)) : records;
-    },
-
-    
-    filterByGmidDisplay: function (records, node) {
-        console.log(`🔍 GMID Filter: Processing node "${node.label}" (${node._id}) with ${records.length} records`);
-        
-        // CRITICAL: Don't filter ROOT nodes - include ALL records for grand totals
-        if (node._id === 'ROOT' || 
-            node.label === 'All GMIDs' || 
-            node._id.endsWith('_ROOT') || 
-            node.label === 'WORLDWIDE' ||
-            node._id === 'All GMIDs') {
-            console.log(`🔍 GMID Filter: ROOT node "${node.label}" - returning all ${records.length} records`);
-            return records;
-        }
-
-        // For leaf nodes with factId, handle both COMPONENT_GMID and PATH_GMID matching
-        if (node.isLeaf && node.factId) {
-            console.log(`🔍 GMID Filter: Leaf node with factId: "${node.factId}"`);
-            
-            let filtered = [];
-            
-            if (Array.isArray(node.factId)) {
-                // Handle multiple factIds
-                node.factId.forEach(factId => {
-                    const singleFiltered = this.filterByFactId(records, factId);
-                    filtered = filtered.concat(singleFiltered);
-                });
-                
-                // Remove duplicates
-                filtered = filtered.filter((record, index, self) => 
-                    index === self.findIndex(r => 
-                        r.PATH_GMID === record.PATH_GMID && 
-                        r.COMPONENT_GMID === record.COMPONENT_GMID
-                    )
-                );
-            } else {
-                // Single factId
-                filtered = this.filterByFactId(records, node.factId);
-            }
-            
-            console.log(`🔍 GMID Filter: Leaf node result: ${filtered.length} records`);
-            return filtered;
-        }
-
-        // For parent/hierarchy nodes, get all descendant factIds
-        const dimName = 'gmid_display';
-        const hierarchy = this.state.hierarchies?.[dimName];
-        
-        if (hierarchy && hierarchy.nodesMap && hierarchy.nodesMap[node._id]) {
-            const hierarchyNode = hierarchy.nodesMap[node._id];
-            const descendants = this.getAllLeafDescendants(hierarchyNode, hierarchy);
-            
-            if (descendants.length > 0) {
-                const factIds = new Set();
-                descendants.forEach(desc => {
-                    if (desc.factId) {
-                        if (Array.isArray(desc.factId)) {
-                            desc.factId.forEach(id => factIds.add(id));
-                        } else {
-                            factIds.add(desc.factId);
-                        }
-                    }
-                });
-                
-                if (factIds.size > 0) {
-                    const filtered = records.filter(record => {
-                        // Check both COMPONENT_GMID and PATH_GMID
-                        return factIds.has(record.COMPONENT_GMID) || 
-                            (record.PATH_GMID && Array.from(factIds).some(factId => 
-                                record.PATH_GMID === factId || record.PATH_GMID.includes(factId)
-                            ));
-                    });
-                    console.log(`🔍 GMID Filter: Parent node with ${descendants.length} descendants, ${factIds.size} factIds -> ${filtered.length} records`);
-                    return filtered;
-                }
-            }
-        }
-        
-        // Fallback: no specific filter criteria - return all records
-        console.log(`🔍 GMID Filter: No filter criteria for "${node.label}" - returning all ${records.length} records`);
-        return records;
-    },
-    
-
-    // Specific factId filtering logic
-    filterByFactId: function(records, factId) {
-        if (!factId) {
-            // console.log(`🔍 FACT_ID Filter: Empty factId - returning no records`);
-            return [];
-        }
-        
-        // console.log(`🔍 FACT_ID Filter: Processing factId "${factId}"`);
-        
-        // Strategy 1: If factId ends with '#', it's a PATH_GMID (for NULL COMPONENT_GMID records)
-        if (factId.endsWith('#')) {
-            const pathMatches = records.filter(r => r.PATH_GMID === factId);
-            // console.log(`🔍 FACT_ID Filter: PATH_GMID exact match for "${factId}": ${pathMatches.length} records`);
-            
-            // Also check for records where COMPONENT_GMID matches but is derived from this PATH
-            const componentMatches = records.filter(r => 
-                r.COMPONENT_GMID && r.PATH_GMID === factId
-            );
-            // console.log(`🔍 FACT_ID Filter: Additional COMPONENT_GMID matches: ${componentMatches.length} records`);
-            
-            // Combine and deduplicate
-            const combined = [...pathMatches, ...componentMatches];
-            const unique = combined.filter((record, index, self) => 
-                index === self.findIndex(r => 
-                    r.PATH_GMID === record.PATH_GMID && 
-                    r.COMPONENT_GMID === record.COMPONENT_GMID
-                )
-            );
-            
-            return unique;
-        }
-        
-        // Strategy 2: Regular COMPONENT_GMID matching
-        const componentMatches = records.filter(r => r.COMPONENT_GMID === factId);
-        // console.log(`🔍 FACT_ID Filter: COMPONENT_GMID exact match for "${factId}": ${componentMatches.length} records`);
-        
-        // Strategy 3: If no COMPONENT_GMID matches, try PATH_GMID contains
-        if (componentMatches.length === 0) {
-            const pathContains = records.filter(r => 
-                r.PATH_GMID && r.PATH_GMID.includes(factId)
-            );
-            // console.log(`🔍 FACT_ID Filter: PATH_GMID contains "${factId}": ${pathContains.length} records`);
-            return pathContains;
-        }
-        
-        return componentMatches;
-    },
-
-
-    filterByItemCostType: function (records, node) {
-        if (node._id === 'ROOT') return records;
-        if (node.factId) return records.filter(r => r.ITEM_COST_TYPE === node.factId);
-        return records;
-    },
-
-
-    filterByMaterialType: function (records, node) {
-        if (node._id === 'ROOT') return records;
-        if (node.factId) return records.filter(r => r.COMPONENT_MATERIAL_TYPE === node.factId);
-        return records;
-    },
-
-    
-    /**
-     * Filter records by MC
-     */
-    filterByMC: function(records, node) {
-        if (!state.mappings || !state.mappings.managementCentre || node._id === 'ROOT') return records;
-
-        // Get the mapping
-        const mapping = state.mappings.managementCentre;
-        
-        // For leaf nodes, filter by exact LE code
-        if (node.isLeaf && node.factId) {
-            return records.filter(record => record.MC === node.factId);
-        }
-        
-        // For hierarchy nodes, we need to find all LEs that fall under this path segment
-        const nodePath = node.path ? node.path.join('/') : '';
-        const nodeLabel = node.label || '';
-        
-        // Get all relevant LE codes
-        const mcCodes = new Set();
-        
-        // First try by path segments - any LE with this node in its path
-        if (mapping.pathToMcCodes[nodeLabel]) {
-            // Add all LE codes associated with this path segment
-            mapping.pathToMcCodes[nodeLabel].forEach(mcCode => mcCodes.add(mcCode));
-        }
-        
-        // Find by checking if this node's label or path is contained in any LE paths
-        if (mcCodes.size === 0) {
-            // Find all LEs that contain this node label in their path
-            Object.entries(mapping.mcToPaths).forEach(([mcCode, path]) => {
-                if (path.includes(nodeLabel)) {
-                    mcCodes.add(mcCode);
-                }
-            });
-        }
-        
-        // If we still don't have any LE codes but have a label, try direct matching
-        if (mcCodes.size === 0 && nodeLabel) {
-            Object.keys(mapping.mcToDetails).forEach(mcCode => {
-                const details = mapping.mcToDetails[mcCode];
-                if (details.description === nodeLabel || mcCode === nodeLabel) {
-                    mcCodes.add(mcCode);
-                }
-            });
-        }
-        
-        // Log what we found
-        // console.log(`Filtering by MC node ${nodeLabel}: Found ${mcCodes.size} matching MC codes`);
-        
-        // If we found LE codes, filter the records
-        if (mcCodes.size > 0) {
-            return records.filter(record => 
-                record.MC && mcCodes.has(record.MC)
-            );
-        }
-        
-        // If we didn't find any matching LE codes, just return the records as is
-        console.warn(`⚠️ Warning: No matching MC codes found for node ${nodeLabel}`);
-        return records;
-    },
-
-
-    filterByBusinessYear: function(records, node) {
-        if (!state.mappings || !state.mappings.year) return records;
-        
-        // Skip root nodes
-        if(node._id === 'YEAR_ROOT'){
-            return records;
-        }
-
-        // Get node value from the key or label
-        const yearValue = node.factId || node.label;
-        
-        // Direct lookup of the pk to fk
-        const filtered = records.filter(record => record.ZYEAR === yearValue);
-        
-        return filtered;
     },
 
 
@@ -1560,7 +1262,7 @@ const pivotTable = {
         console.log("🔧 Auto-expanding hierarchies for 'all selected' state...");
         
         rowFields.forEach(field => {
-            const dimName = extractDimensionName(field);
+            const dimName = data.extractDimensionName(field);
             
             // First analyze the hierarchy structure
             this.analyzeHierarchyStructure(dimName);
@@ -1570,7 +1272,7 @@ const pivotTable = {
             if (!filterSystem) return;
             
             const dimensionMeta = Object.values(filterSystem.filterMeta).find(meta => 
-                extractDimensionName(meta.dimensionKey) === dimName
+                data.extractDimensionName(meta.dimensionKey) === dimName
             );
             
             if (!dimensionMeta) return;
@@ -1809,7 +1511,7 @@ const pivotTable = {
         const flatMappings = [];
         
         const processNodeRecursive = (node, dimensionField, hierarchy, path, level) => {
-            const dimensionName = extractDimensionName(dimensionField);
+            const dimensionName = data.extractDimensionName(dimensionField);
             const hasChildren = this.nodeHasChildren ? this.nodeHasChildren(node) : 
                             (node.children && node.children.length > 0);
             
@@ -1854,7 +1556,7 @@ const pivotTable = {
         };
 
         fields.forEach((dimensionField) => {
-            const dimensionName = extractDimensionName(dimensionField);
+            const dimensionName = data.extractDimensionName(dimensionField);
             const hierarchy = this.state.hierarchies[dimensionName];
             
             if (!hierarchy) {
@@ -1980,7 +1682,7 @@ const pivotTable = {
         
         // For leaf nodes, use direct factId filtering (much faster)
         if (node.isLeaf && node.factId) {
-            const factField = this.getFactIdField(dimName);
+            const factField = data.getFactIdField(dimName);
             if (factField) {
                 return records.filter(record => {
                     if (Array.isArray(node.factId)) {
@@ -2022,27 +1724,98 @@ const pivotTable = {
 
 
     /**
+     * Filter records based on dimension information
+     * @param {Array} records - The records to filter
+     * @param {Object} dimDef - The dimension definition (row or column)
+     * @returns {Array} - Filtered records
+     */
+    filterRecordsByDimension: function(records, dimNode) {
+        if (!dimNode || !dimNode.hierarchyField) {
+            // console.log("No hierarchy field, returning all records");
+            return records;
+        }
+
+        const dimName = data.extractDimensionName(dimNode.hierarchyField);
+        // console.log(`🔍 Filtering by ${dimName}: ${dimNode.label} (${dimNode._id})`);
+
+        // Don't filter ROOT nodes
+        if (dimNode._id === 'ROOT' || dimNode.label === 'WORLDWIDE' || 
+            dimNode.label === 'All GMIDs' || dimNode.label === 'All Cost Elements' ||
+            dimNode.label === 'Sanofi' || dimNode.label === 'All Years') {
+            // console.log(`  ROOT/ALL node - no filtering`);
+            return records;
+        }
+
+        // For leaf nodes with factId, filter directly
+        if (dimNode.isLeaf && dimNode.factId) {
+            const factField = data.getFactIdField(dimName);
+            if (factField) {
+                const filtered = records.filter(record => {
+                    if (Array.isArray(dimNode.factId)) {
+                        return dimNode.factId.includes(record[factField]);
+                    }
+                    return record[factField] === dimNode.factId;
+                });
+                // console.log(`  Leaf node filter: ${factField} = ${dimNode.factId} → ${filtered.length} records`);
+                return filtered;
+            }
+        }
+
+        // For parent nodes, need to get all descendant factIds
+        const hierarchy = this.state.hierarchies?.[dimName];
+        if (hierarchy && hierarchy.nodesMap && hierarchy.nodesMap[dimNode._id]) {
+            const node = hierarchy.nodesMap[dimNode._id];
+            const descendants = this.getAllLeafDescendants(node, hierarchy);
+            
+            if (descendants.length > 0) {
+                const factField = data.getFactIdField(dimName);
+                const factIds = new Set();
+                
+                descendants.forEach(desc => {
+                    if (desc.factId) {
+                        if (Array.isArray(desc.factId)) {
+                            desc.factId.forEach(id => factIds.add(id));
+                        } else {
+                            factIds.add(desc.factId);
+                        }
+                    }
+                });
+                
+                if (factIds.size > 0 && factField) {
+                    const filtered = records.filter(record => factIds.has(record[factField]));
+                    // console.log(`  Parent node filter: ${factIds.size} factIds → ${filtered.length} records`);
+                    return filtered;
+                }
+            }
+        }
+
+        // console.log(`  No filtering applied for ${dimNode.label}`);
+        return records;
+    },
+
+
+    /**
      * Gets the corresponding fact table field name for a dimension
      * 
      * @param {string} dimName - Dimension name
      * @returns {string|null} - Corresponding fact table field name or null if not found
      */
-    getFactIdField: function(dimName) {
-        // Define mapping between dimension names and fact table field names
-        const factIdFieldMap = {
-            'le': 'LE',
-            'cost_element': 'COST_ELEMENT',
-            'root_gmid_display': 'ROOT_GMID',
-            'gmid_display': 'COMPONENT_GMID',
-            'smartcode': 'ROOT_SMARTCODE',
-            'item_cost_type': 'ITEM_COST_TYPE',
-            'material_type': 'COMPONENT_MATERIAL_TYPE',
-            'year': 'ZYEAR',
-            'mc': 'MC'
-        };
+    // getFactIdField: function(dimName) {
+    //     // Define mapping between dimension names and fact table field names
+    //     const factIdFieldMap = {
+    //         'le': 'LE',
+    //         'cost_element': 'COST_ELEMENT',
+    //         'root_gmid_display': 'ROOT_GMID',
+    //         'gmid_display': 'COMPONENT_GMID',
+    //         'smartcode': 'ROOT_SMARTCODE',
+    //         'item_cost_type': 'ITEM_COST_TYPE',
+    //         'material_type': 'COMPONENT_MATERIAL_TYPE',
+    //         'year': 'ZYEAR',
+    //         'mc': 'MC'
+    //     };
         
-        return factIdFieldMap[dimName.toLowerCase()] || null;
-    },
+    //     return factIdFieldMap[dimName.toLowerCase()] || null;
+    // },
 
 
     /**
@@ -2051,22 +1824,22 @@ const pivotTable = {
      * @param {string} dimName - Dimension name
      * @returns {string|null} - Corresponding dimension table field name or null if not found
      */
-    getDimensionIdField: function(dimName) {
-        // Define mapping between dimension names and pk field names
-        const dimensionIdFieldMap = {
-            'le': 'LE',
-            'cost_element': 'COST_ELEMENT',
-            'root_gmid_display': 'ROOT_GMID',
-            'gmid_display': 'COMPONENT_GMID',
-            'smartcode': 'SMARTCODE',
-            'item_cost_type': 'ITEM_COST_TYPE',
-            'material_type': 'MATERIAL_TYPE',
-            'year': 'YEAR',
-            'mc': 'MC'
-        };
+    // getDimensionIdField: function(dimName) {
+    //     // Define mapping between dimension names and pk field names
+    //     const dimensionIdFieldMap = {
+    //         'le': 'LE',
+    //         'cost_element': 'COST_ELEMENT',
+    //         'root_gmid_display': 'ROOT_GMID',
+    //         'gmid_display': 'COMPONENT_GMID',
+    //         'smartcode': 'SMARTCODE',
+    //         'item_cost_type': 'ITEM_COST_TYPE',
+    //         'material_type': 'MATERIAL_TYPE',
+    //         'year': 'YEAR',
+    //         'mc': 'MC'
+    //     };
         
-        return dimensionIdFieldMap[dimName.toLowerCase()] || null;
-    },
+    //     return dimensionIdFieldMap[dimName.toLowerCase()] || null;
+    // },
 
 
     /**
@@ -2354,7 +2127,7 @@ const pivotTable = {
                 // Only add expand/collapse if column has hierarchy field
                 if (hasChildren && col.hierarchyField) {
                     const expandClass = col.expanded ? 'expanded' : 'collapsed';
-                    const dimName = extractDimensionName(col.hierarchyField);
+                    const dimName = data.extractDimensionName(col.hierarchyField);
                     
                     // FIXED: No JavaScript icons in column headers either
                     headerHtml += `<span class="expand-collapse ${expandClass}" 
@@ -2388,7 +2161,7 @@ const pivotTable = {
         
         // Group columns by dimension and get visible nodes for each level
         columnFields.forEach((field, index) => {
-            const dimName = extractDimensionName(field);
+            const dimName = data.extractDimensionName(field);
             const dimensionNodes = this.getVisibleNodesForDimension(columns, dimName);
             structure.levels[index] = dimensionNodes;
             
@@ -2417,7 +2190,7 @@ const pivotTable = {
         // Get all nodes for this dimension
         const dimensionNodes = columns.filter(col => {
             if (!col.hierarchyField) return false;
-            return extractDimensionName(col.hierarchyField) === dimName;
+            return data.extractDimensionName(col.hierarchyField) === dimName;
         });
         
         // console.log(`📋 All nodes for dimension ${dimName}:`, dimensionNodes.map(n => `${n.label} (level: ${n.level}, id: ${n._id})`));
@@ -2506,10 +2279,10 @@ const pivotTable = {
         // Get visible nodes for each column dimension
         const dimensionNodes = {};
         columnFields.forEach(field => {
-            const dimName = this.extractDimensionName(field);
+            const dimName = data.extractDimensionName(field);
             const allNodes = this.state.pivotData.columns.filter(col => {
                 if (!col.hierarchyField) return false;
-                const colDimName = this.extractDimensionName(col.hierarchyField);
+                const colDimName = data.extractDimensionName(col.hierarchyField);
                 return colDimName === dimName && col._id !== 'ROOT';
             });
             
@@ -2642,7 +2415,7 @@ const pivotTable = {
             
             if (this.originalColumnHasChildren(dim1Node)) {
                 const expandClass = dim1Node.expanded ? 'expanded' : 'collapsed';
-                const dimName = this.extractDimensionName(columnFields[0]);
+                const dimName = data.extractDimensionName(columnFields[0]);
                 headerHtml += `<span class="expand-collapse ${expandClass}" 
                     data-node-id="${dim1Node._id}" 
                     data-hierarchy="${dimName}" 
@@ -2669,7 +2442,7 @@ const pivotTable = {
                     
                     if (this.originalColumnHasChildren(dim2Node)) {
                         const expandClass = dim2Node.expanded ? 'expanded' : 'collapsed';
-                        const dimName = this.extractDimensionName(columnFields[1]);
+                        const dimName = data.extractDimensionName(columnFields[1]);
                         headerHtml += `<span class="expand-collapse ${expandClass}" 
                             data-node-id="${dim2Node._id}" 
                             data-hierarchy="${dimName}" 
@@ -2749,7 +2522,7 @@ const pivotTable = {
         
         // Process each column dimension with FIXED logic
         columnFields.forEach((field, index) => {
-            const dimName = this.extractDimensionName(field);
+            const dimName = data.extractDimensionName(field);
             console.log(`🔍 Processing column field ${index}: ${field} → ${dimName}`);
             
             // Get meaningful nodes for this dimension
@@ -2836,7 +2609,7 @@ const pivotTable = {
         // Filter columns for this dimension
         const dimensionColumns = columns.filter(col => {
             if (!col.hierarchyField) return false;
-            const colDimName = this.extractDimensionName(col.hierarchyField);
+            const colDimName = data.extractDimensionName(col.hierarchyField);
             return colDimName === dimName;
         });
         
@@ -3042,7 +2815,7 @@ const pivotTable = {
         
         // Process each column dimension
         columnFields.forEach((field, index) => {
-            const dimName = extractDimensionName(field);
+            const dimName = data.extractDimensionName(field);
             console.log(`🔍 Processing column field ${index}: ${field} → ${dimName}`);
             
             // ENHANCED: Get nodes with fallback strategies
@@ -3144,7 +2917,7 @@ const pivotTable = {
             if (!col.hierarchyField) {
                 return false;
             }
-            const colDimName = extractDimensionName(col.hierarchyField);
+            const colDimName = data.extractDimensionName(col.hierarchyField);
             const matches = colDimName === dimName;
             if (matches) {
                 console.log(`  ✓ Found node: ${col.label || col._id} (level: ${col.level}, factId: ${col.factId}, id: ${col._id})`);
@@ -3254,7 +3027,7 @@ const pivotTable = {
     countLeafDescendantsInColumns: function(parentNode, leafColumns) {
         if (!parentNode.hierarchyField) return 0;
         
-        const dimName = extractDimensionName(parentNode.hierarchyField);
+        const dimName = data.extractDimensionName(parentNode.hierarchyField);
         const hierarchy = this.state.hierarchies[dimName];
         
         if (!hierarchy || !hierarchy.nodesMap) return 0;
@@ -3321,7 +3094,7 @@ const pivotTable = {
     getNodesForDimension: function(columns, dimName) {
         const dimensionNodes = columns.filter(col => {
             if (!col.hierarchyField) return false;
-            return extractDimensionName(col.hierarchyField) === dimName;
+            return data.extractDimensionName(col.hierarchyField) === dimName;
         });
         
         // Sort by level and then by order within level
@@ -3342,7 +3115,7 @@ const pivotTable = {
         
         // Initialize structure for each column field
         columnFields.forEach((field, index) => {
-            const dimName = extractDimensionName(field);
+            const dimName = data.extractDimensionName(field);
             hierarchy[dimName] = {
                 fieldIndex: index,
                 nodes: [],
@@ -3354,7 +3127,7 @@ const pivotTable = {
         columns.forEach(col => {
             if (!col.hierarchyField) return;
             
-            const dimName = extractDimensionName(col.hierarchyField);
+            const dimName = data.extractDimensionName(col.hierarchyField);
             if (hierarchy[dimName]) {
                 hierarchy[dimName].nodes.push(col);
                 
@@ -3377,7 +3150,7 @@ const pivotTable = {
     originalColumnHasChildren: function(col) {
         if (!col || !col.hierarchyField) return false;
         
-        const dimName = extractDimensionName(col.hierarchyField);
+        const dimName = data.extractDimensionName(col.hierarchyField);
         const hierarchy = this.state?.hierarchies?.[dimName];
         
         if (!hierarchy || !hierarchy.nodesMap) return false;
@@ -3407,26 +3180,30 @@ const pivotTable = {
 
 
     // Add this new helper method for display labels
+    // getDisplayLabel: function(node) {
+    //     if (!node) return '';
+        
+    //     // Handle case where hierarchyField might be undefined
+    //     if (!node.hierarchyField) {
+    //         return node.label || node._id || 'Unknown';
+    //     }
+        
+    //     const dimName = extractDimensionName(node.hierarchyField);
+        
+    //     // Try to get enhanced label from data module
+    //     if (typeof data !== 'undefined') {
+    //         if (dimName === 'item_cost_type' && node.factId) {
+    //             return data.getItemCostTypeDesc?.(node.factId) || node.label || node._id;
+    //         } else if (dimName === 'material_type' && node.factId) {
+    //             return data.getMaterialTypeDesc?.(node.factId) || node.label || node._id;
+    //         }
+    //     }
+        
+    //     return node.label || node._id;
+    // },
     getDisplayLabel: function(node) {
-        if (!node) return '';
-        
-        // Handle case where hierarchyField might be undefined
-        if (!node.hierarchyField) {
-            return node.label || node._id || 'Unknown';
-        }
-        
-        const dimName = extractDimensionName(node.hierarchyField);
-        
-        // Try to get enhanced label from data module
-        if (typeof data !== 'undefined') {
-            if (dimName === 'item_cost_type' && node.factId) {
-                return data.getItemCostTypeDesc?.(node.factId) || node.label || node._id;
-            } else if (dimName === 'material_type' && node.factId) {
-                return data.getMaterialTypeDesc?.(node.factId) || node.label || node._id;
-            }
-        }
-        
-        return node.label || node._id;
+        if (!node) return 'Unknown';
+        return node.label || node.displayLabel || node.name || node._id || 'Unknown';
     },
 
 
@@ -3624,122 +3401,6 @@ const pivotTable = {
 
         rowHtml += '</tr>';
         return rowHtml;
-    },
-
-
-    /**
-     * Filters fact data by a dimension node
-     * Updated for BOM data with LE mapping and non-hierarchical fields
-     * 
-     * @param {Array} data - The data array to filter
-     * @param {Object} rowDef - Row definition with filtering criteria
-     * @returns {Array} - Filtered data array
-     */
-    filterDataByDimension: function (data, rowDef) {
-        let filteredData = [...data];
-
-        // Handle non-hierarchical special fields (ITEM_COST_TYPE, COMPONENT_MATERIAL_TYPE)
-        if (rowDef.hierarchyField === 'ITEM_COST_TYPE' ||
-            rowDef.hierarchyField === 'DIM_ITEM_COST_TYPE') {
-            // ROOT node shows all data
-            if (rowDef._id === 'ITEM_COST_TYPE_ROOT') {
-                return filteredData;
-            }
-            // Value node filters by specific value
-            const value = rowDef.factId || rowDef.label;
-            return filteredData.filter(record => record.ITEM_COST_TYPE === value);
-        }
-
-        if (rowDef.hierarchyField === 'COMPONENT_MATERIAL_TYPE' ||
-            rowDef.hierarchyField === 'DIM_MATERIAL_TYPE') {
-            // ROOT node shows all data
-            if (rowDef._id === 'COMPONENT_MATERIAL_TYPE_ROOT') {
-                return filteredData;
-            }
-            // Value node filters by specific value
-            const value = rowDef.factId || rowDef.label;
-            return filteredData.filter(record => record.COMPONENT_MATERIAL_TYPE === value);
-        }
-
-        // Handle standard non-hierarchical fields
-        if (rowDef._id === 'ITEM_COST_TYPE' || rowDef._id === 'COMPONENT_MATERIAL_TYPE') {
-            return filteredData.filter(record => record[rowDef._id] === rowDef.label);
-        }
-
-        // Continue with your existing hierarchy handling code...
-
-        return filteredData;
-    },
-
-
-    /**
-     * Filter records based on dimension information
-     * @param {Array} records - The records to filter
-     * @param {Object} dimDef - The dimension definition (row or column)
-     * @returns {Array} - Filtered records
-     */
-    filterRecordsByDimension: function(records, dimNode) {
-        if (!dimNode || !dimNode.hierarchyField) {
-            // console.log("No hierarchy field, returning all records");
-            return records;
-        }
-
-        const dimName = extractDimensionName(dimNode.hierarchyField);
-        // console.log(`🔍 Filtering by ${dimName}: ${dimNode.label} (${dimNode._id})`);
-
-        // Don't filter ROOT nodes
-        if (dimNode._id === 'ROOT' || dimNode.label === 'WORLDWIDE' || 
-            dimNode.label === 'All GMIDs' || dimNode.label === 'All Cost Elements' ||
-            dimNode.label === 'Sanofi' || dimNode.label === 'All Years') {
-            // console.log(`  ROOT/ALL node - no filtering`);
-            return records;
-        }
-
-        // For leaf nodes with factId, filter directly
-        if (dimNode.isLeaf && dimNode.factId) {
-            const factField = this.getFactIdField(dimName);
-            if (factField) {
-                const filtered = records.filter(record => {
-                    if (Array.isArray(dimNode.factId)) {
-                        return dimNode.factId.includes(record[factField]);
-                    }
-                    return record[factField] === dimNode.factId;
-                });
-                // console.log(`  Leaf node filter: ${factField} = ${dimNode.factId} → ${filtered.length} records`);
-                return filtered;
-            }
-        }
-
-        // For parent nodes, need to get all descendant factIds
-        const hierarchy = this.state.hierarchies?.[dimName];
-        if (hierarchy && hierarchy.nodesMap && hierarchy.nodesMap[dimNode._id]) {
-            const node = hierarchy.nodesMap[dimNode._id];
-            const descendants = this.getAllLeafDescendants(node, hierarchy);
-            
-            if (descendants.length > 0) {
-                const factField = this.getFactIdField(dimName);
-                const factIds = new Set();
-                
-                descendants.forEach(desc => {
-                    if (desc.factId) {
-                        if (Array.isArray(desc.factId)) {
-                            desc.factId.forEach(id => factIds.add(id));
-                        } else {
-                            factIds.add(desc.factId);
-                        }
-                    }
-                });
-                
-                if (factIds.size > 0 && factField) {
-                    const filtered = records.filter(record => factIds.has(record[factField]));
-                    // console.log(`  Parent node filter: ${factIds.size} factIds → ${filtered.length} records`);
-                    return filtered;
-                }
-            }
-        }
-
-        // console.log(`  No filtering applied for ${dimNode.label}`);
-        return records;
     },
 
 
@@ -3999,70 +3660,6 @@ const pivotTable = {
     /**
      * Enhanced generatePivotTableEnhanced with proper state integration
      */
-    // generatePivotTable: function() {
-    //     if (!this.state) {
-    //         console.error("No state connection");
-    //         return;
-    //     }
-
-    //     console.log("🔄 Starting Excel-like multi-dimensional pivot table generation...");
-
-    //     this.resetTableStructure();
-
-    //     const elements = {
-    //         pivotTableHeader: document.getElementById('pivotTableHeader'),
-    //         pivotTableBody: document.getElementById('pivotTableBody')
-    //     };
-
-    //     if (!elements.pivotTableHeader || !elements.pivotTableBody) {
-    //         console.error("Cannot find pivot table DOM elements");
-    //         return;
-    //     }
-
-    //     const rowFields = this.state.rowFields || [];
-    //     const columnFields = this.state.columnFields || [];
-    //     const valueFields = this.state.valueFields || ['COST_UNIT'];
-        
-    //     console.log(`📊 Excel-like generation: ${rowFields.length} row fields, ${columnFields.length} column fields, ${valueFields.length} value fields`);
-
-    //     // Add multi-dimension class to container
-    //     const container = elements.pivotTableHeader.closest('.pivot-table-container');
-    //     if (container) {
-    //         container.classList.add('multi-dimension');
-    //         if (rowFields.length === 2) container.classList.add('two-dimensions');
-    //         if (rowFields.length === 3) container.classList.add('three-dimensions');
-    //     }
-
-    //     try {
-    //         this.processPivotData();
-            
-    //         // Determine rendering strategy based on dimensions
-    //         if (rowFields.length >= 2 && columnFields.length >= 2) {
-    //             console.log(`🌟 Using EXCEL-LIKE multi-row + multi-column rendering`);
-    //             this.renderExcelLikeMultiDimensionTable(elements, rowFields, columnFields, valueFields);
-    //         } else if (rowFields.length >= 2) {
-    //             console.log(`🌟 Using enhanced multi-row rendering (${rowFields.length} dimensions)`);
-    //             this.renderEnhancedMultiRowTable(elements, rowFields);
-    //         } else if (columnFields.length >= 2) {
-    //             console.log(`🌟 Using enhanced stacked column rendering`);
-    //             this.renderStackedColumnHeaders(elements, this.state.pivotData, columnFields, valueFields);
-    //             this.renderEnhancedStackedTableBody(elements, this.state.pivotData);
-    //         } else {
-    //             console.log(`📊 Using standard rendering`);
-    //             this.renderStandardTable(elements);
-    //         }
-
-    //         console.log("✅ Excel-like pivot table generation complete");
-
-    //     } catch (error) {
-    //         console.error("Error in Excel-like pivot generation:", error);
-    //         if (elements.pivotTableBody) {
-    //             elements.pivotTableBody.innerHTML = '<tr><td colspan="100%">Error generating pivot table</td></tr>';
-    //         }
-    //     }
-    // },
-    
-
     generatePivotTable: function() {
         if (!this.state) {
             console.error("No state connection");
@@ -4388,7 +3985,7 @@ const pivotTable = {
                     let headerContent = '';
                     if (this.nodeHasChildren(nodeInfo.node)) {
                         const expandClass = nodeInfo.node.expanded ? 'expanded' : 'collapsed';
-                        const dimName = this.extractDimensionName(field1);
+                        const dimName = data.extractDimensionName(field1);
                         headerContent += `<span class="expand-collapse ${expandClass}" 
                             data-node-id="${nodeInfo.node._id}" 
                             data-hierarchy="${dimName}" 
@@ -4420,7 +4017,7 @@ const pivotTable = {
                     let headerContent = '';
                     if (this.nodeHasChildren(node2)) {
                         const expandClass = node2.expanded ? 'expanded' : 'collapsed';
-                        const dimName = this.extractDimensionName(columnFields[1]);
+                        const dimName = data.extractDimensionName(columnFields[1]);
                         headerContent += `<span class="expand-collapse ${expandClass}" 
                             data-node-id="${node2._id}" 
                             data-hierarchy="${dimName}" 
@@ -4526,7 +4123,7 @@ const pivotTable = {
 
         const level = node.level || 0;
         const indentationPx = 4 + (level * 20);
-        const dimName = this.extractDimensionName(field);
+        const dimName = data.extractDimensionName(field);
         
         let cellHtml = `<td class="dimension-cell dimension-${dimIndex}" data-level="${level}" style="padding-left: ${indentationPx}px !important;">`;
         
@@ -4630,7 +4227,7 @@ const pivotTable = {
                     let headerContent = '';
                     if (this.nodeHasChildren(column)) {
                         const expandClass = column.expanded ? 'expanded' : 'collapsed';
-                        const dimName = this.extractDimensionName(columnFields[0]);
+                        const dimName = data.extractDimensionName(columnFields[0]);
                         headerContent += `<span class="expand-collapse ${expandClass}" 
                             data-node-id="${column._id}" 
                             data-hierarchy="${dimName}" 
@@ -4899,7 +4496,6 @@ const pivotTable = {
     },
 
 
-
     /**
      * Calculate value for multi-row combination (no columns)
      */
@@ -4957,7 +4553,7 @@ const pivotTable = {
 
         const level = node.level || 0;
         const indentationPx = 4 + (level * 20);
-        const dimName = this.extractDimensionName(field);
+        const dimName = data.extractDimensionName(field);
         
         let cellHtml = `<td class="dimension-cell dimension-${dimIndex}" data-level="${level}" style="padding-left: ${indentationPx}px !important;">`;
         
@@ -4987,18 +4583,18 @@ const pivotTable = {
     /**
      * Utility method to extract dimension name (moved from global scope)
      */
-    extractDimensionName: function(dimensionField) {
-        if (!dimensionField) {
-            return 'unknown';
-        }
+    // extractDimensionName: function(field) {
+    //     if (!field) return 'unknown';
         
-        let dimName = dimensionField;
-        if (dimName.startsWith('DIM_')) {
-            dimName = dimName.replace(/^DIM_/, '');
-        }
+    //     let name = typeof field === 'string' ? field : (field.field || field.name || 'unknown');
         
-        return dimName.toLowerCase();
-    },
+    //     // Remove DIM_ prefix
+    //     if (name.startsWith('DIM_')) {
+    //         name = name.substring(4);
+    //     }
+        
+    //     return name.toLowerCase();
+    // },
 
 
     /**
@@ -5012,12 +4608,12 @@ const pivotTable = {
         const dimensionMatrices = {};
         
         rowFields.forEach(field => {
-            const dimName = this.extractDimensionName(field);
+            const dimName = data.extractDimensionName(field);
             
             // Get all rows for this dimension
             const allDimensionRows = this.state.pivotData.rows.filter(row => {
                 if (!row || !row.hierarchyField) return false;
-                const rowDimName = this.extractDimensionName(row.hierarchyField);
+                const rowDimName = data.extractDimensionName(row.hierarchyField);
                 return rowDimName === dimName;
             });
             
@@ -5068,8 +4664,8 @@ const pivotTable = {
         // - If one dimension is collapsed, show ROOT combinations only
         // - Apply smart filtering to avoid explosion
         
-        const dim1Name = this.extractDimensionName(field1);
-        const dim2Name = this.extractDimensionName(field2);
+        const dim1Name = data.extractDimensionName(field1);
+        const dim2Name = data.extractDimensionName(field2);
         
         const dim1HasExpansion = this.dimensionHasExpandedNodes(dim1Name);
         const dim2HasExpansion = this.dimensionHasExpandedNodes(dim2Name);
@@ -5156,7 +4752,7 @@ const pivotTable = {
         
         // Check expansion state of each dimension
         const expansionStates = rowFields.map(field => {
-            const dimName = this.extractDimensionName(field);
+            const dimName = data.extractDimensionName(field);
             return this.dimensionHasExpandedNodes(dimName);
         });
         
@@ -5242,7 +4838,7 @@ const pivotTable = {
         
         // Check how many dimensions are expanded
         const expansionStates = rowFields.map(field => {
-            const dimName = this.extractDimensionName(field);
+            const dimName = data.extractDimensionName(field);
             return this.dimensionHasExpandedNodes(dimName);
         });
         
@@ -5664,49 +5260,26 @@ const pivotTable = {
     /**
      * Get real dimension name from field identifier
      */
-    getRealDimensionName: function(field) {
-        // Remove DIM_ prefix and convert to proper display name
-        const dimName = this.extractDimensionName(field);
+    // getRealDimensionName: function(field) {
+    //     // Remove DIM_ prefix and convert to proper display name
+    //     const dimName = data.extractDimensionName(field);
         
-        // Map dimension names to display names
-        const displayNames = {
-            'le': 'Legal Entity',
-            'cost_element': 'Cost Element',
-            'material_type': 'Material Type',
-            'item_cost_type': 'Item Cost Type',
-            'gmid_display': 'GMID Display',
-            'gmid': 'ROOT GMID',
-            'smartcode': 'Smart Code',
-            'mc': 'Management Center',
-            'year': 'Business Year',
-        };
+    //     // Map dimension names to display names
+    //     const displayNames = {
+    //         'le': 'Legal Entity',
+    //         'cost_element': 'Cost Element',
+    //         'material_type': 'Material Type',
+    //         'item_cost_type': 'Item Cost Type',
+    //         'gmid_display': 'GMID Display',
+    //         'gmid': 'ROOT GMID',
+    //         'smartcode': 'Smart Code',
+    //         'mc': 'Management Center',
+    //         'year': 'Business Year',
+    //     };
         
-        return displayNames[dimName.toLowerCase()] || 
-            dimName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-    },
-
-
-    /**
-     * Get display name for dimension
-     */
-    getDimensionDisplayName: function(field) {
-        const dimName = extractDimensionName(field);
-        
-        // Map dimension names to display names
-        const displayNames = {
-            'le': 'Legal Entity',
-            'cost_element': 'Cost Element',
-            'material_type': 'Material Type',
-            'item_cost_type': 'Item Cost Type',
-            'root_gmid_display': 'ROOT GMID',
-            'gmid_display': 'GMID Display',
-            'smartcode': 'Smart Code',
-            'mc': 'Management Center',
-            'year': 'Year'
-        };
-        
-        return displayNames[dimName] || dimName.replace(/_/g, ' ').toUpperCase();
-    },
+    //     return displayNames[dimName.toLowerCase()] || 
+    //         dimName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    // },
 
 
     /**

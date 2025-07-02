@@ -2845,7 +2845,8 @@ handleFilterSearch(dimension, searchTerm) {
     const fallbackMapping = {
         'le': 'LE',
         'cost_element': 'COST_ELEMENT',
-        'gmid_display': 'COMPONENT_GMID',
+        // 'gmid_display': 'COMPONENT_GMID',
+        'gmid_display': 'PATH_GMID',
         'root_gmid_display': 'ROOT_GMID',
         'smartcode': 'ROOT_SMARTCODE',
         'item_cost_type': 'ITEM_COST_TYPE',
@@ -2867,7 +2868,8 @@ handleFilterSearch(dimension, searchTerm) {
       const mapping = {
           'le': 'LE',
           'cost_element': 'COST_ELEMENT',
-          'gmid_display': 'COMPONENT_GMID',
+          // 'gmid_display': 'COMPONENT_GMID',
+          'gmid_display': 'PATH_GMID',
           'root_gmid_display': 'ROOT_GMID',
           'smartcode': 'SMARTCODE',
           'item_cost_type': 'ITEM_COST_TYPE',

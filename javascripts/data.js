@@ -25,6 +25,67 @@ const ENDPOINTS = {
 
 
 /**
+ * ENHANCED: Configuration for dimension field loading
+ * Maps each dimension to the specific fields needed for filtering
+ */
+const DIMENSION_FIELD_CONFIG = {
+    'DIM_LE': {
+        fields: ['LE', 'LE_DESC', 'PATH'],
+        displayField: 'LE_DESC',
+        valueField: 'LE',
+        filterField: 'LE'
+    },
+    'DIM_COST_ELEMENT': {
+        fields: ['COST_ELEMENT', 'COST_ELEMENT_DESC', 'PATH'],
+        displayField: 'COST_ELEMENT_DESC',
+        valueField: 'COST_ELEMENT',
+        filterField: 'COST_ELEMENT'
+    },
+    'DIM_SMARTCODE': {
+        fields: ['SMARTCODE', 'SMARTCODE_DESC', 'PATH'],
+        displayField: 'SMARTCODE_DESC',
+        valueField: 'SMARTCODE',
+        filterField: 'ROOT_SMARTCODE'
+    },
+    'DIM_GMID_DISPLAY': {
+        fields: ['PATH_GMID', 'COMPONENT_GMID', 'ROOT_GMID', 'DISPLAY'], 
+        valueField: 'PATH_GMID', 
+        displayField: 'DISPLAY',
+        filterField: 'PATH_GMID'
+    },
+    'DIM_ROOT_GMID_DISPLAY': {
+        fields: ['ROOT_GMID', 'ROOT_DISPLAY'],
+        displayField: 'ROOT_DISPLAY',
+        valueField: 'ROOT_GMID',
+        filterField: 'ROOT_GMID'
+    },
+    'DIM_ITEM_COST_TYPE': {
+        fields: ['ITEM_COST_TYPE', 'ITEM_COST_TYPE_DESC'],
+        displayField: 'ITEM_COST_TYPE_DESC',
+        valueField: 'ITEM_COST_TYPE',
+        filterField: 'ITEM_COST_TYPE'
+    },
+    'DIM_MATERIAL_TYPE': {
+        fields: ['MATERIAL_TYPE', 'MATERIAL_TYPE_DESC'],
+        displayField: 'MATERIAL_TYPE_DESC',
+        valueField: 'MATERIAL_TYPE',
+        filterField: 'COMPONENT_MATERIAL_TYPE'
+    },
+    'DIM_MC': {
+        fields: ['MC', 'LE_DESC', 'PATH'],
+        displayField: 'LE_DESC',
+        valueField: 'MC',
+        filterField: 'MC'
+    },
+    'DIM_YEAR': {
+        fields: ['YEAR'],
+        displayField: 'YEAR',
+        valueField: 'YEAR',
+        filterField: 'ZYEAR'
+    }
+};
+
+/**
  * ENHANCED: Fetch specific fields from a dimension table
  * @param {string} tableName - Name of the dimension table
  * @param {Array} fields - Array of field names to fetch
@@ -1456,7 +1517,7 @@ function getDimensionIdField(dimName) {
     const dimensionIdFieldMap = {
         'le': 'LE',
         'cost_element': 'COST_ELEMENT',
-        'gmid_display': 'COMPONENT_GMID',
+        'gmid_display': 'PATH_GMID',
         'root_gmid_display': 'ROOT_GMID',
         'smartcode': 'SMARTCODE',
         'item_cost_type': 'ITEM_COST_TYPE',
@@ -1705,7 +1766,7 @@ function getFactIdField(dimName) {
     const factIdFieldMap = {
         'le': 'LE',
         'cost_element': 'COST_ELEMENT',
-        'gmid_display': 'COMPONENT_GMID',
+        'gmid_display': 'PATH_GMID',
         'root_gmid_display': 'ROOT_GMID',
         'smartcode': 'ROOT_SMARTCODE',
         'item_cost_type': 'ITEM_COST_TYPE',
@@ -1762,7 +1823,7 @@ function preservingFilterByDimension(data, dimensionNode) {
     let factField = null;
     
     if (hierarchyField === 'DIM_GMID_DISPLAY') {
-        factField = 'COMPONENT_GMID';
+        factField = 'PATH_GMID';
     } else if (hierarchyField === 'DIM_COST_ELEMENT') {
         factField = 'COST_ELEMENT';
     } else if (hierarchyField === 'DIM_LE') {
@@ -1851,7 +1912,7 @@ function guessDimensionField(nodeId) {
         return 'DIM_LE';
     } else if (nodeId.includes('COST_ELEMENT_')) {
         return 'DIM_COST_ELEMENT';
-    } else if (nodeId.includes('GMID_') || nodeId.includes('COMPONENT_GMID_')) {
+    } else if (nodeId.includes('GMID_') || nodeId.includes('PATH_GMID_')) {
         return 'DIM_GMID_DISPLAY';
     } else if (nodeId.includes('ITEM_COST_TYPE_')) {
         return 'DIM_ITEM_COST_TYPE';
@@ -2315,13 +2376,13 @@ function verifyFactDimensionMappings() {
         console.log(`✅ Status: Smart Code mapping: ${scMatches}/${sampleSize} records have matching ROOT_SMARTCODE`);
     }
     
-    // Check GMID mapping - FIXED to correctly check COMPONENT_GMID
+    // Check GMID mapping - FIXED to correctly check PATH_GMID
     if (state.mappings.gmidDisplay) {
         const gmidMatches = sampleRecords.filter(record => 
-            record.COMPONENT_GMID && state.mappings.gmidDisplay.gmidToDisplay[record.COMPONENT_GMID]
+            record.PATH_GMID && state.mappings.gmidDisplay.gmidToDisplay[record.PATH_GMID]
         ).length;
         
-        console.log(`✅ Status: GMID mapping: ${gmidMatches}/${sampleSize} records have matching COMPONENT_GMID`);
+        console.log(`✅ Status: GMID mapping: ${gmidMatches}/${sampleSize} records have matching PATH_GMID`);
     }
     
     // Check item cost type mapping
@@ -2867,8 +2928,6 @@ function buildManagementCentreHierarchy(data) {
         data: data
     });
 
-    // config.rootLabel = 'All Management Centres';
-
     // Build hierarchy with segment labels
     const hierarchy = buildPathHierarchyWithSegmentLabels(data, config);
     
@@ -2912,22 +2971,9 @@ function buildCostElementHierarchy(data) {
 function buildGmidDisplayHierarchy(data) {
     console.log(`⏳ Status: Building GMID Display hierarchy from ${data?.length || 0} records...`);
     
-    // Check if data has PATH_GMID structure
-    // const hasPathData = data && Array.isArray(data) && 
-    //                      data.some(item => item && item.PATH_GMID && 
-    //                               typeof item.PATH_GMID === 'string' && 
-    //                               item.PATH_GMID.includes('/'));
-    
-    // if (!hasPathData) {
-    //     console.log("GMID data appears to be flat. Using flat hierarchy builder.");
-    //     const hierarchy = buildStandaloneFlatHierarchy(data, 'GMID_DISPLAY', 'GMID', 'DIM_GMID_DISPLAY');
-    //     // The buildStandaloneFlatHierarchy now ensures ROOT ID consistency
-    //     return hierarchy;
-    // }
-    
     const config = createPathSegmentLabelConfig({
         pathField: 'DISPLAY',
-        idField: 'COMPONENT_GMID',
+        idField: 'PATH_GMID',
         pathSeparator: '//',
         data: data
     });
@@ -2961,19 +3007,6 @@ function buildItemCostTypeHierarchy(data) {
 }
 
 
-// function buildItemCostTypeHierarchy(data) {
-//     const hierarchy = buildStandaloneFlatHierarchy(
-//         data, 
-//         'ITEM_COST_TYPE',
-//         'ITEM_COST_TYPE',
-//         'ITEM_COST_TYPE_DESC'
-//     );
-    
-//     // The buildStandaloneFlatHierarchy now ensures ROOT ID consistency
-//     return hierarchy;
-// }
-
-
 function buildMaterialTypeHierarchy(data) {
     console.log(`⏳ Status: Building MATERIAL_TYPE hierarchy from ${data?.length || 0} records...`);
     
@@ -2992,19 +3025,6 @@ function buildMaterialTypeHierarchy(data) {
     console.log(`✅ Status: MATERIAL_TYPE hierarchy built with ROOT node`);
     return hierarchy;
 }
-
-
-// function buildMaterialTypeHierarchy(data) {
-//     const hierarchy = buildStandaloneFlatHierarchy(
-//         data, 
-//         'MATERIAL_TYPE',
-//         'MATERIAL_TYPE',
-//         'MATERIAL_TYPE_DESC'
-//     );
-    
-//     // The buildStandaloneFlatHierarchy now ensures ROOT ID consistency
-//     return hierarchy;
-// }
 
 
 function buildBusinessYearHierarchy(data) {
@@ -3181,7 +3201,7 @@ function processDimensionHierarchies(dimensions){
                 // Build GMID hierarchy with the original function signature
                 hierarchies.gmid_display = buildGmidDisplayHierarchy(dimensions.gmid_display);
                 // Precompute descendant factIds for GMID hierarchy
-                precomputeDescendantFactIds(hierarchies.gmid_display, 'COMPONENT_GMID');
+                precomputeDescendantFactIds(hierarchies.gmid_display, 'PATH_GMID');
             } catch (error) {
                 console.error("❌ Error building GMID display hierarchy:", error);
                 // Create fallback hierarchy
@@ -3459,7 +3479,7 @@ function precomputeDescendantFactIds(hierarchy, factIdField) {
     // console.log(`Precomputing descendant factIds for hierarchy using ${factIdField}`);
     
     // Special case for GMID hierarchy - ensure we're handling it differently
-    const isGmidHierarchy = factIdField === 'COMPONENT_GMID';
+    const isGmidHierarchy = factIdField === 'PATH_GMID';
     
     // Get all nodes from the hierarchy
     const nodes = Object.values(hierarchy.nodesMap);
@@ -3560,189 +3580,212 @@ function filterRecordsByLeHierarchy(records, leCode) {
 
 
 function buildGmidDisplayMapping(gmidDisplayData, bomData) {
-    console.log("⏳ Status: Building GMID Display mapping with PATH_GMID-based hierarchy");
+    console.log("⏳ Status: Building GMID Display mapping with PATH_GMID as primary foreign key");
     
     // Create mapping object
     const mapping = {
-        // Maps COMPONENT_GMID to display information
-        gmidToDisplay: {},
-        // Maps any GMID or path segment from PATH_GMID to its display value
+        // Maps PATH_GMID to display information (primary mapping)
         pathGmidToDisplay: {},
-        // Maps node IDs to their child GMIDs
-        nodeToChildGmids: {},
-        // Maps node IDs to their descendant GMIDs (all leaf GMIDs below)
-        nodeToDescendantGmids: {},
+        
+        // Maps COMPONENT_GMID to PATH_GMID for backward compatibility
+        componentGmidToPathGmid: {},
+        
+        // Maps any path segment to its display value
+        pathSegmentToDisplay: {},
+        
+        // Maps node IDs to their child PATH_GMIDs
+        nodeToChildPathGmids: {},
+        
+        // Maps node IDs to their descendant PATH_GMIDs (all leaf PATH_GMIDs below)
+        nodeToDescendantPathGmids: {},
+        
         // Maps node IDs to their parent node ID
         nodeToParent: {},
-        // Tracks which GMIDs are used in FACT_BOM as COMPONENT_GMID
-        usedGmids: new Set()
+        
+        // Tracks which PATH_GMIDs are used in FACT_BOM
+        usedPathGmids: new Set(),
+        
+        // Tracks PATH_GMID hierarchy levels
+        pathGmidLevels: {},
+        
+        // Maps ROOT_GMID to all its descendant PATH_GMIDs
+        rootGmidToPathGmids: {}
     };
     
-    // First load all GMIDs from BOM data to ensure we catch all needed GMIDs
+    // First pass: Load all PATH_GMIDs from BOM data to ensure we catch all needed GMIDs
     if (bomData && bomData.length > 0) {
         bomData.forEach(row => {
-            if (row.COMPONENT_GMID) {
-                mapping.usedGmids.add(row.COMPONENT_GMID);
+            if (row.PATH_GMID) {
+                mapping.usedPathGmids.add(row.PATH_GMID);
                 
-                // Pre-populate the display mapping with at least the GMID itself
-                // This ensures we at least have a placeholder for all GMIDs
-                if (!mapping.gmidToDisplay[row.COMPONENT_GMID]) {
-                    mapping.gmidToDisplay[row.COMPONENT_GMID] = {
-                        display: row.COMPONENT_GMID,
-                        fullPath: row.COMPONENT_GMID
+                // Pre-populate the display mapping with at least the PATH_GMID itself
+                if (!mapping.pathGmidToDisplay[row.PATH_GMID]) {
+                    mapping.pathGmidToDisplay[row.PATH_GMID] = {
+                        display: row.PATH_GMID,
+                        fullPath: row.PATH_GMID,
+                        level: 0 // Will be updated later
                     };
+                }
+                
+                // Build ROOT_GMID to PATH_GMID mapping
+                if (row.ROOT_GMID) {
+                    if (!mapping.rootGmidToPathGmids[row.ROOT_GMID]) {
+                        mapping.rootGmidToPathGmids[row.ROOT_GMID] = new Set();
+                    }
+                    mapping.rootGmidToPathGmids[row.ROOT_GMID].add(row.PATH_GMID);
                 }
             }
         });
     }
     
-    console.log(`✅ Status: Loaded ${mapping.usedGmids.size} GMIDs from FACT_BOM data`);
+    console.log(`✅ Status: Loaded ${mapping.usedPathGmids.size} PATH_GMIDs from FACT_BOM data`);
     
-    // Then process the display mappings
+    // Second pass: Process the display mappings from dimension data
     if (gmidDisplayData && gmidDisplayData.length > 0) {
-        // console.log(`⏳ Status: Processing ${gmidDisplayData.length} rows of GMID Display data...`);
+        console.log(`⏳ Status: Processing ${gmidDisplayData.length} rows of GMID Display data...`);
         
-        // First find all root GMIDs to ensure we build complete hierarchies
-        const rootGmidCounts = {};
         gmidDisplayData.forEach(row => {
-            if (row.PATH_GMID) {
-                const segments = row.PATH_GMID.split('/').filter(s => s.trim() !== '');
-                if (segments.length > 0) {
-                    const rootGmid = segments[0];
-                    rootGmidCounts[rootGmid] = (rootGmidCounts[rootGmid] || 0) + 1;
-                }
-            }
-        });
-        
-        // console.log(`Found ${Object.keys(rootGmidCounts).length} unique root GMIDs in PATH_GMID`);
-        
-        // Now process each row for display mappings
-        gmidDisplayData.forEach(row => {
-            // Determine the component GMID
-            let componentGmid;
-            if (row.PATH_GMID) {
-                const pathSegments = row.PATH_GMID.split('/');
-                const lastSegment = pathSegments[pathSegments.length - 1];
-                
-                // If the last segment is '#', use the entire PATH_GMID as the COMPONENT_GMID
-                if (lastSegment === '#') {
-                    componentGmid = row.PATH_GMID;
-                } else {
-                    // Otherwise, use the COMPONENT_GMID value
-                    componentGmid = row.COMPONENT_GMID || "Unknown GMID";
-                }
-            } else {
-                componentGmid = row.COMPONENT_GMID || "Unknown GMID";
-            }
+            const pathGmid = row.PATH_GMID;
+            const componentGmid = row.COMPONENT_GMID;
+            const displayValue = row.DISPLAY;
             
-            // Skip if we couldn't determine a component GMID
-            if (!componentGmid) return;
+            // Skip if no PATH_GMID
+            if (!pathGmid) return;
             
-            // Get display info
-            let displayValue = row.DISPLAY || componentGmid;
-            let displaySegments = displayValue.split('//').filter(s => s.trim() !== '');
+            // Calculate hierarchy level based on path structure
+            const pathSegments = pathGmid.split('/').filter(s => s.trim() !== '');
+            const level = pathSegments.length;
             
-            // If there are no segments, treat the whole display as one segment
-            if (displaySegments.length === 0) {
-                displaySegments = [displayValue];
-            }
+            // Store PATH_GMID level
+            mapping.pathGmidLevels[pathGmid] = level;
             
-            // Update or create the GMID display mapping
-            mapping.gmidToDisplay[componentGmid] = {
-                display: displaySegments[displaySegments.length - 1] || componentGmid,
-                fullPath: displayValue,
-                pathGmid: row.PATH_GMID || componentGmid
+            // Create or update the PATH_GMID display mapping
+            mapping.pathGmidToDisplay[pathGmid] = {
+                display: displayValue || pathGmid,
+                fullPath: displayValue || pathGmid,
+                level: level,
+                pathSegments: pathSegments,
+                componentGmid: componentGmid // Keep reference for backward compatibility
             };
             
-            // Process PATH_GMID to build hierarchy
-            if (row.PATH_GMID) {
-                const pathSegments = row.PATH_GMID.split('/').filter(s => s.trim() !== '');
+            // Map COMPONENT_GMID to PATH_GMID for backward compatibility
+            if (componentGmid) {
+                mapping.componentGmidToPathGmid[componentGmid] = pathGmid;
+            }
+            
+            // Process display path to build hierarchy mappings
+            if (displayValue) {
+                const displaySegments = displayValue.split('//').filter(s => s.trim() !== '');
                 
                 // Map each path segment to its display segment
                 for (let i = 0; i < pathSegments.length; i++) {
                     const pathSegment = pathSegments[i];
-                    
-                    // Use corresponding display segment if available, otherwise use path segment
                     const displaySegment = (i < displaySegments.length) ? displaySegments[i] : pathSegment;
-                    mapping.pathGmidToDisplay[pathSegment] = displaySegment;
+                    
+                    // Store segment to display mapping
+                    mapping.pathSegmentToDisplay[pathSegment] = displaySegment;
                     
                     // Generate node ID for this segment
-                    // Use the same node ID format as in buildGmidDisplayHierarchy for consistency
-                    const safeId = pathSegment.replace(/[^a-zA-Z0-9]/g, '_');
-                    const nodeId = `LEVEL_${i+1}_${safeId}`;
+                    const safeId = pathSegment.replace(/[^a-zA-Z0-9_]/g, '_');
+                    const nodeId = `SEGMENT_LEVEL_${i+1}_${safeId}`;
                     
                     // Initialize this node's children and descendants if not already done
-                    if (!mapping.nodeToChildGmids[nodeId]) {
-                        mapping.nodeToChildGmids[nodeId] = new Set();
-                        mapping.nodeToDescendantGmids[nodeId] = new Set();
+                    if (!mapping.nodeToChildPathGmids[nodeId]) {
+                        mapping.nodeToChildPathGmids[nodeId] = new Set();
+                        mapping.nodeToDescendantPathGmids[nodeId] = new Set();
                     }
                     
-                    // If this is the last segment, add COMPONENT_GMID as a child
+                    // If this is the last segment, add PATH_GMID as a leaf
                     if (i === pathSegments.length - 1) {
-                        mapping.nodeToChildGmids[nodeId].add(componentGmid);
+                        mapping.nodeToChildPathGmids[nodeId].add(pathGmid);
                     }
                     
-                    // Always add COMPONENT_GMID as a descendant of this node
-                    mapping.nodeToDescendantGmids[nodeId].add(componentGmid);
+                    // Always add PATH_GMID as a descendant of this node
+                    mapping.nodeToDescendantPathGmids[nodeId].add(pathGmid);
                     
-                    // If not the last segment, set up parent-child relationship with next segment
+                    // Set up parent-child relationship with next segment
                     if (i < pathSegments.length - 1) {
                         const childPathSegment = pathSegments[i + 1];
-                        const childSafeId = childPathSegment.replace(/[^a-zA-Z0-9]/g, '_');
-                        const childNodeId = `LEVEL_${i+2}_${childSafeId}`;
+                        const childSafeId = childPathSegment.replace(/[^a-zA-Z0-9_]/g, '_');
+                        const childNodeId = `SEGMENT_LEVEL_${i+2}_${childSafeId}`;
                         
-                        mapping.nodeToChildGmids[nodeId].add(childNodeId);
+                        mapping.nodeToChildPathGmids[nodeId].add(childNodeId);
                         mapping.nodeToParent[childNodeId] = nodeId;
                     }
                 }
-            } else {
-                // If no PATH_GMID, create a node for this COMPONENT_GMID
-                const safeId = componentGmid.replace(/[^a-zA-Z0-9]/g, '_');
-                const nodeId = `LEVEL_1_${safeId}`;
-                mapping.nodeToChildGmids[nodeId] = new Set([componentGmid]);
-                mapping.nodeToDescendantGmids[nodeId] = new Set([componentGmid]);
             }
         });
     }
     
-    // Handle unmapped GMIDs from FACT_BOM
-    const unmappedGmids = Array.from(mapping.usedGmids).filter(gmid => 
-        !mapping.gmidToDisplay[gmid] || !mapping.gmidToDisplay[gmid].display);
+    // Third pass: Handle unmapped PATH_GMIDs from FACT_BOM
+    const unmappedPathGmids = Array.from(mapping.usedPathGmids).filter(pathGmid => 
+        !mapping.pathGmidToDisplay[pathGmid] || 
+        !mapping.pathGmidToDisplay[pathGmid].display ||
+        mapping.pathGmidToDisplay[pathGmid].display === pathGmid
+    );
     
-    if (unmappedGmids.length > 0) {
-        console.warn(`Found ${unmappedGmids.length} unmapped COMPONENT_GMIDs in fact data`);
-        // console.warn("First few unmapped GMIDs:", unmappedGmids.slice(0, 5));
+    if (unmappedPathGmids.length > 0) {
+        console.warn(`Found ${unmappedPathGmids.length} unmapped PATH_GMIDs in fact data`);
+        console.warn("Sample unmapped PATH_GMIDs:", unmappedPathGmids.slice(0, 5));
         
-        // Create basic mappings for unmapped GMIDs
-        unmappedGmids.forEach(gmid => {
-            mapping.gmidToDisplay[gmid] = {
-                display: gmid,
-                fullPath: gmid
+        // Create basic mappings for unmapped PATH_GMIDs
+        unmappedPathGmids.forEach(pathGmid => {
+            const pathSegments = pathGmid.split('/').filter(s => s.trim() !== '');
+            const level = pathSegments.length;
+            
+            mapping.pathGmidToDisplay[pathGmid] = {
+                display: pathGmid,
+                fullPath: pathGmid,
+                level: level,
+                pathSegments: pathSegments,
+                isFallback: true
             };
             
-            // Create a node for this GMID
-            const safeId = gmid.replace(/[^a-zA-Z0-9]/g, '_');
-            const nodeId = `LEVEL_1_${safeId}`;
-            mapping.nodeToChildGmids[nodeId] = new Set([gmid]);
-            mapping.nodeToDescendantGmids[nodeId] = new Set([gmid]);
+            mapping.pathGmidLevels[pathGmid] = level;
+            
+            // Create a node for this PATH_GMID
+            const lastSegment = pathSegments[pathSegments.length - 1] || pathGmid;
+            const safeId = lastSegment.replace(/[^a-zA-Z0-9_]/g, '_');
+            const nodeId = `SEGMENT_LEVEL_${level}_${safeId}`;
+            
+            if (!mapping.nodeToChildPathGmids[nodeId]) {
+                mapping.nodeToChildPathGmids[nodeId] = new Set();
+                mapping.nodeToDescendantPathGmids[nodeId] = new Set();
+            }
+            
+            mapping.nodeToChildPathGmids[nodeId].add(pathGmid);
+            mapping.nodeToDescendantPathGmids[nodeId].add(pathGmid);
         });
     }
     
     // Convert Sets to Arrays for easier consumption
-    for (const key in mapping.nodeToChildGmids) {
-        mapping.nodeToChildGmids[key] = Array.from(mapping.nodeToChildGmids[key]);
+    for (const key in mapping.nodeToChildPathGmids) {
+        mapping.nodeToChildPathGmids[key] = Array.from(mapping.nodeToChildPathGmids[key]);
     }
     
-    for (const key in mapping.nodeToDescendantGmids) {
-        mapping.nodeToDescendantGmids[key] = Array.from(mapping.nodeToDescendantGmids[key]);
+    for (const key in mapping.nodeToDescendantPathGmids) {
+        mapping.nodeToDescendantPathGmids[key] = Array.from(mapping.nodeToDescendantPathGmids[key]);
     }
     
-    mapping.usedGmids = Array.from(mapping.usedGmids);
+    // Convert ROOT_GMID mappings to arrays
+    for (const rootGmid in mapping.rootGmidToPathGmids) {
+        mapping.rootGmidToPathGmids[rootGmid] = Array.from(mapping.rootGmidToPathGmids[rootGmid]);
+    }
     
-    const mappedGmids = Object.keys(mapping.gmidToDisplay).length;
-    const pathMappings = Object.keys(mapping.pathGmidToDisplay).length;
-    const rootGmids = Object.keys(mapping.nodeToChildGmids).filter(id => !mapping.nodeToParent[id]).length;
+    mapping.usedPathGmids = Array.from(mapping.usedPathGmids);
     
+    // Calculate statistics
+    const mappedPathGmids = Object.keys(mapping.pathGmidToDisplay).length;
+    const pathMappings = Object.keys(mapping.pathSegmentToDisplay).length;
+    const rootGmids = Object.keys(mapping.nodeToChildPathGmids).filter(id => !mapping.nodeToParent[id]).length;
+    const fallbackMappings = Object.values(mapping.pathGmidToDisplay).filter(m => m.isFallback).length;
+    
+    console.log(`✅ Status: GMID mapping complete:`);
+    console.log(`   - ${mappedPathGmids} PATH_GMIDs mapped`);
+    console.log(`   - ${pathMappings} path segments mapped`);
+    console.log(`   - ${rootGmids} root nodes identified`);
+    console.log(`   - ${fallbackMappings} fallback mappings created`);
+    console.log(`   - ${Object.keys(mapping.rootGmidToPathGmids).length} ROOT_GMIDs with descendant PATH_GMIDs`);
     
     return mapping;
 }
@@ -4720,22 +4763,6 @@ function isNodeExpanded(nodeId, dimensionName, zone, state) {
     if (!state.expandedNodes[dimensionName][zone]) return false;
     return !!state.expandedNodes[dimensionName][zone][nodeId];
 }
-
-
-/**
- * Universal expansion tracking initializer
- * Initializes the expansion tracking structure for a hierarchy and zone
- * 
- * @param {Object} state - Application state
- * @param {string} hierarchyName - Name of the hierarchy
- * @param {string} zone - Zone to initialize ('row' or 'column')
- */
-// function initializeExpansionTracking(state, hierarchyName, zone) {
-//     state.expandedNodes = state.expandedNodes || {};
-//     state.expandedNodes[hierarchyName] = state.expandedNodes[hierarchyName] || {};
-//     state.expandedNodes[hierarchyName][zone] = state.expandedNodes[hierarchyName][zone] || {};
-// }
-
 
 
 function processHierarchicalFieldsEnhanced(fields, zone) {

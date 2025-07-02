@@ -4,6 +4,7 @@
  */
 
 import pivotTable from './pivot-table.js';
+import data from './data.js';
 
 /**
  * Template detection and routing system
@@ -75,13 +76,14 @@ const PivotTemplateSystem = {
         }
     },
 
+
     /**
      * Template-specific row cell renderers
      */
     renderTemplate1RowCell: function(row, field) {
         const level = row.level || 0;
         const indentationPx = 4 + (level * 30);
-        const dimName = pivotTable.extractDimensionName(field);
+        const dimName = data.extractDimensionName(field);
         
         let cellHtml = `<td class="t1-hierarchy-cell" data-level="${level}" style="padding-left: ${indentationPx}px !important;">`;
         
@@ -102,6 +104,7 @@ const PivotTemplateSystem = {
         return cellHtml;
     },
 
+
     renderTemplate2DimensionCell: function(node, field, dimIndex) {
         if (!node) {
             return `<td class="t2-dimension-cell dimension-${dimIndex} empty">-</td>`;
@@ -109,7 +112,7 @@ const PivotTemplateSystem = {
 
         const level = node.level || 0;
         const indentationPx = 4 + (level * 20);
-        const dimName = pivotTable.extractDimensionName(field);
+        const dimName = data.extractDimensionName(field);
         
         let cellHtml = `<td class="t2-dimension-cell dimension-${dimIndex}" data-level="${level}" style="padding-left: ${indentationPx}px !important;">`;
         
@@ -131,10 +134,11 @@ const PivotTemplateSystem = {
         return cellHtml;
     },
 
+
     renderTemplate3RowCell: function(row, field) {
         const level = row.level || 0;
         const indentationPx = 4 + (level * 30);
-        const dimName = pivotTable.extractDimensionName(field);
+        const dimName = data.extractDimensionName(field);
         
         let cellHtml = `<td class="t3-hierarchy-cell" data-level="${level}" style="padding-left: ${indentationPx}px !important;">`;
         
@@ -155,6 +159,7 @@ const PivotTemplateSystem = {
         return cellHtml;
     },
 
+
     renderTemplate4DimensionCell: function(node, field, dimIndex) {
         if (!node) {
             return `<td class="t4-dimension-cell dimension-${dimIndex} empty">-</td>`;
@@ -162,7 +167,7 @@ const PivotTemplateSystem = {
 
         const level = node.level || 0;
         const indentationPx = 4 + (level * 20);
-        const dimName = pivotTable.extractDimensionName(field);
+        const dimName = data.extractDimensionName(field);
         
         let cellHtml = `<td class="t4-dimension-cell dimension-${dimIndex}" data-level="${level}" style="padding-left: ${indentationPx}px !important;">`;
         
@@ -184,6 +189,7 @@ const PivotTemplateSystem = {
         return cellHtml;
     },
 
+
     renderTemplate5DimensionCell: function(node, field, dimIndex) {
         if (!node) {
             return `<td class="t5-dimension-cell dimension-${dimIndex} empty">-</td>`;
@@ -191,7 +197,7 @@ const PivotTemplateSystem = {
 
         const level = node.level || 0;
         const indentationPx = 4 + (level * 20);
-        const dimName = pivotTable.extractDimensionName(field);
+        const dimName = data.extractDimensionName(field);
         
         let cellHtml = `<td class="t5-dimension-cell dimension-${dimIndex}" data-level="${level}" style="padding-left: ${indentationPx}px !important;">`;
         
@@ -212,11 +218,12 @@ const PivotTemplateSystem = {
         
         return cellHtml;
     },
+    
 
     renderTemplate6RowCell: function(row, field) {
         const level = row.level || 0;
         const indentationPx = 4 + (level * 30);
-        const dimName = pivotTable.extractDimensionName(field);
+        const dimName = data.extractDimensionName(field);
         
         let cellHtml = `<td class="t6-hierarchy-cell" data-level="${level}" style="padding-left: ${indentationPx}px !important;">`;
         
@@ -362,7 +369,7 @@ const PivotTemplateSystem = {
     renderTemplate1RowCell: function(row, field) {
         const level = row.level || 0;
         const indentationPx = 4 + (level * 30);
-        const dimName = pivotTable.extractDimensionName(field);
+        const dimName = data.extractDimensionName(field);
         
         let cellHtml = `<td class="t1-hierarchy-cell" data-level="${level}" style="padding-left: ${indentationPx}px !important;">`;
         
@@ -542,11 +549,11 @@ const PivotTemplateSystem = {
         
         // Extract dimension name safely
         if (typeof field === 'string') {
-            dimName = pivotTable.extractDimensionName(field);
+            dimName = data.extractDimensionName(field);
         } else if (field && field.field) {
-            dimName = pivotTable.extractDimensionName(field.field);
+            dimName = data.extractDimensionName(field.field);
         } else if (field && field.name) {
-            dimName = pivotTable.extractDimensionName(field.name);
+            dimName = data.extractDimensionName(field.name);
         } else {
             dimName = `dim_${dimIndex}`;
         }
@@ -635,7 +642,7 @@ const PivotTemplateSystem = {
                 
                 if (pivotTable.originalColumnHasChildren(col)) {
                     const expandClass = col.expanded ? 'expanded' : 'collapsed';
-                    const dimName = pivotTable.extractDimensionName(columnFields[0]);
+                    const dimName = data.extractDimensionName(columnFields[0]);
                     headerHtml += `<span class="expand-collapse ${expandClass}" 
                         data-node-id="${col._id}" 
                         data-hierarchy="${dimName}" 
@@ -952,7 +959,7 @@ const PivotTemplateSystem = {
                 // Add expand/collapse control if column has children
                 if (pivotTable.originalColumnHasChildren(col)) {
                     const expandClass = col.expanded ? 'expanded' : 'collapsed';
-                    const dimName = pivotTable.extractDimensionName(columnFields[0]);
+                    const dimName = data.extractDimensionName(columnFields[0]);
                     headerHtml += `<span class="expand-collapse ${expandClass}" 
                         data-node-id="${col._id}" 
                         data-hierarchy="${dimName}" 
@@ -1010,7 +1017,7 @@ const PivotTemplateSystem = {
         }
 
         const level = node.level || 0;
-        const dimName = pivotTable.extractDimensionName(field);
+        const dimName = data.extractDimensionName(field);
         
         let cellHtml = `<td class="t4-dimension-cell dimension-${dimIndex}" data-level="${level}" data-dimension-index="${dimIndex}">`;
         cellHtml += '<div class="cell-content">';
@@ -1571,7 +1578,7 @@ const PivotTemplateSystem = {
      * Get visible column nodes respecting hierarchy and expand/collapse state
      */
     getVisibleColumnNodesHierarchical: function(dimensionColumns, field, pivotTable) {
-        const dimName = pivotTable.extractDimensionName(field);
+        const dimName = data.extractDimensionName(field);
         const hierarchy = pivotTable.state?.hierarchies?.[dimName];
         
         if (!hierarchy || !hierarchy.nodesMap) {
@@ -1638,11 +1645,11 @@ const PivotTemplateSystem = {
         // Group columns by dimension with hierarchical awareness
         const dimensionColumns = {};
         columnFields.forEach(field => {
-            const dimName = pivotTable.extractDimensionName(field);
+            const dimName = data.extractDimensionName(field);
             dimensionColumns[field] = this.getVisibleColumnNodesHierarchical(
                 columns.filter(col => {
                     if (!col.hierarchyField) return false;
-                    const colDimName = pivotTable.extractDimensionName(col.hierarchyField);
+                    const colDimName = data.extractDimensionName(col.hierarchyField);
                     return colDimName === dimName;
                 }),
                 field,
@@ -1722,10 +1729,10 @@ const PivotTemplateSystem = {
         // Group columns by dimension
         const dimensionColumns = {};
         columnFields.forEach(field => {
-            const dimName = pivotTable.extractDimensionName(field);
+            const dimName = data.extractDimensionName(field);
             dimensionColumns[field] = columns.filter(col => {
                 if (!col.hierarchyField) return false;
-                const colDimName = pivotTable.extractDimensionName(col.hierarchyField);
+                const colDimName = data.extractDimensionName(col.hierarchyField);
                 return colDimName === dimName;
             });
             console.log(`🔍 Dimension ${dimName}: ${dimensionColumns[field].length} columns`);
@@ -1832,7 +1839,7 @@ const PivotTemplateSystem = {
                         // FIXED: Any node with children should be expandable
                         if (this.columnNodeHasExpandableChildren(node, pivotTable)) {
                             const expandClass = node.expanded ? 'expanded' : 'collapsed';
-                            const dimName = pivotTable.extractDimensionName(field);
+                            const dimName = data.extractDimensionName(field);
                             headerHtml += `<span class="expand-collapse ${expandClass}" 
                                 data-node-id="${node._id}" 
                                 data-hierarchy="${dimName}" 
@@ -1859,7 +1866,7 @@ const PivotTemplateSystem = {
                             // FIX 2: Add expand/collapse for nodes with children
                             if (this.columnNodeHasExpandableChildren(node, pivotTable)) {
                                 const expandClass = node.expanded ? 'expanded' : 'collapsed';
-                                const dimName = pivotTable.extractDimensionName(columnFields[levelIndex]);
+                                const dimName = data.extractDimensionName(columnFields[levelIndex]);
                                 headerHtml += `<span class="expand-collapse ${expandClass}" 
                                     data-node-id="${node._id}" 
                                     data-hierarchy="${dimName}" 
@@ -1892,35 +1899,74 @@ const PivotTemplateSystem = {
      * FIXED: Properly checks for children regardless of dimension level
      */
     columnNodeHasExpandableChildren: function(node, pivotTable) {
-        if (!node || !node.hierarchyField) return false;
+        if (!node) {
+            console.log('🔍 columnNodeHasExpandableChildren: node is null/undefined');
+            return false;
+        }
         
-        // Check if this node has children in its own hierarchy
-        const dimName = pivotTable.extractDimensionName(node.hierarchyField);
+        // Extract dimension name from node
+        let dimName = '';
+        if (node.hierarchyField) {
+            dimName = data.extractDimensionName(node.hierarchyField);
+        } else if (node._id && node._id.includes('_')) {
+            // Try to extract from node ID pattern (e.g., "le_WORLDWIDE")
+            const parts = node._id.split('_');
+            if (parts.length >= 2) {
+                dimName = parts[0].toLowerCase();
+            }
+        }
+        
+        if (!dimName) {
+            console.log(`🔍 columnNodeHasExpandableChildren: cannot determine dimension for node ${node._id || 'unknown'}`);
+            return false;
+        }
+        
+        console.log(`🔍 Checking expandable children for node ${node._id} (${node.label || 'no label'}) in dimension ${dimName}`);
+        
+        // METHOD 1: Check via hierarchy system
         const hierarchy = pivotTable.state?.hierarchies?.[dimName];
+        if (hierarchy && hierarchy.nodesMap) {
+            const originalNode = hierarchy.nodesMap[node._id];
+            if (originalNode && originalNode.children && originalNode.children.length > 0) {
+                console.log(`✅ Node ${node._id} has ${originalNode.children.length} children via hierarchy`);
+                return true;
+            }
+        }
         
-        if (!hierarchy || !hierarchy.nodesMap) return false;
+        // METHOD 2: Check direct children property
+        if (node.children && Array.isArray(node.children) && node.children.length > 0) {
+            console.log(`✅ Node ${node._id} has ${node.children.length} direct children`);
+            return true;
+        }
         
-        const originalNode = hierarchy.nodesMap[node._id];
-        if (!originalNode) return false;
+        // METHOD 3: Check isLeaf property (inverse logic)
+        if (node.hasOwnProperty('isLeaf') && !node.isLeaf) {
+            console.log(`✅ Node ${node._id} is not a leaf (isLeaf=${node.isLeaf})`);
+            return true;
+        }
         
-        // FIXED: Any node with children should be expandable, regardless of dimension or level
-        const hasChildren = originalNode.children && originalNode.children.length > 0;
-        if (!hasChildren) return false;
+        // METHOD 4: Check if this node appears in other nodes' children
+        if (hierarchy && hierarchy.nodesMap) {
+            for (const [nodeId, hierarchyNode] of Object.entries(hierarchy.nodesMap)) {
+                if (hierarchyNode.children && hierarchyNode.children.includes(node._id)) {
+                    // This node is someone's child, so it might have its own children
+                    const thisNode = hierarchy.nodesMap[node._id];
+                    if (thisNode && thisNode.children && thisNode.children.length > 0) {
+                        console.log(`✅ Node ${node._id} found in hierarchy with children`);
+                        return true;
+                    }
+                }
+            }
+        }
         
-        // ENHANCED: Check if children are meaningful (have data or are intermediate nodes)
-        const childrenAreExpandable = originalNode.children.some(childId => {
-            const childNode = hierarchy.nodesMap[childId];
-            if (!childNode) return false;
-            
-            // Child is expandable if it has factId (data) OR has its own children
-            return childNode.factId || 
-                childNode.isLeaf || 
-                (childNode.children && childNode.children.length > 0);
-        });
+        // METHOD 5: Check if factId indicates it's a leaf
+        if (node.factId) {
+            console.log(`❌ Node ${node._id} has factId, likely a leaf node`);
+            return false;
+        }
         
-        console.log(`🔍 Node ${node._id} (${node.label}) in ${dimName}: hasChildren=${hasChildren}, childrenExpandable=${childrenAreExpandable}`);
-        
-        return childrenAreExpandable;
+        console.log(`❌ Node ${node._id} - no children found via any method`);
+        return false;
     },
 
 
@@ -1972,7 +2018,7 @@ const PivotTemplateSystem = {
                 // FIXED: Check for expandable children regardless of which dimension this node belongs to
                 if (this.columnNodeHasExpandableChildren(col, pivotTable)) {
                     const expandClass = col.expanded ? 'expanded' : 'collapsed';
-                    const dimName = pivotTable.extractDimensionName(col.hierarchyField);
+                    const dimName = data.extractDimensionName(col.hierarchyField);
                     headerHtml += `<span class="expand-collapse ${expandClass}" 
                         data-node-id="${col._id}" 
                         data-hierarchy="${dimName}" 
@@ -2016,7 +2062,7 @@ const PivotTemplateSystem = {
                     
                     if (pivotTable.originalColumnHasChildren(node)) {
                         const expandClass = node.expanded ? 'expanded' : 'collapsed';
-                        const dimName = pivotTable.extractDimensionName(columnFields[0]);
+                        const dimName = data.extractDimensionName(columnFields[0]);
                         headerHtml += `<span class="expand-collapse ${expandClass}" 
                             data-node-id="${node._id}" 
                             data-hierarchy="${dimName}" 
@@ -2041,7 +2087,7 @@ const PivotTemplateSystem = {
                     
                     if (pivotTable.originalColumnHasChildren(lastNode)) {
                         const expandClass = lastNode.expanded ? 'expanded' : 'collapsed';
-                        const dimName = pivotTable.extractDimensionName(columnFields[columnFields.length - 1]);
+                        const dimName = data.extractDimensionName(columnFields[columnFields.length - 1]);
                         headerHtml += `<span class="expand-collapse ${expandClass}" 
                             data-node-id="${lastNode._id}" 
                             data-hierarchy="${dimName}" 
@@ -2252,7 +2298,7 @@ const PivotTemplateSystem = {
             const combinations = pivotData.rows.slice(0, 20).map((row, index) => {
                 // Create nodes for each dimension
                 const nodes = rowFields.map((field, dimIndex) => {
-                    const dimName = pivotTable.extractDimensionName(field);
+                    const dimName = data.extractDimensionName(field);
                     
                     // Create a mock node structure
                     return {
@@ -2281,7 +2327,7 @@ const PivotTemplateSystem = {
         
         for (let i = 0; i < 5; i++) { // Create 5 placeholder rows
             const nodes = rowFields.map((field, dimIndex) => {
-                const dimName = pivotTable.extractDimensionName(field);
+                const dimName = data.extractDimensionName(field);
                 let label = `${dimName.toUpperCase()} ${i + 1}`;
                 
                 // Create dimension-appropriate labels
@@ -2521,7 +2567,7 @@ const PivotTemplateSystem = {
      * Generate combinations for single column dimension
      */
     generateSingleColumnCombinations: function(columns, field, pivotTable) {
-        const dimName = pivotTable.extractDimensionName(field);
+        const dimName = data.extractDimensionName(field);
         const visibleNodes = this.getVisibleColumnNodesForTemplate6(columns, field, pivotTable);
         
         console.log(`🔍 Single column dimension ${dimName}: ${visibleNodes.length} visible nodes`);
@@ -2560,10 +2606,10 @@ const PivotTemplateSystem = {
         const dimensionColumns = {};
         
         columnFields.forEach(field => {
-            const dimName = pivotTable.extractDimensionName(field);
+            const dimName = data.extractDimensionName(field);
             const dimColumns = columns.filter(col => {
                 if (!col.hierarchyField) return false;
-                const colDimName = pivotTable.extractDimensionName(col.hierarchyField);
+                const colDimName = data.extractDimensionName(col.hierarchyField);
                 return colDimName === dimName;
             });
             
@@ -2581,7 +2627,7 @@ const PivotTemplateSystem = {
      * Get hierarchically visible nodes respecting expand/collapse state
      */
     getHierarchicallyVisibleNodes: function(dimensionColumns, field, pivotTable) {
-        const dimName = pivotTable.extractDimensionName(field);
+        const dimName = data.extractDimensionName(field);
         const hierarchy = pivotTable.state?.hierarchies?.[dimName];
         
         if (!hierarchy || !hierarchy.nodesMap) {
@@ -2760,8 +2806,7 @@ const PivotTemplateSystem = {
         });
         
         return headerHtml;
-    },
-    
+    },    
 
 
     /**
@@ -2775,7 +2820,7 @@ const PivotTemplateSystem = {
         let headerHtml = `<th class="t6-column-header dimension-level-${levelIndex}" colspan="${spanCount}" data-node-id="${node._id}" data-value-index="${valueIndex}">`;
         
         // IMPROVEMENT 2: Always add expand/collapse for higher dimension nodes (no leaf icons in column zone)
-        const dimName = pivotTable.extractDimensionName(field);
+        const dimName = data.extractDimensionName(field);
         const isExpanded = this.isColumnNodeExpanded(node, dimName, pivotTable);
         const expandClass = isExpanded ? 'expanded' : 'collapsed';
         
@@ -2793,8 +2838,7 @@ const PivotTemplateSystem = {
         headerHtml += '</th>';
         
         return headerHtml;
-    },
-    
+    },    
 
 
     /**
@@ -2803,7 +2847,7 @@ const PivotTemplateSystem = {
      */
     renderTemplate6LowerDimensionHeaders: function(columnCombinations, field, levelIndex, valueField, valueIndex, pivotTable) {
         let headerHtml = '';
-        const dimName = pivotTable.extractDimensionName(field);
+        const dimName = data.extractDimensionName(field);
         
         // IMPROVEMENT 4: Get lower dimension nodes for this specific value field
         const lowerDimensionNodes = this.getLowerDimensionNodesForValue(columnCombinations, levelIndex, valueField, valueIndex);
@@ -2832,8 +2876,7 @@ const PivotTemplateSystem = {
         });
         
         return headerHtml;
-    },
-    
+    },    
 
 
     /**
@@ -2879,9 +2922,6 @@ const PivotTemplateSystem = {
         
         return nodes;
     },
-    
-
-
 
 
     /**
@@ -2918,8 +2958,7 @@ const PivotTemplateSystem = {
         });
         
         return spans;
-    },
-    
+    },    
 
 
     /**
@@ -2958,7 +2997,7 @@ const PivotTemplateSystem = {
         // Add expand/collapse control if node has children
         if (this.columnNodeHasExpandableChildren(node, pivotTable)) {
             const expandClass = node.expanded ? 'expanded' : 'collapsed';
-            const dimName = pivotTable.extractDimensionName(field);
+            const dimName = data.extractDimensionName(field);
             headerHtml += `<span class="expand-collapse ${expandClass}" 
                 data-node-id="${node._id}" 
                 data-hierarchy="${dimName}" 
@@ -2989,7 +3028,7 @@ const PivotTemplateSystem = {
         // Add expand/collapse control if node has children
         if (this.columnNodeHasExpandableChildren(node, pivotTable)) {
             const expandClass = node.expanded ? 'expanded' : 'collapsed';
-            const dimName = pivotTable.extractDimensionName(field);
+            const dimName = data.extractDimensionName(field);
             headerHtml += `<span class="expand-collapse ${expandClass}" 
                 data-node-id="${node._id}" 
                 data-hierarchy="${dimName}" 
@@ -3018,8 +3057,7 @@ const PivotTemplateSystem = {
                 col.factId || 
                 col.expanded;
         }).slice(0, 15); // Slightly higher limit for Template 6
-    },
-    
+    },    
 
 
     /**
@@ -3059,8 +3097,7 @@ const PivotTemplateSystem = {
         pivotTable.attachEventListeners(elements.pivotTableBody);
         
         console.log(`✅ Template6 body built with ${visibleRows.length} rows × ${columnCombinations.length} column combinations`);
-    },
-    
+    },    
 
 
     /**
@@ -3107,13 +3144,12 @@ const PivotTemplateSystem = {
     },
 
 
-
     /**
      * Calculate total for collapsed parent (all children, including hidden ones)
      */
     calculateTotalForCollapsedParent: function(row, parentNode, field, pivotTable) {
         // Calculate total including all children (visible and hidden)
-        const dimName = pivotTable.extractDimensionName(parentNode.hierarchyField);
+        const dimName = data.extractDimensionName(parentNode.hierarchyField);
         const hierarchy = pivotTable.state?.hierarchies?.[dimName];
         
         if (!hierarchy || !hierarchy.nodesMap) {
@@ -3144,7 +3180,6 @@ const PivotTemplateSystem = {
     },
 
 
-
     /**
      * Calculate total for expanded parent (sum of visible children)
      */
@@ -3170,7 +3205,7 @@ const PivotTemplateSystem = {
     renderTemplate6RowCell: function(row, field) {
         const level = row.level || 0;
         const indentationPx = 4 + (level * 30);
-        const dimName = pivotTable.extractDimensionName(field);
+        const dimName = data.extractDimensionName(field);
         
         let cellHtml = `<td class="t6-hierarchy-cell" data-level="${level}" style="padding-left: ${indentationPx}px !important;">`;
         
@@ -3189,8 +3224,7 @@ const PivotTemplateSystem = {
         cellHtml += '</td>';
         
         return cellHtml;
-    },
-    
+    },    
 
 
     /**
@@ -3228,6 +3262,7 @@ const PivotTemplateSystem = {
         </td>`;
     },
 
+
     /**
      * Enhanced check for node children
      */
@@ -3242,7 +3277,7 @@ const PivotTemplateSystem = {
         
         // Method 2: Check via pivotTable hierarchy system
         if (pivotTable && node.hierarchyField) {
-            const dimName = pivotTable.extractDimensionName ? pivotTable.extractDimensionName(node.hierarchyField) : node.hierarchyField;
+            const dimName = data.extractDimensionName ? data.extractDimensionName(node.hierarchyField) : node.hierarchyField;
             const hierarchy = pivotTable.state?.hierarchies?.[dimName];
             
             if (hierarchy && hierarchy.nodesMap) {

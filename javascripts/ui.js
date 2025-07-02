@@ -1,7 +1,7 @@
 // Enhanced UI module with improved drag/drop restrictions and reset functionality
 
-import core from './core.js';
 import stateModule from './state.js';
+import core from './core.js';
 
 const state = stateModule.state;
 
@@ -1039,6 +1039,58 @@ function updateTableStatus(tableName, status, count = null) {
 }
 
 
+// Wait for data events to be available
+function initializeDataEventListeners() {
+    // Check if dataEvents is available
+    if (window.dataEvents) {
+        setupEventListeners();
+    } else {
+        // Wait a bit and try again
+        setTimeout(initializeDataEventListeners, 100);
+    }
+}
+
+
+function setupEventListeners() {
+    const dataEvents = window.dataEvents;
+    
+    // Listen for table status updates
+    dataEvents.on('tableStatusUpdate', ({ tableName, status, count }) => {
+        // Call your existing updateTableStatus function
+        if (typeof updateTableStatus === 'function') {
+            updateTableStatus(tableName, status, count);
+        } else {
+            console.log(`Table ${tableName} status: ${status}${count ? ` (${count})` : ''}`);
+        }
+    });
+    
+    // Listen for render available fields
+    dataEvents.on('renderAvailableFields', ({ elements }) => {
+        if (typeof renderAvailableFields === 'function') {
+            renderAvailableFields(elements);
+        }
+    });
+    
+    // Listen for set default fields
+    dataEvents.on('setDefaultFields', () => {
+        if (typeof setDefaultFields === 'function') {
+            setDefaultFields();
+        }
+    });
+    
+    // Listen for render field containers
+    dataEvents.on('renderFieldContainers', ({ elements, state }) => {
+        if (typeof renderFieldContainers === 'function') {
+            renderFieldContainers(elements, state);
+        }
+    });
+    
+    console.log('✅ Data event listeners initialized');
+}
+
+initializeDataEventListeners();
+
+
 // Expose key functions globally
 window.activityLog = {
     addEntry: addLogEntry,
@@ -1053,6 +1105,7 @@ window.activityLog = {
 
 // Export functions
 export default {
+    initializeDataEventListeners,
     setupRowCountUpdates,
     updateTableStatus,
     addLogEntry,

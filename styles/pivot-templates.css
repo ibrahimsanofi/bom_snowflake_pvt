@@ -1949,6 +1949,23 @@
     background: #f8f9fa !important;
 }
 
+/* COMPREHENSIVE FIX: Remove leaf node dots from column headers in all templates */
+[class*="template"] .column-header .leaf-node,
+[class*="template"] thead .leaf-node,
+[class*="template"] .t6-column-header .leaf-node-empty,
+[class*="template"] .t5-column-header .leaf-node-empty,
+[class*="template"] .t4-column-header .leaf-node-empty,
+[class*="template"] .t3-column-header .leaf-node-empty {
+    display: none !important;
+}
+
+[class*="template"] .column-header .leaf-node::after,
+[class*="template"] .column-header .leaf-node::before,
+[class*="template"] thead .leaf-node::after,
+[class*="template"] thead .leaf-node::before {
+    display: none !important;
+    content: none !important;
+}
 
 /* ---------- UNIVERSAL FIXES FOR ALL TEMPLATES ---------- */
 /* Apply the original fixes to all templates */
