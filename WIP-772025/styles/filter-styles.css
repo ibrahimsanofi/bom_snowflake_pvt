@@ -1,0 +1,92 @@
+/* 
+ * Additional CSS styles for filter dropdowns
+ * Add these to your existing CSS file or include them in a style tag
+ */
+
+/* Make dropdowns more spacious */
+.multiselect-dropdown-content {
+    max-height: 70vh !important; /* Use viewport height for better responsiveness */
+    min-width: 350px !important; /* Minimum width */
+    max-width: 30vw !important; /* Prevent going off screen */
+  }
+  
+  /* Improve checkbox container */
+  .checkbox-container {
+    max-height: 50vh !important; /* Allow more vertical space */
+    width: 100% !important;
+    padding: 0 !important; /* Remove padding to maximize space */
+  }
+  
+  /* Style checkbox list for better visibility */
+  .checkbox-list {
+    max-height: none !important; /* Let the container control height */
+    width: 100% !important;
+    overflow-y: auto !important;
+    padding: 0 !important;
+  }
+  
+  /* Make checkbox options more visible */
+  .checkbox-option {
+    padding: 8px 12px !important;
+    border-bottom: 1px solid #f0f0f0 !important;
+    transition: background-color 0.2s ease !important;
+  }
+  
+  .checkbox-option:hover {
+    background-color: #f8fafc !important;
+  }
+  
+  .checkbox-option:last-child {
+    border-bottom: none !important;
+  }
+  
+  /* Make search more prominent */
+  .search-container {
+    position: sticky !important;
+    top: 0 !important;
+    background-color: white !important;
+    z-index: 10 !important;
+    padding: 12px !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+  }
+  
+  .search-input {
+    width: 100% !important;
+    padding: 8px 12px !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 4px !important;
+    font-size: 14px !important;
+  }
+  
+  /* Improve select actions */
+  .select-actions {
+    position: sticky !important;
+    top: 52px !important; /* Position right below search */
+    background-color: white !important;
+    z-index: 10 !important;
+    padding: 8px 12px !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    display: flex !important;
+    gap: 8px !important;
+  }
+  
+  /* Style for hierarchical trees */
+  .filter-tree-container {
+    max-height: none !important;
+    width: 100% !important;
+  }
+  
+  .filter-tree-nodes {
+    max-height: none !important;
+    padding: 8px 12px !important;
+  }
+  
+  /* Media queries for better mobile support */
+  @media (max-width: 768px) {
+    .multiselect-dropdown-content {
+      width: 90vw !important;
+      max-width: 90vw !important;
+      left: 5vw !important;
+      right: 5vw !important;
+    }
+  }

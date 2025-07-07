@@ -1122,40 +1122,34 @@ async function ingestDimensionData(elements, selectedFact = 'FACT_BOM') {
 }
 
 
-// This isn't needed again because a better function has been written
 /**
  * Replace GMID placeholder with real filtered data
  * @param {Array} selectedRootGmids - Array of selected ROOT_GMID values
  * @returns {Promise<boolean>} - Success status
  */
-async function replaceGmidPlaceholderWithRealData(selectedRootGmids, additionalFilters = {}) {
+async function replaceGmidPlaceholderWithRealData(selectedRootGmids) {
     if (!selectedRootGmids || selectedRootGmids.length === 0) {
-        console.log('✅ Status: No ROOT_GMIDs provided, keeping placeholder data');
+        console.log('✅ Status: No ROOT_GMIDs selected, keeping placeholder data');
         return true;
     }
     
     if (selectedRootGmids.length > 10) {
-        console.warn(`⚠️ Warning: ${selectedRootGmids.length} ROOT_GMIDs provided, limiting to first 50 for performance`);
+        console.warn(`⚠️ Warning: ${selectedRootGmids.length} ROOT_GMIDs selected (max 10 recommended for performance)`);
         selectedRootGmids = selectedRootGmids.slice(0, 10);
     }
     
-    console.log(`🔄 Enhanced GMID replacement with filtered data for ${selectedRootGmids.length} ROOT_GMIDs...`);
+    console.log(`🔄 Replacing GMID placeholder with real data for ${selectedRootGmids.length} ROOT_GMIDs...`);
     
     try {
+        // Use the existing filtered GMID endpoint
         const API_BASE_URL = 'http://localhost:3000/api';
         
-        // Build query parameters for ROOT_GMID filtering
         const queryParams = new URLSearchParams();
         queryParams.append('ROOT_GMID', selectedRootGmids.join(','));
         
-        // Add any additional filters if provided
-        if (additionalFilters.PATH_GMID && additionalFilters.PATH_GMID.length > 0) {
-            queryParams.append('PATH_GMID', additionalFilters.PATH_GMID.join(','));
-        }
-        
         const url = `${API_BASE_URL}/data/DIM_GMID_DISPLAY/filtered?${queryParams.toString()}`;
         
-        console.log(`📡 Fetching enhanced GMID data from: ${url}`);
+        console.log(`📡 Fetching real GMID data from: ${url}`);
         
         const response = await fetch(url, {
             headers: { 'Accept': 'application/x-ndjson' }
@@ -1184,7 +1178,7 @@ async function replaceGmidPlaceholderWithRealData(selectedRootGmids, additionalF
                     try {
                         rows.push(JSON.parse(line));
                     } catch (e) {
-                        console.warn('Invalid JSON line in enhanced GMID data:', e);
+                        console.warn('Invalid JSON line in real GMID data:', e);
                     }
                 }
             });
@@ -1194,536 +1188,45 @@ async function replaceGmidPlaceholderWithRealData(selectedRootGmids, additionalF
             try {
                 rows.push(JSON.parse(buffer));
             } catch (e) {
-                console.warn('Invalid final JSON in enhanced GMID data:', e);
+                console.warn('Invalid final JSON in real GMID data:', e);
             }
         }
 
-        console.log(`✅ Loaded ${rows.length} filtered GMID_DISPLAY records`);
+        console.log(`✅ Loaded ${rows.length} real GMID_DISPLAY records`);
         
-        // Apply additional filtering if PATH_GMID constraints exist
-        let filteredRows = rows;
-        if (additionalFilters.PATH_GMID && additionalFilters.PATH_GMID.length > 0) {
-            const pathGmidSet = new Set(additionalFilters.PATH_GMID);
-            filteredRows = rows.filter(row => 
-                row.PATH_GMID && pathGmidSet.has(row.PATH_GMID)
-            );
-            console.log(`✅ Applied PATH_GMID filter: ${rows.length} → ${filteredRows.length} records`);
-        }
-        
-        // Replace dimension data with filtered real data
-        if (!state.dimensions) {
-            state.dimensions = {};
-        }
-        state.dimensions.gmid_display = filteredRows;
-        
-        // Rebuild GMID hierarchy with filtered real data
-        console.log("🔧 Rebuilding GMID hierarchy with filtered real data...");
-        const gmidHierarchy = buildGmidDisplayHierarchy(filteredRows);
-        
-        if (gmidHierarchy) {
-            if (!state.hierarchies) {
-                state.hierarchies = {};
-            }
-            
-            state.hierarchies.gmid_display = gmidHierarchy;
-            state.hierarchies.gmid_display._isPlaceholder = false;
-            state.hierarchies.gmid_display._isFiltered = true;
-            state.hierarchies.gmid_display._filterCriteria = {
-                rootGmids: selectedRootGmids,
-                additionalFilters: additionalFilters,
-                appliedAt: Date.now()
-            };
-            
-            console.log(`✅ Status: GMID hierarchy rebuilt with filtered data: ${Object.keys(gmidHierarchy.nodesMap || {}).length} nodes`);
-        }
-        
-        // Update UI status
-        if (typeof ui !== 'undefined' && ui.updateTableStatus) {
-            ui.updateTableStatus('DIM_GMID_DISPLAY', 'loaded', filteredRows.length);
-        }
-        
-        // Clear placeholder flags and set filtered flags
-        state.gmidPlaceholderLoaded = false;
-        state.gmidRealDataLoaded = true;
-        state.gmidFilteredDataLoaded = true;
-        
-        console.log(`✅ Status: Successfully replaced GMID placeholder with ${filteredRows.length} filtered records`);
-        return true;
-        
-    } catch (error) {
-        console.error('❌ Error in enhanced GMID placeholder replacement:', error);
-        
-        // Update UI to show error but keep placeholder
-        if (typeof ui !== 'undefined' && ui.updateTableStatus) {
-            ui.updateTableStatus('DIM_GMID_DISPLAY', 'error');
-        }
-        
-        return false;
-    }
-}
-
-
-/**
- * OPTIMIZED: Replace GMID placeholder using efficient JOIN-based filtering
- * @param {Object} filterParams - Filter parameters (LE, COST_ELEMENT, etc.)
- * @param {Object} options - Optional configuration
- * @returns {Promise<boolean>} - Success status
- */
-async function replaceGmidPlaceholderWithOptimizedFiltering(filterParams, options = {}) {
-    if (!filterParams || Object.keys(filterParams).length === 0) {
-        console.log('✅ Status: No filter parameters provided, keeping placeholder data');
-        return true;
-    }
-    
-    console.log(`🚀 Optimized GMID replacement using JOIN-based filtering...`);
-    console.log(`📊 Filter parameters:`, filterParams);
-    
-    try {
-        const API_BASE_URL = 'http://localhost:3000/api';
-        
-        // Use the new optimized JOIN endpoint
-        const url = `${API_BASE_URL}/data/DIM_GMID_DISPLAY/filtered-join`;
-        
-        const requestBody = {
-            factFilters: filterParams,
-            maxRecords: options.maxRecords || 10000,
-            orderBy: options.orderBy || 'ROOT_GMID'
-        };
-        
-        console.log(`📡 Fetching optimized GMID data using JOIN approach...`);
-        
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 
-                'Accept': 'application/x-ndjson',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(requestBody)
-        });
-        
-        if (!response.ok) {
-            const errorText = await response.text().catch(() => 'Unknown error');
-            throw new Error(`API returned ${response.status}: ${response.statusText}. ${errorText}`);
-        }
-        
-        // Check response headers for query info
-        const queryType = response.headers.get('X-Query-Type');
-        const filterCount = response.headers.get('X-Filter-Count');
-        const maxRecords = response.headers.get('X-Max-Records');
-        
-        console.log(`✅ Query type: ${queryType}, Filters: ${filterCount}, Max records: ${maxRecords}`);
-
-        // Parse NDJSON response
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        const rows = [];
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop();
-
-            lines.forEach(line => {
-                if (line.trim()) {
-                    try {
-                        rows.push(JSON.parse(line));
-                    } catch (e) {
-                        console.warn('Invalid JSON line in optimized GMID data:', e);
-                    }
-                }
-            });
-        }
-
-        if (buffer.trim()) {
-            try {
-                rows.push(JSON.parse(buffer));
-            } catch (e) {
-                console.warn('Invalid final JSON in optimized GMID data:', e);
-            }
-        }
-
-        console.log(`✅ Loaded ${rows.length} optimized GMID_DISPLAY records using JOIN approach`);
-        
-        if (rows.length === 0) {
-            console.warn('⚠️ No GMID records found matching the filter criteria');
-            
-            // Create empty state but don't fail
-            if (!state.dimensions) {
-                state.dimensions = {};
-            }
-            state.dimensions.gmid_display = [];
-            
-            // Create minimal hierarchy
-            if (!state.hierarchies) {
-                state.hierarchies = {};
-            }
-            state.hierarchies.gmid_display = createEmptyGmidHierarchy();
-            
-            return true;
-        }
-        
-        // Replace dimension data with optimized filtered data
-        if (!state.dimensions) {
-            state.dimensions = {};
-        }
+        // Replace placeholder data with real data
         state.dimensions.gmid_display = rows;
         
-        // Rebuild GMID hierarchy with optimized filtered data
-        console.log("🔧 Rebuilding GMID hierarchy with optimized filtered data...");
+        // Rebuild GMID hierarchy with real data
+        console.log("🔧 Rebuilding GMID hierarchy with real data...");
         const gmidHierarchy = buildGmidDisplayHierarchy(rows);
         
         if (gmidHierarchy) {
-            if (!state.hierarchies) {
-                state.hierarchies = {};
-            }
-            
             state.hierarchies.gmid_display = gmidHierarchy;
             state.hierarchies.gmid_display._isPlaceholder = false;
-            state.hierarchies.gmid_display._isOptimizedFiltered = true;
-            state.hierarchies.gmid_display._filterCriteria = {
-                filterParams: filterParams,
-                queryType: 'INNER_JOIN',
-                appliedAt: Date.now(),
-                recordCount: rows.length
-            };
+            state.hierarchies.gmid_display._replacedAt = Date.now();
             
-            console.log(`✅ Status: GMID hierarchy rebuilt with optimized data: ${Object.keys(gmidHierarchy.nodesMap || {}).length} nodes`);
+            console.log(`✅ Status: GMID hierarchy rebuilt with real data: ${Object.keys(gmidHierarchy.nodesMap || {}).length} nodes`);
         }
         
         // Update UI status
-        if (typeof ui !== 'undefined' && ui.updateTableStatus) {
-            ui.updateTableStatus('DIM_GMID_DISPLAY', 'loaded', rows.length);
-        }
+        ui.updateTableStatus('DIM_GMID_DISPLAY', 'loaded', rows.length);
         
-        // Set optimized flags
+        // Clear placeholder flag
         state.gmidPlaceholderLoaded = false;
         state.gmidRealDataLoaded = true;
-        state.gmidOptimizedFiltered = true;
         
-        console.log(`✅ Status: Successfully replaced GMID placeholder with ${rows.length} optimized filtered records`);
+        console.log(`✅ Status: Successfully replaced GMID placeholder with ${rows.length} real records`);
         return true;
         
     } catch (error) {
-        console.error('❌ Error in optimized GMID placeholder replacement:', error);
+        console.error('❌ Error replacing GMID placeholder with real data:', error);
         
         // Update UI to show error but keep placeholder
-        if (typeof ui !== 'undefined' && ui.updateTableStatus) {
-            ui.updateTableStatus('DIM_GMID_DISPLAY', 'error');
-        }
+        ui.updateTableStatus('DIM_GMID_DISPLAY', 'error');
         
         return false;
     }
-}
-
-
-/**
- * HELPER: Create empty GMID hierarchy when no data is found
- */
-function createEmptyGmidHierarchy() {
-    const rootNode = {
-        id: 'ROOT',
-        label: 'No GMIDs match current filters',
-        children: [],
-        level: 0,
-        path: ['ROOT'],
-        expanded: false,
-        isLeaf: true,
-        hasChildren: false
-    };
-    
-    return {
-        root: rootNode,
-        nodesMap: { 'ROOT': rootNode },
-        flatData: [],
-        isEmpty: true
-    };
-}
-
-
-/**
- * NEW: Extract ROOT_GMIDs from filtered fact data
- * This function helps determine which ROOT_GMIDs should be used for GMID filtering
- * @param {Array} filteredFactData - The filtered fact data
- * @param {number} maxRootGmids - Maximum number of ROOT_GMIDs to return (default: 50)
- * @returns {Array} - Array of unique ROOT_GMID values
- */
-function extractRootGmidsFromFactData(filteredFactData, maxRootGmids = 50) {
-    if (!filteredFactData || !Array.isArray(filteredFactData) || filteredFactData.length === 0) {
-        console.warn('⚠️ No filtered fact data provided for ROOT_GMID extraction');
-        return [];
-    }
-    
-    console.log(`🔍 Extracting ROOT_GMIDs from ${filteredFactData.length} fact records...`);
-    
-    // Extract unique ROOT_GMIDs, filtering out null/empty values
-    const uniqueRootGmids = [...new Set(
-        filteredFactData
-            .filter(row => row && row.ROOT_GMID && row.ROOT_GMID.trim() !== '')
-            .map(row => row.ROOT_GMID.trim())
-    )];
-    
-    // Sort for consistent results
-    uniqueRootGmids.sort();
-    
-    // Limit for performance
-    const limitedRootGmids = uniqueRootGmids.slice(0, maxRootGmids);
-    
-    if (limitedRootGmids.length < uniqueRootGmids.length) {
-        console.warn(`⚠️ Limited ROOT_GMIDs from ${uniqueRootGmids.length} to ${limitedRootGmids.length} for performance`);
-    }
-    
-    console.log(`✅ Extracted ${limitedRootGmids.length} unique ROOT_GMIDs from fact data`);
-    
-    return limitedRootGmids;
-}
-
-
-/**
- * NEW: Extract PATH_GMIDs from filtered fact data
- * This can be used for additional GMID dimension filtering
- * @param {Array} filteredFactData - The filtered fact data
- * @param {number} maxPathGmids - Maximum number of PATH_GMIDs to return (default: 1000)
- * @returns {Array} - Array of unique PATH_GMID values
- */
-function extractPathGmidsFromFactData(filteredFactData, maxPathGmids = 1000) {
-    if (!filteredFactData || !Array.isArray(filteredFactData) || filteredFactData.length === 0) {
-        console.warn('⚠️ No filtered fact data provided for PATH_GMID extraction');
-        return [];
-    }
-    
-    console.log(`🔍 Extracting PATH_GMIDs from ${filteredFactData.length} fact records...`);
-    
-    // Extract unique PATH_GMIDs, filtering out null/empty values
-    const uniquePathGmids = [...new Set(
-        filteredFactData
-            .filter(row => row && row.PATH_GMID && row.PATH_GMID.trim() !== '')
-            .map(row => row.PATH_GMID.trim())
-    )];
-    
-    // Sort for consistent results
-    uniquePathGmids.sort();
-    
-    // Limit for performance
-    const limitedPathGmids = uniquePathGmids.slice(0, maxPathGmids);
-    
-    if (limitedPathGmids.length < uniquePathGmids.length) {
-        console.warn(`⚠️ Limited PATH_GMIDs from ${uniquePathGmids.length} to ${limitedPathGmids.length} for performance`);
-    }
-    
-    console.log(`✅ Extracted ${limitedPathGmids.length} unique PATH_GMIDs from fact data`);
-    
-    return limitedPathGmids;
-}
-
-
-/**
- * NEW: Comprehensive filter coordination function
- * This function coordinates filtering across dimensions and fact data
- * @param {Object} filterParams - Filter parameters from the filter system
- * @returns {Promise<Object>} - Result object with filtered data and metadata
- */
-async function coordinateComprehensiveFiltering(filterParams) {
-    console.log('🚀 Starting comprehensive filtering coordination...');
-    
-    try {
-        // Step 1: Apply filters to get filtered fact data (excluding GMID filters for now)
-        const nonGmidFilters = { ...filterParams };
-        delete nonGmidFilters.PATH_GMID; // Remove GMID filters temporarily
-        
-        console.log('📊 Step 1: Fetching fact data with non-GMID filters...');
-        const factData = await fetchFilteredFactDataDirect(nonGmidFilters);
-        
-        if (!factData || factData.length === 0) {
-            console.log('⚠️ No fact data matches non-GMID filters');
-            return {
-                success: false,
-                factData: [],
-                gmidData: [],
-                rootGmids: [],
-                pathGmids: []
-            };
-        }
-        
-        console.log(`✅ Step 1 complete: ${factData.length} fact records retrieved`);
-        
-        // Step 2: Extract GMIDs from filtered fact data
-        console.log('🔍 Step 2: Extracting GMIDs from filtered fact data...');
-        const rootGmidsFromFact = extractRootGmidsFromFactData(factData);
-        const pathGmidsFromFact = extractPathGmidsFromFactData(factData);
-        
-        console.log(`✅ Step 2 complete: ${rootGmidsFromFact.length} ROOT_GMIDs, ${pathGmidsFromFact.length} PATH_GMIDs`);
-        
-        // Step 3: Filter GMID dimension data
-        console.log('🔧 Step 3: Filtering GMID dimension data...');
-        const gmidFilterSuccess = await replaceGmidPlaceholderWithRealData(
-            rootGmidsFromFact,
-            { PATH_GMID: pathGmidsFromFact }
-        );
-        
-        let gmidData = [];
-        if (gmidFilterSuccess && state.dimensions && state.dimensions.gmid_display) {
-            gmidData = state.dimensions.gmid_display;
-        }
-        
-        console.log(`✅ Step 3 complete: ${gmidData.length} GMID dimension records`);
-        
-        // Step 4: Apply any remaining GMID filters to fact data
-        let finalFactData = factData;
-        if (filterParams.PATH_GMID && filterParams.PATH_GMID.length > 0) {
-            console.log('🔧 Step 4: Applying GMID filters to fact data...');
-            const pathGmidSet = new Set(filterParams.PATH_GMID);
-            finalFactData = factData.filter(row => 
-                row.PATH_GMID && pathGmidSet.has(row.PATH_GMID)
-            );
-            console.log(`✅ Step 4 complete: ${factData.length} → ${finalFactData.length} fact records after GMID filtering`);
-        }
-        
-        console.log('🚀 Comprehensive filtering coordination complete');
-        
-        return {
-            success: true,
-            factData: finalFactData,
-            gmidData: gmidData,
-            rootGmids: rootGmidsFromFact,
-            pathGmids: pathGmidsFromFact,
-            filteringSteps: {
-                step1_factRecords: factData.length,
-                step2_rootGmids: rootGmidsFromFact.length,
-                step2_pathGmids: pathGmidsFromFact.length,
-                step3_gmidRecords: gmidData.length,
-                step4_finalFactRecords: finalFactData.length
-            }
-        };
-        
-    } catch (error) {
-        console.error('❌ Error in comprehensive filtering coordination:', error);
-        return {
-            success: false,
-            error: error.message,
-            factData: [],
-            gmidData: [],
-            rootGmids: [],
-            pathGmids: []
-        };
-    }
-}
-
-
-/**
- * NEW: Direct fact data fetching function (wrapper for existing functionality)
- * This function calls the existing filtered fact data API
- * @param {Object} filterParams - Filter parameters
- * @returns {Promise<Array>} - Filtered fact data
- */
-async function fetchFilteredFactDataDirect(filterParams) {
-    // This function should call the existing fetchFilteredFactData method
-    // from the EnhancedFilterSystem class or similar functionality
-    
-    const API_BASE_URL = 'http://localhost:3000/api';
-    
-    try {
-        console.log(`📡 Fetching filtered FACT_BOM data with parameters:`, filterParams);
-        
-        // Build query parameters
-        const queryParams = new URLSearchParams();
-        
-        Object.entries(filterParams).forEach(([field, values]) => {
-            if (values && Array.isArray(values) && values.length > 0) {
-                queryParams.append(field, values.join(','));
-            }
-        });
-        
-        const url = `${API_BASE_URL}/data/FACT_BOM/filtered?${queryParams.toString()}`;
-        
-        const response = await fetch(url, {
-            headers: { 'Accept': 'application/x-ndjson' }
-        });
-        
-        if (!response.ok) {
-            throw new Error(`API returned ${response.status}: ${response.statusText}`);
-        }
-
-        // Parse NDJSON response
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        const rows = [];
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop();
-
-            lines.forEach(line => {
-                if (line.trim()) {
-                    try {
-                        rows.push(JSON.parse(line));
-                    } catch (e) {
-                        console.warn('Invalid JSON line in fact data:', e);
-                    }
-                }
-            });
-        }
-
-        if (buffer.trim()) {
-            try {
-                rows.push(JSON.parse(buffer));
-            } catch (e) {
-                console.warn('Invalid final JSON in fact data:', e);
-            }
-        }
-
-        console.log(`✅ Retrieved ${rows.length} filtered FACT_BOM records`);
-        return rows;
-        
-    } catch (error) {
-        console.error('❌ Error fetching filtered fact data:', error);
-        throw error;
-    }
-}
-
-
-/**
- * NEW: Check if GMID dimension has been filtered
- * @returns {boolean} - True if GMID dimension contains filtered data
- */
-function isGmidDimensionFiltered() {
-    return state.gmidFilteredDataLoaded === true ||
-           (state.hierarchies?.gmid_display?._isFiltered === true);
-}
-
-
-/**
- * NEW: Get GMID filter metadata
- * @returns {Object|null} - Metadata about GMID filtering or null if not filtered
- */
-function getGmidFilterMetadata() {
-    if (!isGmidDimensionFiltered()) {
-        return null;
-    }
-    
-    const hierarchy = state.hierarchies?.gmid_display;
-    if (hierarchy && hierarchy._filterCriteria) {
-        return {
-            isFiltered: true,
-            rootGmidsCount: hierarchy._filterCriteria.rootGmids?.length || 0,
-            appliedAt: hierarchy._filterCriteria.appliedAt,
-            additionalFilters: hierarchy._filterCriteria.additionalFilters,
-            recordCount: state.dimensions?.gmid_display?.length || 0
-        };
-    }
-    
-    return {
-        isFiltered: true,
-        recordCount: state.dimensions?.gmid_display?.length || 0
-    };
 }
 
 
@@ -5776,57 +5279,8 @@ function filterFactDataByRootGmids() {
 }
 
 
-// Endpoint selection logic:
-async function loadGmidDisplayDataWithEndpointSelection(rootGmids, pathGmids = null) {
-    const API_BASE_URL = 'http://localhost:3000/api';
-    
-    // Choose endpoint based on filtering complexity
-    let endpoint, queryParams;
-    
-    if (pathGmids && pathGmids.length > 0) {
-        // Use enhanced endpoint when PATH_GMID filtering is needed
-        endpoint = `${API_BASE_URL}/data/DIM_GMID_DISPLAY/filtered-enhanced`;
-        queryParams = new URLSearchParams();
-        
-        if (rootGmids && rootGmids.length > 0) {
-            queryParams.append('ROOT_GMID', rootGmids.join(','));
-        }
-        queryParams.append('PATH_GMID', pathGmids.join(','));
-        
-        console.log('🚀 Using enhanced endpoint with PATH_GMID filtering');
-        
-    } else {
-        // Use existing endpoint for simple ROOT_GMID filtering
-        endpoint = `${API_BASE_URL}/data/DIM_GMID_DISPLAY/filtered`;
-        queryParams = new URLSearchParams();
-        queryParams.append('ROOT_GMID', rootGmids.join(','));
-        
-        console.log('✅ Using existing endpoint for ROOT_GMID filtering');
-    }
-    
-    const url = `${endpoint}?${queryParams.toString()}`;
-    
-    // Rest of your existing fetch logic...
-    const response = await fetch(url, {
-        headers: { 'Accept': 'application/x-ndjson' }
-    });
-    
-    // ... continue with existing implementation
-}
-
-
 // Export signature
 export default {
-    // new exports
-    replaceGmidPlaceholderWithOptimizedFiltering,
-    loadGmidDisplayDataWithEndpointSelection,
-    extractRootGmidsFromFactData,
-    extractPathGmidsFromFactData,
-    coordinateComprehensiveFiltering,
-    fetchFilteredFactDataDirect,
-    isGmidDimensionFiltered,
-    getGmidFilterMetadata,
-
     // ENHANCED EXPORTS
     ingestDimensionFilterData,
     getDimensionFilterOptions,

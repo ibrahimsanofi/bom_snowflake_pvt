@@ -204,362 +204,80 @@ class EnhancedFilterSystem {
   /**
    * Load GMID_DISPLAY data for specific ROOT_GMIDs
    */
-  async loadGmidDisplayData(rootGmids, additionalFilters = {}, options = {}) {
+  async loadGmidDisplayData(rootGmids) {
     const API_BASE_URL = 'http://localhost:3000/api';
     
-    // Validate inputs
-    if (!rootGmids || !Array.isArray(rootGmids) || rootGmids.length === 0) {
-        console.warn('⚠️ No ROOT_GMIDs provided for GMID data loading');
-        return [];
+    console.log(`📡 Fetching GMID_DISPLAY data for ROOT_GMIDs:`, rootGmids);
+    
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+    queryParams.append('ROOT_GMID', rootGmids.join(','));
+    
+    const url = `${API_BASE_URL}/data/DIM_GMID_DISPLAY/filtered?${queryParams.toString()}`;
+    
+    const response = await fetch(url, {
+      headers: { 'Accept': 'application/x-ndjson' }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`API returned ${response.status}: ${response.statusText}`);
     }
-    
-    // Apply limits for performance
-    const maxRootGmids = options.maxRootGmids || 50;
-    const maxPathGmids = options.maxPathGmids || 1000;
-    const timeout = options.timeout || 60000; // 60 seconds
-    
-    const limitedRootGmids = rootGmids.slice(0, maxRootGmids);
-    if (limitedRootGmids.length < rootGmids.length) {
-        console.warn(`⚠️ Limited ROOT_GMIDs from ${rootGmids.length} to ${limitedRootGmids.length} for performance`);
-    }
-    
-    console.log(`📡 Loading GMID data for ${limitedRootGmids.length} ROOT_GMIDs...`);
-    
-    try {
-        // Determine if we need enhanced endpoint
-        const hasPathGmidFilter = additionalFilters.PATH_GMID && 
-                                  Array.isArray(additionalFilters.PATH_GMID) && 
-                                  additionalFilters.PATH_GMID.length > 0;
-        
-        const hasComplexFilters = hasPathGmidFilter || 
-                                  (additionalFilters.limit && additionalFilters.limit < 10000) ||
-                                  Object.keys(additionalFilters).length > 1;
-        
-        let url, queryParams, endpointType;
-        
-        if (hasComplexFilters) {
-            // Use enhanced endpoint for complex filtering
-            endpointType = 'enhanced';
-            url = `${API_BASE_URL}/data/DIM_GMID_DISPLAY/filtered-enhanced`;
-            queryParams = new URLSearchParams();
-            
-            // Add ROOT_GMID parameter
-            queryParams.append('ROOT_GMID', limitedRootGmids.join(','));
-            
-            // Add PATH_GMID parameter if provided
-            if (hasPathGmidFilter) {
-                const limitedPathGmids = additionalFilters.PATH_GMID.slice(0, maxPathGmids);
-                if (limitedPathGmids.length < additionalFilters.PATH_GMID.length) {
-                    console.warn(`⚠️ Limited PATH_GMIDs from ${additionalFilters.PATH_GMID.length} to ${limitedPathGmids.length} for performance`);
-                }
-                queryParams.append('PATH_GMID', limitedPathGmids.join(','));
-                console.log(`🚀 Using enhanced endpoint with ${limitedPathGmids.length} PATH_GMID filters`);
-            }
-            
-            // Add limit parameter if provided
-            if (additionalFilters.limit) {
-                queryParams.append('limit', additionalFilters.limit.toString());
-            }
-            
-            console.log(`🚀 Using enhanced endpoint for complex GMID filtering`);
-            
-        } else {
-            // Use existing endpoint for simple ROOT_GMID filtering
-            endpointType = 'standard';
-            url = `${API_BASE_URL}/data/DIM_GMID_DISPLAY/filtered`;
-            queryParams = new URLSearchParams();
-            queryParams.append('ROOT_GMID', limitedRootGmids.join(','));
-            
-            console.log(`✅ Using existing endpoint for basic ROOT_GMID filtering`);
-        }
-        
-        const finalUrl = `${url}?${queryParams.toString()}`;
-        console.log(`📊 GMID API URL: ${finalUrl}`);
-        
-        // Set up request with timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => {
-            controller.abort();
-            console.warn(`⏰ GMID data request timeout after ${timeout}ms`);
-        }, timeout);
-        
-        const response = await fetch(finalUrl, {
-            headers: { 
-                'Accept': 'application/x-ndjson',
-                'X-Request-Source': 'EnhancedFilterSystem',
-                'X-Endpoint-Type': endpointType
-            },
-            signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
-        
-        if (!response.ok) {
-            const errorText = await response.text().catch(() => 'Unknown error');
-            throw new Error(`API returned ${response.status}: ${response.statusText}. ${errorText}`);
-        }
-        
-        // Log response headers for debugging
-        const enhancedEndpoint = response.headers.get('X-Enhanced-Endpoint');
-        const filterCount = response.headers.get('X-Filter-Count');
-        
-        if (enhancedEndpoint) {
-            console.log(`✅ Confirmed enhanced endpoint usage with ${filterCount || 'unknown'} filters`);
-        }
-        
-        // Parse NDJSON response with progress tracking
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        const rows = [];
-        let processedChunks = 0;
-        let lastProgressLog = Date.now();
-        
-        console.log('📥 Streaming GMID NDJSON response...');
-        
-        try {
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                
-                processedChunks++;
-                buffer += decoder.decode(value, { stream: true });
-                
-                const lines = buffer.split('\n');
-                buffer = lines.pop(); // Keep the last incomplete line in buffer
-                
-                lines.forEach(line => {
-                    if (line.trim()) {
-                        try {
-                            const record = JSON.parse(line);
-                            
-                            // Validate record structure
-                            if (record.PATH_GMID && record.ROOT_GMID) {
-                                rows.push(record);
-                            } else {
-                                console.warn('⚠️ Invalid GMID record structure:', record);
-                            }
-                        } catch (parseError) {
-                            console.warn('⚠️ Invalid JSON line in GMID data:', parseError.message);
-                        }
-                    }
-                });
-                
-                // Progress logging (every 5 seconds or every 50 chunks)
-                const now = Date.now();
-                if (processedChunks % 50 === 0 || (now - lastProgressLog) > 5000) {
-                    console.log(`📥 GMID Progress: ${processedChunks} chunks processed, ${rows.length} records parsed...`);
-                    lastProgressLog = now;
-                }
-            }
-        } catch (streamError) {
-            console.error('❌ Error during GMID data streaming:', streamError);
-            throw new Error(`Streaming error: ${streamError.message}`);
-        }
-        
-        // Process final buffer
-        if (buffer.trim()) {
-            try {
-                const finalRecord = JSON.parse(buffer);
-                if (finalRecord.PATH_GMID && finalRecord.ROOT_GMID) {
-                    rows.push(finalRecord);
-                }
-            } catch (parseError) {
-                console.warn('⚠️ Invalid final JSON line in GMID data:', parseError.message);
-            }
-        }
-        
-        // Validate and log results
-        if (rows.length === 0) {
-            console.warn(`⚠️ No valid GMID records received for ${limitedRootGmids.length} ROOT_GMIDs`);
-            console.warn(`🔍 Sample ROOT_GMIDs queried:`, limitedRootGmids.slice(0, 3));
-            return [];
-        }
-        
-        // Analyze data quality
-        const rootGmidCounts = {};
-        const pathGmidCounts = {};
-        let recordsWithDisplay = 0;
-        
-        rows.forEach(record => {
-            // Count by ROOT_GMID
-            if (record.ROOT_GMID) {
-                rootGmidCounts[record.ROOT_GMID] = (rootGmidCounts[record.ROOT_GMID] || 0) + 1;
-            }
-            
-            // Count PATH_GMIDs
-            if (record.PATH_GMID) {
-                pathGmidCounts[record.PATH_GMID] = (pathGmidCounts[record.PATH_GMID] || 0) + 1;
-            }
-            
-            // Count records with display information
-            if (record.DISPLAY && record.DISPLAY.trim() !== '') {
-                recordsWithDisplay++;
-            }
-        });
-        
-        const uniqueRootGmids = Object.keys(rootGmidCounts).length;
-        const uniquePathGmids = Object.keys(pathGmidCounts).length;
-        const displayCoverage = Math.round((recordsWithDisplay / rows.length) * 100);
-        
-        console.log(`✅ GMID data loaded successfully:`);
-        console.log(`   📊 ${rows.length} total records`);
-        console.log(`   🎯 ${uniqueRootGmids} unique ROOT_GMIDs (requested: ${limitedRootGmids.length})`);
-        console.log(`   📋 ${uniquePathGmids} unique PATH_GMIDs`);
-        console.log(`   🏷️  ${displayCoverage}% records have display information`);
-        console.log(`   🔧 Endpoint used: ${endpointType}`);
-        
-        // Log ROOT_GMID distribution (top 5)
-        const topRootGmids = Object.entries(rootGmidCounts)
-            .sort(([,a], [,b]) => b - a)
-            .slice(0, 5);
-        
-        if (topRootGmids.length > 0) {
-            console.log(`   📈 Top ROOT_GMIDs by record count:`);
-            topRootGmids.forEach(([rootGmid, count]) => {
-                console.log(`      ${rootGmid}: ${count} records`);
-            });
-        }
-        
-        // Validate that we got data for requested ROOT_GMIDs
-        const returnedRootGmids = new Set(Object.keys(rootGmidCounts));
-        const missingRootGmids = limitedRootGmids.filter(gmid => !returnedRootGmids.has(gmid));
-        
-        if (missingRootGmids.length > 0) {
-            console.warn(`⚠️ No data found for ${missingRootGmids.length} ROOT_GMIDs:`);
-            console.warn(`   Missing:`, missingRootGmids.slice(0, 5), 
-                          missingRootGmids.length > 5 ? `... +${missingRootGmids.length - 5} more` : '');
-        }
-        
-        // Add metadata to the result
-        rows._metadata = {
-            endpointUsed: endpointType,
-            requestedRootGmids: limitedRootGmids.length,
-            returnedRootGmids: uniqueRootGmids,
-            uniquePathGmids: uniquePathGmids,
-            displayCoverage: displayCoverage,
-            loadedAt: Date.now(),
-            hasPathGmidFilter: hasPathGmidFilter,
-            additionalFilters: additionalFilters
-        };
-        
-        return rows;
-        
-    } catch (error) {
-        if (error.name === 'AbortError') {
-            console.error(`❌ GMID data request timeout after ${timeout}ms`);
-            throw new Error(`Request timeout - GMID data loading took longer than ${timeout/1000} seconds`);
-        }
-        
-        console.error('❌ Error loading enhanced GMID data:', error);
-        
-        // Provide helpful error context
-        if (error.message.includes('404')) {
-            throw new Error(`GMID API endpoint not found. Ensure server is running and endpoints are configured.`);
-        } else if (error.message.includes('400')) {
-            throw new Error(`Invalid GMID request parameters: ${error.message}`);
-        } else if (error.message.includes('500')) {
-            throw new Error(`Server error loading GMID data: ${error.message}`);
-        } else if (error.message.includes('network') || error.message.includes('fetch')) {
-            throw new Error(`Network error loading GMID data: ${error.message}`);
-        }
-        
-        throw error;
-    }
-  }
 
+    // Parse NDJSON response
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    const rows = [];
 
-  /**
-   * ENHANCED: Load GMID data with caching support
-   * This is the main method you should call - it includes caching
-   */
-  async loadGmidDisplayDataWithCache(rootGmids, additionalFilters = {}, options = {}) {
-      // Setup cache if not already done
-      this.setupGmidDataCache();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
       
-      // Try to get from cache first
-      if (!options.skipCache) {
-          const cached = this.getCachedGmidData(rootGmids, additionalFilters);
-          if (cached) {
-              return cached;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+
+      lines.forEach(line => {
+        if (line.trim()) {
+          try {
+            rows.push(JSON.parse(line));
+          } catch (e) {
+            console.warn('Invalid JSON line:', e);
           }
-      }
-      
-      // Load fresh data
-      const data = await this.loadGmidDisplayData(rootGmids, additionalFilters, options);
-      
-      // Cache the result
-      if (data && data.length > 0) {
-          this.setCachedGmidData(rootGmids, additionalFilters, data);
-      }
-      
-      return data;
-  }
-
-
-  /**
-   * HELPER: Cache management for GMID data
-   * Add this as a companion method to the EnhancedFilterSystem class
-   */
-  setupGmidDataCache() {
-      if (!this.gmidCache) {
-          this.gmidCache = new Map();
-          this.gmidCacheTimestamps = new Map();
-          this.gmidCacheMaxAge = 5 * 60 * 1000; // 5 minutes
-          
-          console.log('🗄️ GMID data cache initialized');
-      }
-  }
-
-
-  /**
-   * HELPER: Get cached GMID data if available and fresh
-   */
-  getCachedGmidData(rootGmids, additionalFilters = {}) {
-      if (!this.gmidCache) return null;
-      
-      // Create cache key based on parameters
-      const cacheKey = JSON.stringify({
-          rootGmids: [...rootGmids].sort(),
-          filters: additionalFilters
+        }
       });
-      
-      const cached = this.gmidCache.get(cacheKey);
-      const timestamp = this.gmidCacheTimestamps.get(cacheKey);
-      
-      if (cached && timestamp && (Date.now() - timestamp) < this.gmidCacheMaxAge) {
-          console.log(`🗄️ Using cached GMID data (${cached.length} records)`);
-          return cached;
-      }
-      
-      return null;
-  }
+    }
 
-
-  /**
-   * HELPER: Cache GMID data for future use
-   */
-  setCachedGmidData(rootGmids, additionalFilters, data) {
-      if (!this.gmidCache) this.setupGmidDataCache();
-      
-      const cacheKey = JSON.stringify({
-          rootGmids: [...rootGmids].sort(),
-          filters: additionalFilters
-      });
-      
-      this.gmidCache.set(cacheKey, data);
-      this.gmidCacheTimestamps.set(cacheKey, Date.now());
-      
-      // Cleanup old cache entries (keep max 10 entries)
-      if (this.gmidCache.size > 10) {
-          const oldestKey = [...this.gmidCacheTimestamps.entries()]
-              .sort(([,a], [,b]) => a - b)[0][0];
-          
-          this.gmidCache.delete(oldestKey);
-          this.gmidCacheTimestamps.delete(oldestKey);
+    if (buffer.trim()) {
+      try {
+        rows.push(JSON.parse(buffer));
+      } catch (e) {
+        console.warn('Invalid final JSON line:', e);
       }
-      
-      console.log(`🗄️ Cached GMID data (${data.length} records)`);
+    }
+
+    console.log(`✅ Loaded ${rows.length} GMID_DISPLAY records`);
+    
+    // Store in cache
+    rootGmids.forEach(gmid => {
+      const gmidData = rows.filter(row => row.ROOT_GMID === gmid);
+      this.gmidCache.set(gmid, gmidData);
+    });
+    
+    // Add to application state (append to existing or create new)
+    if (!this.state.dimensions.gmid_display) {
+      this.state.dimensions.gmid_display = [];
+    }
+    
+    // Remove existing data for these ROOT_GMIDs to avoid duplicates
+    this.state.dimensions.gmid_display = this.state.dimensions.gmid_display.filter(
+      row => !rootGmids.includes(row.ROOT_GMID)
+    );
+    
+    // Add new data
+    this.state.dimensions.gmid_display.push(...rows);
+    
+    return rows;
   }
 
 
@@ -1688,6 +1406,59 @@ class EnhancedFilterSystem {
    * Populate a simple (non-hierarchical) filter with unique values
    * @param {Object} dimension - Dimension configuration
    */
+  // populateSimpleFilter(dimension) {
+  //   console.log(`⏳ Status: Populating simple filter for ${dimension.label}...`);
+
+  //   const previousSelection = this.filterSelections[dimension.id] || new Set();
+  
+  //   const checkboxList = document.getElementById(`${dimension.id}CheckboxList`);
+  //   if (!checkboxList) {
+  //     console.warn(`Checkbox list for ${dimension.id} not found`);
+  //     return;
+  //   }
+  
+  //   checkboxList.innerHTML = '';
+  
+  //   const uniqueValues = this.getUniqueValuesForDimension(dimension);
+  
+  //   if (uniqueValues.length === 0) {
+  //     checkboxList.innerHTML = `<div class="no-values-message">No values available</div>`;
+  //     return;
+  //   }
+  
+  //   uniqueValues.sort((a, b) => {
+  //     return a.label.toString().toLowerCase().localeCompare(b.label.toString().toLowerCase());
+  //   });
+  
+  //   uniqueValues.forEach(item => {
+  //     const checkboxOption = document.createElement('div');
+  //     checkboxOption.className = 'checkbox-option';
+  
+  //     const safeId = (item.id || item.value).toString().replace(/[^a-zA-Z0-9]/g, '_');
+  
+  //     checkboxOption.innerHTML = `
+  //       <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; width: 100%; overflow: hidden;">
+  //         <input type="checkbox" id="${dimension.id}_${safeId}" value="${item.value}" ${!previousSelection.has(item.value) ? 'checked' : ''}>
+  //         <span style="white-space: normal; overflow: hidden; text-overflow: ellipsis; font-size: 0.9rem;">
+  //           ${item.label}
+  //         </span>
+  //       </label>
+  //     `;
+  
+  //     const checkbox = checkboxOption.querySelector('input[type="checkbox"]');
+  //     checkbox.addEventListener('change', (e) => {
+  //       this.handleSimpleFilterCheckboxChange(dimension, item.value, e.target.checked);
+  //     });
+  
+  //     checkboxList.appendChild(checkboxOption);
+  //   });
+  
+  //   this.filterSelections[dimension.id] = new Set(
+  //     uniqueValues
+  //       .map(item => item.value)
+  //       .filter(value => previousSelection.has(value))
+  //   );
+  // }
   populateSimpleFilter(dimension) {
   console.log(`⏳ Status: Populating simple filter for ${dimension.label}...`);
 
@@ -2030,60 +1801,60 @@ class EnhancedFilterSystem {
   }
   
 
-  /**
-     * Handle search in filter dropdown
-     * @param {Object} dimension - Dimension configuration
-     * @param {string} searchTerm - Search term
-     */
-  handleFilterSearch(dimension, searchTerm) {
-    const searchLower = searchTerm.toLowerCase().trim();
+/**
+   * Handle search in filter dropdown
+   * @param {Object} dimension - Dimension configuration
+   * @param {string} searchTerm - Search term
+   */
+handleFilterSearch(dimension, searchTerm) {
+  const searchLower = searchTerm.toLowerCase().trim();
 
-    if (dimension.hierarchical) {
-      const treeNodes = document.querySelectorAll(`#${dimension.id}TreeContainer .filter-tree-node`);
-      let found = false;
+  if (dimension.hierarchical) {
+    const treeNodes = document.querySelectorAll(`#${dimension.id}TreeContainer .filter-tree-node`);
+    let found = false;
+    treeNodes.forEach(node => {
+      const label = node.querySelector('.filter-tree-label');
+      if (label) {
+        const text = label.textContent.toLowerCase().trim();
+        const match = searchLower === "" || text.startsWith(searchLower);
+        node.style.display = match ? '' : 'none';
+        if (match && searchLower !== "") found = true;
+      }
+    });
+    if (!found && searchLower !== "") {
       treeNodes.forEach(node => {
         const label = node.querySelector('.filter-tree-label');
         if (label) {
           const text = label.textContent.toLowerCase().trim();
-          const match = searchLower === "" || text.startsWith(searchLower);
+          const match = text.includes(searchLower);
           node.style.display = match ? '' : 'none';
-          if (match && searchLower !== "") found = true;
         }
       });
-      if (!found && searchLower !== "") {
-        treeNodes.forEach(node => {
-          const label = node.querySelector('.filter-tree-label');
-          if (label) {
-            const text = label.textContent.toLowerCase().trim();
-            const match = text.includes(searchLower);
-            node.style.display = match ? '' : 'none';
-          }
-        });
+    }
+  } else {
+    const checkboxOptions = document.querySelectorAll(`#${dimension.id}CheckboxList .checkbox-option`);
+    let found = false;
+    checkboxOptions.forEach(option => {
+      const label = option.querySelector('label');
+      if (label) {
+        const text = label.textContent.toLowerCase().trim();
+        const match = searchLower === "" || text.startsWith(searchLower);
+        option.style.display = match ? '' : 'none';
+        if (match && searchLower !== "") found = true;
       }
-    } else {
-      const checkboxOptions = document.querySelectorAll(`#${dimension.id}CheckboxList .checkbox-option`);
-      let found = false;
+    });
+    if (!found && searchLower !== "") {
       checkboxOptions.forEach(option => {
         const label = option.querySelector('label');
         if (label) {
           const text = label.textContent.toLowerCase().trim();
-          const match = searchLower === "" || text.startsWith(searchLower);
+          const match = text.includes(searchLower);
           option.style.display = match ? '' : 'none';
-          if (match && searchLower !== "") found = true;
         }
       });
-      if (!found && searchLower !== "") {
-        checkboxOptions.forEach(option => {
-          const label = option.querySelector('label');
-          if (label) {
-            const text = label.textContent.toLowerCase().trim();
-            const match = text.includes(searchLower);
-            option.style.display = match ? '' : 'none';
-          }
-        });
-      }
     }
   }
+}
 
   
   /**
@@ -2153,8 +1924,8 @@ class EnhancedFilterSystem {
    * Apply all filters to the data
    */
   async applyAllFilters() {
-    console.log('🚀 === APPLYING FILTERS WITH OPTIMIZED GMID FILTERING ===');
-    console.time('ApplyOptimizedFilters');
+    console.log('🚀 === APPLYING FILTERS WITH GMID PLACEHOLDER SUPPORT ===');
+    console.time('ApplyFiltersWithGmidSupport');
 
     // Show initial loading state
     this.showLoadingStep('Validating filter selections...', 1, 6); // Updated to 6 steps
@@ -2175,21 +1946,43 @@ class EnhancedFilterSystem {
         return;
     }
 
-    console.log('✅ Validation passed. Proceeding with optimized GMID workflow...');
+    console.log('✅ Validation passed. Proceeding with enhanced data workflow...');
 
     try {
-        // STEP 2: Apply optimized GMID filtering using INNER JOIN approach
-        this.showLoadingStep('Applying optimized GMID filtering...', 2, 6);
+        // STEP 2: Handle ROOT_GMID selection and GMID placeholder replacement
+        this.showLoadingStep('Processing ROOT_GMID selections...', 2, 6);
+        const selectedRootGmids = this.getSelectedRootGmids();
         
-        const gmidFilteringSuccess = await this.applyOptimizedGmidFiltering(validFilterParams);
+        let gmidReplacementNeeded = false;
         
-        if (!gmidFilteringSuccess) {
-            console.warn('⚠️ GMID filtering failed, but continuing with fact data filtering');
+        if (selectedRootGmids.length > 0 && selectedRootGmids.length <= 10) {
+            this.showLoadingStep('Updating GMID Display data...', 3, 6);
+            console.log(`🔄 Loading real data for ${selectedRootGmids.length} ROOT_GMIDs...`);
+
+            const replacementSuccess = await window.App.data.replaceGmidPlaceholderWithRealData(selectedRootGmids);
+                    
+            if (replacementSuccess) {
+                console.log('✅ GMID placeholder successfully replaced with real data');
+                gmidReplacementNeeded = true;
+                
+                // Update filter UI to reflect new GMID hierarchy
+                this.refreshGmidFilterUI();
+                this.setGmidFilterState('ready', 'Real GMID data loaded');
+            } else {
+                console.warn('⚠️ GMID placeholder replacement failed, continuing with existing data');
+                this.setGmidFilterState('error', 'Failed to load real GMID data');
+            }
+        } else if (selectedRootGmids.length > 10) {
+            console.warn(`⚠️ Too many ROOT_GMIDs selected (${selectedRootGmids.length}), skipping GMID data loading`);
+            this.setGmidFilterState('error', `Too many ROOT_GMIDs selected (max 10)`);
         }
         
-        // STEP 3: Fetch filtered fact data
-        this.showLoadingStep('Fetching filtered FACT_BOM data...', 3, 6);
+        this.showLoadingStep('Building query parameters...', 4, 6);
+        await new Promise(resolve => setTimeout(resolve, 300)); // Brief pause for UX
         
+        this.showLoadingStep('Fetching filtered data from database...', 5, 6);
+        
+        // STEP 3: Fetch fact data with filters applied at database level
         const factData = await this.fetchFilteredFactData(validFilterParams.params);
         
         if (!factData || factData.length === 0) {
@@ -2198,24 +1991,15 @@ class EnhancedFilterSystem {
             this.handleEmptyFilterResult();
             return;
         }
-
-        // STEP 4: Store the filtered fact data
-        this.showLoadingStep('Storing filtered data...', 4, 6);
         
+        // STEP 4: Store the filtered fact data
         this.state.factData = factData;
         this.state.filteredData = factData;
         this.state.factDataLoaded = true;
         
         console.log(`✅ SUCCESS: Retrieved ${factData.length} FACT_BOM records matching filters`);
         
-        // STEP 5: Update dimension filters to reflect fact data constraints (optional)
-        this.showLoadingStep('Updating dimension filters...', 5, 6);
-        
-        // This step is now optional since GMID is already optimally filtered
-        // await this.updateDimensionFiltersFromFactData(factData);
-        console.log('ℹ️ Skipping dimension filter updates - using optimized GMID filtering');
-        
-        // STEP 6: Final processing
+        // STEP 5: Final processing
         this.showLoadingStep('Finalizing data processing...', 6, 6);
         
         // Start animated progress for the record count
@@ -2230,632 +2014,21 @@ class EnhancedFilterSystem {
             // Refresh pivot table with new data
             this.refreshPivotTable();
             
-            // If GMID data was filtered, ensure filters are properly updated
-            if (gmidFilteringSuccess) {
-                console.log('🔄 Refreshing filter UIs after optimized GMID filtering...');
+            // If GMID data was replaced, ensure filters are properly updated
+            if (gmidReplacementNeeded) {
+                console.log('🔄 Refreshing all filter UIs after GMID replacement...');
                 this.populateFilters();
             }
         }, 800);
         
-        console.timeEnd('ApplyOptimizedFilters');
-        console.log('🚀 === OPTIMIZED FILTER APPLICATION COMPLETE ===');
+        console.timeEnd('ApplyFiltersWithGmidSupport');
+        console.log('🚀 === APPLYING FILTERS WITH GMID SUPPORT COMPLETE ===');
         
     } catch (error) {
-        console.error('❌ Error in optimized filter application:', error);
+        console.error('❌ Error in enhanced filter application:', error);
         this.showErrorState(`Error loading data: ${error.message}`);
         this.handleFilterError(error);
     }
-}
-
-
-  // Optimized approach:
-  async applyOptimizedGmidFiltering(validFilterParams) {
-      this.showLoadingStep('Applying optimized GMID filtering...', 4, 7);
-      
-      try {
-          // Use the new optimized JOIN-based approach
-          const replacementSuccess = await window.App.data.replaceGmidPlaceholderWithOptimizedFiltering(
-              validFilterParams.params,
-              { 
-                  maxRecords: 10000,
-                  orderBy: 'ROOT_GMID'
-              }
-          );
-          
-          if (replacementSuccess) {
-              console.log('✅ GMID dimension successfully filtered using optimized JOIN approach');
-              
-              // Update filter UI to reflect new GMID hierarchy
-              this.refreshGmidFilterUI();
-              this.setGmidFilterState('ready', 'GMID filtered using optimized JOIN');
-              
-              return true;
-          } else {
-              console.warn('⚠️ Optimized GMID filtering failed, but continuing');
-              this.setGmidFilterState('error', 'Failed to filter GMID dimension');
-              return false;
-          }
-          
-      } catch (error) {
-          console.error('❌ Error in optimized GMID filtering:', error);
-          this.setGmidFilterState('error', 'Error in optimized GMID filtering');
-          return false;
-      }
-  }
-
-
-  /**
- * NEW: Update dimension filters based on filtered fact data
- * This ensures all dimensions only show values that exist in the filtered fact data
- * @param {Array} factData - The filtered fact data array
- */
-  async updateDimensionFiltersFromFactData(factData) {
-      console.log('⏳ Status: Updating dimension filters based on filtered fact data...');
-      
-      if (!factData || !Array.isArray(factData) || factData.length === 0) {
-          console.warn('⚠️ No fact data provided for dimension filter updates');
-          return;
-      }
-      
-      try {
-          // Extract unique values for each dimension from fact data
-          const factDataConstraints = {
-              le: [...new Set(factData.filter(r => r.LE && r.LE.trim() !== '').map(r => r.LE))],
-              cost_element: [...new Set(factData.filter(r => r.COST_ELEMENT && r.COST_ELEMENT.trim() !== '').map(r => r.COST_ELEMENT))],
-              smartcode: [...new Set(factData.filter(r => r.ROOT_SMARTCODE && r.ROOT_SMARTCODE.trim() !== '').map(r => r.ROOT_SMARTCODE))],
-              root_gmid: [...new Set(factData.filter(r => r.ROOT_GMID && r.ROOT_GMID.trim() !== '').map(r => r.ROOT_GMID))],
-              path_gmid: [...new Set(factData.filter(r => r.PATH_GMID && r.PATH_GMID.trim() !== '').map(r => r.PATH_GMID))],
-              item_cost_type: [...new Set(factData.filter(r => r.ITEM_COST_TYPE && r.ITEM_COST_TYPE.trim() !== '').map(r => r.ITEM_COST_TYPE))],
-              material_type: [...new Set(factData.filter(r => r.COMPONENT_MATERIAL_TYPE && r.COMPONENT_MATERIAL_TYPE.trim() !== '').map(r => r.COMPONENT_MATERIAL_TYPE))],
-              mc: [...new Set(factData.filter(r => r.MC && r.MC.trim() !== '').map(r => r.MC))],
-              year: [...new Set(factData.filter(r => r.ZYEAR && r.ZYEAR.toString().trim() !== '').map(r => r.ZYEAR))]
-          };
-
-          console.log('📊 Fact data constraints extracted:');
-          Object.entries(factDataConstraints).forEach(([dim, values]) => {
-              console.log(`   ${dim}: ${values.length} unique values`);
-          });
-
-          // Update each dimension filter UI to reflect constraints
-          Object.values(this.filterMeta).forEach(dimension => {
-              const constraintKey = this.getConstraintKey(dimension.dimensionKey);
-              
-              if (factDataConstraints[constraintKey] && factDataConstraints[constraintKey].length > 0) {
-                  this.updateFilterUIWithConstraints(dimension, factDataConstraints[constraintKey]);
-              } else {
-                  console.warn(`⚠️ No constraint data found for dimension: ${dimension.label} (key: ${constraintKey})`);
-              }
-          });
-
-          console.log('✅ Status: Dimension filters updated with fact data constraints');
-          
-      } catch (error) {
-          console.error('❌ Error updating dimension filters from fact data:', error);
-      }
-  }
-
-
-  /**
-   * NEW: Map dimension keys to fact data constraint keys
-   */
-  getConstraintKey(dimensionKey) {
-      const mapping = {
-          'le': 'le',
-          'cost_element': 'cost_element', 
-          'smartcode': 'smartcode',
-          'root_gmid_display': 'root_gmid',
-          'gmid_display': 'path_gmid',
-          'item_cost_type': 'item_cost_type',
-          'material_type': 'material_type',
-          'mc': 'mc',
-          'year': 'year'
-      };
-      
-      return mapping[dimensionKey] || dimensionKey;
-  }
-
-
-  /**
- * NEW: Update filter UI to show only values that exist in fact data
- * @param {Object} dimension - The dimension configuration object
- * @param {Array} availableValues - Array of values that exist in fact data
- */
-  updateFilterUIWithConstraints(dimension, availableValues) {
-      if (!availableValues || !Array.isArray(availableValues) || availableValues.length === 0) {
-          console.warn(`⚠️ No available values for dimension: ${dimension.label}`);
-          return;
-      }
-
-      const availableSet = new Set(availableValues);
-      console.log(`🔧 Updating ${dimension.label} filter UI with ${availableValues.length} available values`);
-
-      if (dimension.hierarchical) {
-          // For hierarchical filters, mark nodes as disabled if their factIds aren't in availableValues
-          this.updateHierarchicalFilterConstraints(dimension, availableSet);
-      } else {
-          // For simple filters, disable checkboxes for unavailable values
-          this.updateSimpleFilterConstraints(dimension, availableSet);
-      }
-  }
-
-
-  /**
-   * NEW: Update hierarchical filter with fact data constraints
-   * @param {Object} dimension - The dimension configuration object
-   * @param {Set} availableSet - Set of available values from fact data
-   */
-  updateHierarchicalFilterConstraints(dimension, availableSet) {
-      const treeContainer = document.getElementById(`${dimension.id}TreeContainer`);
-      if (!treeContainer) {
-          console.warn(`⚠️ Tree container not found for dimension: ${dimension.id}`);
-          return;
-      }
-
-      const checkboxes = treeContainer.querySelectorAll('input[type="checkbox"]');
-      const hierarchy = this.state.hierarchies[dimension.dimensionKey];
-      
-      if (!hierarchy || !hierarchy.nodesMap) {
-          console.warn(`⚠️ Hierarchy not found for dimension: ${dimension.dimensionKey}`);
-          return;
-      }
-
-      let updatedCount = 0;
-      let disabledCount = 0;
-      
-      checkboxes.forEach(checkbox => {
-          const nodeId = checkbox.id.replace(`${dimension.id}_node_`, '');
-          const node = hierarchy.nodesMap[nodeId];
-          
-          if (node) {
-              let hasAvailableFactIds = false;
-              
-              if (node.isLeaf && node.factId) {
-                  // For leaf nodes, check if factId is available
-                  const factIds = Array.isArray(node.factId) ? node.factId : [node.factId];
-                  hasAvailableFactIds = factIds.some(id => availableSet.has(id));
-              } else if (node.children && node.children.length > 0) {
-                  // For parent nodes, check if any descendant has available factIds
-                  hasAvailableFactIds = this.nodeHasAvailableDescendants(node, hierarchy, availableSet);
-              } else {
-                  // For nodes without factId or children, assume available (like ROOT)
-                  hasAvailableFactIds = true;
-              }
-              
-              // Update checkbox state and styling
-              const label = checkbox.closest('label');
-              if (label) {
-                  if (hasAvailableFactIds) {
-                      label.style.opacity = '1';
-                      label.style.color = '';
-                      label.style.fontWeight = '';
-                      checkbox.disabled = false;
-                  } else {
-                      label.style.opacity = '0.5';
-                      label.style.color = '#999';
-                      label.style.fontWeight = 'normal';
-                      checkbox.disabled = true;
-                      checkbox.checked = false; // Uncheck unavailable items
-                      
-                      // Add to excluded set since it's not available
-                      this.filterSelections[dimension.id].add(nodeId);
-                      disabledCount++;
-                  }
-                  updatedCount++;
-              }
-          }
-      });
-      
-      console.log(`   📊 ${dimension.label}: Updated ${updatedCount} nodes, disabled ${disabledCount} unavailable nodes`);
-  }
-
-
-  /**
-   * NEW: Update simple filter with fact data constraints
-   * @param {Object} dimension - The dimension configuration object
-   * @param {Set} availableSet - Set of available values from fact data
-   */
-  updateSimpleFilterConstraints(dimension, availableSet) {
-      const checkboxList = document.getElementById(`${dimension.id}CheckboxList`);
-      if (!checkboxList) {
-          console.warn(`⚠️ Checkbox list not found for dimension: ${dimension.id}`);
-          return;
-      }
-
-      const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
-      let updatedCount = 0;
-      let disabledCount = 0;
-      
-      checkboxes.forEach(checkbox => {
-          const value = checkbox.value;
-          const isAvailable = availableSet.has(value);
-          
-          const label = checkbox.closest('label');
-          if (label) {
-              if (isAvailable) {
-                  label.style.opacity = '1';
-                  label.style.color = '';
-                  label.style.fontWeight = '';
-                  checkbox.disabled = false;
-              } else {
-                  label.style.opacity = '0.5';
-                  label.style.color = '#999';
-                  label.style.fontWeight = 'normal';
-                  checkbox.disabled = true;
-                  checkbox.checked = false; // Uncheck unavailable items
-                  
-                  // Add to excluded set since it's not available
-                  this.filterSelections[dimension.id].add(value);
-                  disabledCount++;
-              }
-              updatedCount++;
-          }
-      });
-      
-      console.log(`   📊 ${dimension.label}: Updated ${updatedCount} options, disabled ${disabledCount} unavailable options`);
-  }
-
-
-  /**
-   * NEW: Check if a node has any descendants with available factIds
-   * @param {Object} node - The hierarchy node to check
-   * @param {Object} hierarchy - The complete hierarchy object
-   * @param {Set} availableSet - Set of available factIds from fact data
-   * @returns {boolean} - True if node has descendants with available factIds
-   */
-  nodeHasAvailableDescendants(node, hierarchy, availableSet) {
-      if (!node.children || !Array.isArray(node.children) || node.children.length === 0) {
-          return false;
-      }
-      
-      for (const childId of node.children) {
-          const childNode = hierarchy.nodesMap[childId];
-          if (!childNode) continue;
-          
-          if (childNode.isLeaf && childNode.factId) {
-              const factIds = Array.isArray(childNode.factId) ? childNode.factId : [childNode.factId];
-              if (factIds.some(id => availableSet.has(id))) {
-                  return true;
-              }
-          } else if (childNode.children && childNode.children.length > 0) {
-              if (this.nodeHasAvailableDescendants(childNode, hierarchy, availableSet)) {
-                  return true;
-              }
-          }
-      }
-      
-      return false;
-  }
-
-
-  /**
-   * NEW: Update filter UI to show only values that exist in fact data
-   */
-  updateFilterUIWithConstraints(dimension, availableValues) {
-      if (!availableValues || availableValues.length === 0) {
-          console.warn(`No available values for dimension: ${dimension.label}`);
-          return;
-      }
-
-      const availableSet = new Set(availableValues);
-
-      if (dimension.hierarchical) {
-          // For hierarchical filters, mark nodes as disabled if their factIds aren't in availableValues
-          this.updateHierarchicalFilterConstraints(dimension, availableSet);
-      } else {
-          // For simple filters, disable checkboxes for unavailable values
-          this.updateSimpleFilterConstraints(dimension, availableSet);
-      }
-  }
-
-
-  /**
-   * NEW: Update hierarchical filter with fact data constraints
-   */
-  updateHierarchicalFilterConstraints(dimension, availableSet) {
-      const treeContainer = document.getElementById(`${dimension.id}TreeContainer`);
-      if (!treeContainer) return;
-
-      const checkboxes = treeContainer.querySelectorAll('input[type="checkbox"]');
-      const hierarchy = this.state.hierarchies[dimension.dimensionKey];
-      
-      checkboxes.forEach(checkbox => {
-          const nodeId = checkbox.id.replace(`${dimension.id}_node_`, '');
-          const node = hierarchy?.nodesMap?.[nodeId];
-          
-          if (node) {
-              let hasAvailableFactIds = false;
-              
-              if (node.isLeaf && node.factId) {
-                  // For leaf nodes, check if factId is available
-                  const factIds = Array.isArray(node.factId) ? node.factId : [node.factId];
-                  hasAvailableFactIds = factIds.some(id => availableSet.has(id));
-              } else if (node.children && node.children.length > 0) {
-                  // For parent nodes, check if any descendant has available factIds
-                  hasAvailableFactIds = this.nodeHasAvailableDescendants(node, hierarchy, availableSet);
-              }
-              
-              // Update checkbox state and styling
-              const label = checkbox.closest('label');
-              if (label) {
-                  if (hasAvailableFactIds) {
-                      label.style.opacity = '1';
-                      label.style.color = '';
-                      checkbox.disabled = false;
-                  } else {
-                      label.style.opacity = '0.5';
-                      label.style.color = '#999';
-                      checkbox.disabled = true;
-                      checkbox.checked = false; // Uncheck unavailable items
-                      
-                      // Add to excluded set since it's not available
-                      this.filterSelections[dimension.id].add(nodeId);
-                  }
-              }
-          }
-      });
-  }
-
-
-  /**
-   * NEW: Update simple filter with fact data constraints
-   */
-  updateSimpleFilterConstraints(dimension, availableSet) {
-      const checkboxList = document.getElementById(`${dimension.id}CheckboxList`);
-      if (!checkboxList) return;
-
-      const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
-      
-      checkboxes.forEach(checkbox => {
-          const value = checkbox.value;
-          const isAvailable = availableSet.has(value);
-          
-          const label = checkbox.closest('label');
-          if (label) {
-              if (isAvailable) {
-                  label.style.opacity = '1';
-                  label.style.color = '';
-                  checkbox.disabled = false;
-              } else {
-                  label.style.opacity = '0.5';
-                  label.style.color = '#999';
-                  checkbox.disabled = true;
-                  checkbox.checked = false; // Uncheck unavailable items
-                  
-                  // Add to excluded set since it's not available
-                  this.filterSelections[dimension.id].add(value);
-              }
-          }
-      });
-  }
-
-
-  /**
-   * NEW: Check if a node has any descendants with available factIds
-   */
-  nodeHasAvailableDescendants(node, hierarchy, availableSet) {
-      if (!node.children || node.children.length === 0) {
-          return false;
-      }
-      
-      for (const childId of node.children) {
-          const childNode = hierarchy.nodesMap[childId];
-          if (!childNode) continue;
-          
-          if (childNode.isLeaf && childNode.factId) {
-              const factIds = Array.isArray(childNode.factId) ? childNode.factId : [childNode.factId];
-              if (factIds.some(id => availableSet.has(id))) {
-                  return true;
-              }
-          } else if (childNode.children && childNode.children.length > 0) {
-              if (this.nodeHasAvailableDescendants(childNode, hierarchy, availableSet)) {
-                  return true;
-              }
-          }
-      }
-      
-      return false;
-  }
-
-
-  /**
-   * NEW: Enhanced method to handle complex filter interactions
-   * This ensures that when multiple filters are applied, the GMID dimension
-   * is properly filtered through the fact data relationship
-   */
-  async handleComplexFilterInteractions(filterParams) {
-      console.log('🔄 Handling complex filter interactions...');
-      
-      if (!filterParams || Object.keys(filterParams).length === 0) {
-          console.log('ℹ️ No filter parameters provided for complex interaction handling');
-          return true;
-      }
-      
-      try {
-          // First, get a sample of fact data to understand ROOT_GMID distribution
-          console.log('📊 Analyzing fact data to understand filter impacts...');
-          const sampleFactData = await this.fetchFilteredFactData(filterParams);
-          
-          if (!sampleFactData || sampleFactData.length === 0) {
-              console.log('⚠️ No fact data available for filter parameters');
-              this.handleEmptyFilterResult();
-              return false;
-          }
-          
-          // Extract ROOT_GMIDs that exist in the filtered fact data
-          const factRootGmids = [...new Set(
-              sampleFactData
-                  .filter(row => row && row.ROOT_GMID && row.ROOT_GMID.trim() !== '')
-                  .map(row => row.ROOT_GMID.trim())
-          )];
-          
-          console.log(`📊 Found ${factRootGmids.length} ROOT_GMIDs in filtered fact data`);
-          
-          if (factRootGmids.length === 0) {
-              console.warn('⚠️ No ROOT_GMIDs found in filtered fact data');
-              this.handleEmptyFilterResult();
-              return false;
-          }
-          
-          // Update ROOT_GMID filter to only show available options
-          this.updateRootGmidFilterWithConstraints(factRootGmids);
-          
-          // If user had ROOT_GMID selections that are no longer valid, handle gracefully
-          const currentSelections = this.getSelectedRootGmids();
-          const validSelections = currentSelections.filter(gmid => factRootGmids.includes(gmid));
-          
-          if (validSelections.length !== currentSelections.length) {
-              console.log(`🔄 Adjusting ROOT_GMID selections: ${currentSelections.length} → ${validSelections.length}`);
-              this.updateRootGmidSelections(validSelections);
-          }
-          
-          return true;
-          
-      } catch (error) {
-          console.error('❌ Error handling complex filter interactions:', error);
-          return false;
-      }
-  }
-
-
-  /**
-   * NEW: Update ROOT_GMID filter options based on fact data constraints
-   */
-  updateRootGmidFilterWithConstraints(availableRootGmids) {
-      const checkboxList = document.getElementById('rootGmidCheckboxList');
-      if (!checkboxList) {
-          console.warn('⚠️ ROOT_GMID checkbox list not found');
-          return;
-      }
-      
-      if (!availableRootGmids || !Array.isArray(availableRootGmids)) {
-          console.warn('⚠️ Invalid availableRootGmids provided');
-          return;
-      }
-      
-      const availableSet = new Set(availableRootGmids);
-      const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
-      
-      let totalCount = 0;
-      let availableCount = 0;
-      let disabledCount = 0;
-      
-      checkboxes.forEach(checkbox => {
-          const rootGmid = checkbox.value;
-          const isAvailable = availableSet.has(rootGmid);
-          
-          const label = checkbox.closest('label');
-          if (label) {
-              totalCount++;
-              
-              if (isAvailable) {
-                  label.style.opacity = '1';
-                  label.style.color = '';
-                  label.style.fontWeight = '';
-                  checkbox.disabled = false;
-                  availableCount++;
-              } else {
-                  label.style.opacity = '0.5';
-                  label.style.color = '#999';
-                  label.style.fontWeight = 'normal';
-                  checkbox.disabled = true;
-                  checkbox.checked = false; // Uncheck unavailable ROOT_GMIDs
-                  disabledCount++;
-              }
-          }
-      });
-      
-      console.log(`✅ Updated ROOT_GMID filter: ${availableCount}/${totalCount} options available, ${disabledCount} disabled`);
-      
-      // Update the ROOT_GMID filter selection count
-      const rootGmidDimension = this.filterMeta.rootGmid;
-      if (rootGmidDimension) {
-          this.updateSelectionCount(rootGmidDimension);
-      }
-  }
-
-
-  /**
-   * NEW: Update ROOT_GMID selections programmatically
-   */
-  updateRootGmidSelections(validSelections) {
-      const checkboxList = document.getElementById('rootGmidCheckboxList');
-      if (!checkboxList) {
-          console.warn('⚠️ ROOT_GMID checkbox list not found for selection update');
-          return;
-      }
-      
-      if (!validSelections || !Array.isArray(validSelections)) {
-          console.warn('⚠️ Invalid validSelections provided');
-          return;
-      }
-      
-      const validSet = new Set(validSelections);
-      const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
-      
-      let updatedCount = 0;
-      
-      checkboxes.forEach(checkbox => {
-          const shouldBeChecked = validSet.has(checkbox.value);
-          if (checkbox.checked !== shouldBeChecked) {
-              checkbox.checked = shouldBeChecked;
-              updatedCount++;
-          }
-      });
-      
-      console.log(`🔄 Updated ${updatedCount} ROOT_GMID selections to match available data`);
-      
-      // Update selection count display
-      const rootGmidDimension = this.filterMeta.rootGmid;
-      if (rootGmidDimension) {
-          this.updateSelectionCount(rootGmidDimension);
-      }
-  }
-
-
-  /**
-   * ENHANCED: Handle GMID filter status with dimension filtering awareness
-   * This method now considers fact data constraints when updating GMID filter status
-   */
-  handleGmidFilterStatusEnhanced() {
-      const selectedRootGmids = this.getSelectedRootGmids();
-      
-      if (selectedRootGmids.length === 0) {
-          this.setGmidFilterState('disabled', 'Select ROOT_GMID items to enable GMID filter');
-          this.clearGmidHierarchy();
-      } else if (selectedRootGmids.length > 50) {
-          this.setGmidFilterState('error', `Too many ROOT_GMIDs selected (${selectedRootGmids.length}/50 max)`);
-      } else {
-          // Check if selected ROOT_GMIDs are available in current fact data
-          const availableRootGmids = this.getAvailableRootGmidsFromFactData();
-          const validSelections = selectedRootGmids.filter(gmid => 
-              !availableRootGmids || availableRootGmids.length === 0 || availableRootGmids.includes(gmid)
-          );
-          
-          if (validSelections.length === 0) {
-              this.setGmidFilterState('warning', 'Selected ROOT_GMIDs not available in filtered data');
-          } else if (validSelections.length < selectedRootGmids.length) {
-              this.setGmidFilterState('warning', `${validSelections.length}/${selectedRootGmids.length} ROOT_GMIDs available in filtered data`);
-          } else {
-              this.setGmidFilterState('ready', `GMID filter ready for ${selectedRootGmids.length} ROOT_GMIDs`);
-          }
-      }
-  }
-
-
-  /**
-   * HELPER: Get available ROOT_GMIDs from current fact data state
-   * @returns {Array|null} - Array of available ROOT_GMIDs or null if not available
-   */
-  getAvailableRootGmidsFromFactData() {
-      if (!this.state || !this.state.factData || !Array.isArray(this.state.factData)) {
-          return null;
-      }
-      
-      return [...new Set(
-          this.state.factData
-              .filter(row => row && row.ROOT_GMID && row.ROOT_GMID.trim() !== '')
-              .map(row => row.ROOT_GMID.trim())
-      )];
   }
 
 
@@ -2894,23 +2067,6 @@ class EnhancedFilterSystem {
       this.handleGmidFilterStatus();
       
       this.updateAllSelectionCounts();
-  }
-
-
-  /**
-   * ENHANCED: Handle GMID filter status with dimension filtering awareness
-   */
-  handleGmidFilterStatus() {
-      const selectedRootGmids = this.getSelectedRootGmids();
-      
-      if (selectedRootGmids.length === 0) {
-          this.setGmidFilterState('disabled', 'Select ROOT_GMID items to enable GMID filter');
-          this.clearGmidHierarchy();
-      } else if (selectedRootGmids.length > 10) {
-          this.setGmidFilterState('error', `Too many ROOT_GMIDs selected (${selectedRootGmids.length}/10 max)`);
-      } else {
-          this.setGmidFilterState('ready', `GMID filter ready for ${selectedRootGmids.length} ROOT_GMIDs`);
-      }
   }
 
 
@@ -3116,6 +2272,7 @@ class EnhancedFilterSystem {
       dimensionStates
     };
   }
+ 
 
 
   /**
@@ -3729,389 +2886,389 @@ class EnhancedFilterSystem {
   /**
    * Rebuild filtered hierarchies based on current selections
    */
-  // rebuildFilteredHierarchies() {
-  //   console.log("⏳ Status: Rebuilding hierarchies based on filter selections...");
+  rebuildFilteredHierarchies() {
+    console.log("⏳ Status: Rebuilding hierarchies based on filter selections...");
     
-  //   // Rebuild each hierarchy
-  //   this.rebuildGmidHierarchyWithFilters();     
-  //   this.rebuildItemCostTypeHierarchy();        
-  //   this.rebuildMaterialTypeHierarchy();        
-  //   this.rebuildYearHierarchy();                
-  //   this.rebuildMcHierarchy();                  
-  //   this.rebuildLegalEntityHierarchy();         
-  //   this.rebuildCostElementHierarchy();         
-  //   this.rebuildSmartcodeHierarchy();
-  // }
+    // Rebuild each hierarchy
+    this.rebuildGmidHierarchyWithFilters();     
+    this.rebuildItemCostTypeHierarchy();        
+    this.rebuildMaterialTypeHierarchy();        
+    this.rebuildYearHierarchy();                
+    this.rebuildMcHierarchy();                  
+    this.rebuildLegalEntityHierarchy();         
+    this.rebuildCostElementHierarchy();         
+    this.rebuildSmartcodeHierarchy();
+  }
 
 
   /**
    * Rebuild GMID display hierarchy based on filters
    */
-  // rebuildGmidHierarchyWithFilters() {
-  //     console.log("⏳ Status: Rebuilding GMID display hierarchy based on filters...");
+  rebuildGmidHierarchyWithFilters() {
+      console.log("⏳ Status: Rebuilding GMID display hierarchy based on filters...");
       
-  //     const rootGmidFilter = this.filterSelections.rootGmid;
+      const rootGmidFilter = this.filterSelections.rootGmid;
       
-  //     // Get all available ROOT_GMIDs
-  //     const allRootGmids = [];
-  //     if (this.state.dimensions && this.state.dimensions.gmid_display) {
-  //         this.state.dimensions.gmid_display.forEach(item => {
-  //             if (item.ROOT_GMID && !allRootGmids.includes(item.ROOT_GMID)) {
-  //                 allRootGmids.push(item.ROOT_GMID);
-  //             }
-  //         });
-  //     }
+      // Get all available ROOT_GMIDs
+      const allRootGmids = [];
+      if (this.state.dimensions && this.state.dimensions.gmid_display) {
+          this.state.dimensions.gmid_display.forEach(item => {
+              if (item.ROOT_GMID && !allRootGmids.includes(item.ROOT_GMID)) {
+                  allRootGmids.push(item.ROOT_GMID);
+              }
+          });
+      }
       
-  //     // console.log(`✅ Status: Found ${allRootGmids.length} total ROOT_GMIDs`);
+      // console.log(`✅ Status: Found ${allRootGmids.length} total ROOT_GMIDs`);
       
-  //     // Check if ALL items are selected (no exclusions)
-  //     const allItemsSelected = !rootGmidFilter || rootGmidFilter.size === 0;
+      // Check if ALL items are selected (no exclusions)
+      const allItemsSelected = !rootGmidFilter || rootGmidFilter.size === 0;
       
-  //     if (allItemsSelected) {
-  //         // console.log("✅ Status: ALL ROOT_GMIDs selected - restoring/rebuilding complete hierarchy");
+      if (allItemsSelected) {
+          // console.log("✅ Status: ALL ROOT_GMIDs selected - restoring/rebuilding complete hierarchy");
           
-  //         // Always rebuild from original data when all are selected to ensure proper structure
-  //         const originalDimData = this.state.dimensions?.gmid_display;
-  //         if (originalDimData && originalDimData.length > 0) {
-  //             console.log(`📊 Rebuilding complete hierarchy from ${originalDimData.length} dimension records`);
-  //             const completeHierarchy = this.buildFilteredGmidDisplayHierarchy(originalDimData, null);
+          // Always rebuild from original data when all are selected to ensure proper structure
+          const originalDimData = this.state.dimensions?.gmid_display;
+          if (originalDimData && originalDimData.length > 0) {
+              console.log(`📊 Rebuilding complete hierarchy from ${originalDimData.length} dimension records`);
+              const completeHierarchy = this.buildFilteredGmidDisplayHierarchy(originalDimData, null);
               
-  //             // Install the complete hierarchy
-  //             this.state.hierarchies.gmid_display = completeHierarchy;
+              // Install the complete hierarchy
+              this.state.hierarchies.gmid_display = completeHierarchy;
               
-  //             // Update backup
-  //             if (!this.state._originalHierarchies) {
-  //                 this.state._originalHierarchies = {};
-  //             }
-  //             this.state._originalHierarchies.gmid_display = {
-  //                 root: { ...completeHierarchy.root },
-  //                 nodesMap: { ...completeHierarchy.nodesMap },
-  //                 flatData: [...completeHierarchy.flatData]
-  //             };
+              // Update backup
+              if (!this.state._originalHierarchies) {
+                  this.state._originalHierarchies = {};
+              }
+              this.state._originalHierarchies.gmid_display = {
+                  root: { ...completeHierarchy.root },
+                  nodesMap: { ...completeHierarchy.nodesMap },
+                  flatData: [...completeHierarchy.flatData]
+              };
               
-  //             const nodeCount = Object.keys(completeHierarchy.nodesMap).length;
-  //             const rootChildren = completeHierarchy.root.children ? completeHierarchy.root.children.length : 0;
+              const nodeCount = Object.keys(completeHierarchy.nodesMap).length;
+              const rootChildren = completeHierarchy.root.children ? completeHierarchy.root.children.length : 0;
               
-  //             console.log(`✅ Status: Complete GMID hierarchy: ${nodeCount} nodes, ROOT has ${rootChildren} children`);
-  //             return false; // No rebuilding needed - we just did it
-  //         }
-  //     }
+              console.log(`✅ Status: Complete GMID hierarchy: ${nodeCount} nodes, ROOT has ${rootChildren} children`);
+              return false; // No rebuilding needed - we just did it
+          }
+      }
       
-  //     // Continue with filtered rebuilding for partial selections...
-  //     // (rest of the method unchanged)
-  //     const selectedRootGmids = allRootGmids.filter(gmid => !rootGmidFilter.has(gmid));
+      // Continue with filtered rebuilding for partial selections...
+      // (rest of the method unchanged)
+      const selectedRootGmids = allRootGmids.filter(gmid => !rootGmidFilter.has(gmid));
       
-  //     if (selectedRootGmids.length === 0) {
-  //         this.createEmptyHierarchy(this.filterMeta.rootGmid);
-  //         this.state._emptyFilterResult = true;
-  //         return true;
-  //     }
+      if (selectedRootGmids.length === 0) {
+          this.createEmptyHierarchy(this.filterMeta.rootGmid);
+          this.state._emptyFilterResult = true;
+          return true;
+      }
       
-  //     const originalDimData = this.state.dimensions.gmid_display;
-  //     const filteredDimData = originalDimData.filter(item => 
-  //         item.ROOT_GMID && selectedRootGmids.includes(item.ROOT_GMID)
-  //     );
+      const originalDimData = this.state.dimensions.gmid_display;
+      const filteredDimData = originalDimData.filter(item => 
+          item.ROOT_GMID && selectedRootGmids.includes(item.ROOT_GMID)
+      );
       
-  //     const filteredHierarchy = this.buildFilteredGmidDisplayHierarchy(filteredDimData, selectedRootGmids);
-  //     this.state.hierarchies.gmid_display = filteredHierarchy;
+      const filteredHierarchy = this.buildFilteredGmidDisplayHierarchy(filteredDimData, selectedRootGmids);
+      this.state.hierarchies.gmid_display = filteredHierarchy;
       
-  //     console.log(`✅ Status: Rebuilt filtered GMID hierarchy with ${selectedRootGmids.length} ROOT_GMIDs`);
-  //     return true;
-  // }
+      console.log(`✅ Status: Rebuilt filtered GMID hierarchy with ${selectedRootGmids.length} ROOT_GMIDs`);
+      return true;
+  }
 
 
   // Method to rebuild GMID hierarchy from original data
-  // rebuildGmidHierarchyFromOriginalData() {
-  //     console.log("🔧 Rebuilding GMID hierarchy from original dimension data...");
+  rebuildGmidHierarchyFromOriginalData() {
+      console.log("🔧 Rebuilding GMID hierarchy from original dimension data...");
       
-  //     const originalDimData = this.state.dimensions?.gmid_display;
-  //     if (!originalDimData || originalDimData.length === 0) {
-  //         // console.error("❌ No original GMID dimension data available");
-  //         return false;
-  //     }
+      const originalDimData = this.state.dimensions?.gmid_display;
+      if (!originalDimData || originalDimData.length === 0) {
+          // console.error("❌ No original GMID dimension data available");
+          return false;
+      }
       
-  //     // console.log(`📊 Rebuilding from ${originalDimData.length} dimension records`);
+      // console.log(`📊 Rebuilding from ${originalDimData.length} dimension records`);
       
-  //     // Rebuild the complete hierarchy using all data
-  //     const completeHierarchy = this.buildFilteredGmidDisplayHierarchy(originalDimData, null);
+      // Rebuild the complete hierarchy using all data
+      const completeHierarchy = this.buildFilteredGmidDisplayHierarchy(originalDimData, null);
       
-  //     // Store as both current and backup
-  //     this.state.hierarchies.gmid_display = completeHierarchy;
+      // Store as both current and backup
+      this.state.hierarchies.gmid_display = completeHierarchy;
       
-  //     if (!this.state._originalHierarchies) {
-  //         this.state._originalHierarchies = {};
-  //     }
-  //     this.state._originalHierarchies.gmid_display = {
-  //         root: completeHierarchy.root,
-  //         nodesMap: { ...completeHierarchy.nodesMap },
-  //         flatData: [...completeHierarchy.flatData]
-  //     };
+      if (!this.state._originalHierarchies) {
+          this.state._originalHierarchies = {};
+      }
+      this.state._originalHierarchies.gmid_display = {
+          root: completeHierarchy.root,
+          nodesMap: { ...completeHierarchy.nodesMap },
+          flatData: [...completeHierarchy.flatData]
+      };
       
-  //     const nodeCount = Object.keys(completeHierarchy.nodesMap).length;
-  //     // console.log(`✅ Rebuilt complete GMID hierarchy with ${nodeCount} nodes`);
+      const nodeCount = Object.keys(completeHierarchy.nodesMap).length;
+      // console.log(`✅ Rebuilt complete GMID hierarchy with ${nodeCount} nodes`);
       
-  //     // Verify ROOT node has children
-  //     const rootNode = completeHierarchy.nodesMap['ROOT'];
-  //     if (rootNode && rootNode.children) {
-  //         // console.log(`✅ ROOT node now has ${rootNode.children.length} children`);
-  //         return true;
-  //     } else {
-  //         // console.error("❌ ROOT node still has no children after rebuild");
-  //         return false;
-  //     }
-  // }
+      // Verify ROOT node has children
+      const rootNode = completeHierarchy.nodesMap['ROOT'];
+      if (rootNode && rootNode.children) {
+          // console.log(`✅ ROOT node now has ${rootNode.children.length} children`);
+          return true;
+      } else {
+          // console.error("❌ ROOT node still has no children after rebuild");
+          return false;
+      }
+  }
 
 
   /**
    * Rebuild ITEM_COST_TYPE hierarchy based on filter selections
    */
-  // rebuildItemCostTypeHierarchy() {
-  //   console.log("⏳ Status: Rebuilding ITEM_COST_TYPE hierarchy based on filters...");
+  rebuildItemCostTypeHierarchy() {
+    console.log("⏳ Status: Rebuilding ITEM_COST_TYPE hierarchy based on filters...");
     
-  //   // Get the filter selections for item cost type
-  //   const itemCostTypeFilter = this.filterSelections.itemCostType;
+    // Get the filter selections for item cost type
+    const itemCostTypeFilter = this.filterSelections.itemCostType;
     
-  //   // Get all available item cost types
-  //   const allItemCostTypes = [];
-  //   if (this.state.dimensions && this.state.dimensions.item_cost_type) {
-  //     this.state.dimensions.item_cost_type.forEach(item => {
-  //       if (item.ITEM_COST_TYPE && !allItemCostTypes.includes(item.ITEM_COST_TYPE)) {
-  //         allItemCostTypes.push(item.ITEM_COST_TYPE);
-  //       }
-  //     });
-  //   }
+    // Get all available item cost types
+    const allItemCostTypes = [];
+    if (this.state.dimensions && this.state.dimensions.item_cost_type) {
+      this.state.dimensions.item_cost_type.forEach(item => {
+        if (item.ITEM_COST_TYPE && !allItemCostTypes.includes(item.ITEM_COST_TYPE)) {
+          allItemCostTypes.push(item.ITEM_COST_TYPE);
+        }
+      });
+    }
     
-  //   // Determine selected item cost types (empty set means all selected)
-  //   let selectedItemCostTypes = [];
-  //   if (itemCostTypeFilter && itemCostTypeFilter.size > 0) {
-  //     // We store excluded values, so we need to invert the selection
-  //     selectedItemCostTypes = allItemCostTypes.filter(type => !itemCostTypeFilter.has(type));
-  //   } else {
-  //     // All types are selected
-  //     selectedItemCostTypes = [...allItemCostTypes];
-  //   }
+    // Determine selected item cost types (empty set means all selected)
+    let selectedItemCostTypes = [];
+    if (itemCostTypeFilter && itemCostTypeFilter.size > 0) {
+      // We store excluded values, so we need to invert the selection
+      selectedItemCostTypes = allItemCostTypes.filter(type => !itemCostTypeFilter.has(type));
+    } else {
+      // All types are selected
+      selectedItemCostTypes = [...allItemCostTypes];
+    }
     
-  //   console.log(`✅ Status: Selected ITEM_COST_TYPEs: ${selectedItemCostTypes.length} of ${allItemCostTypes.length}`);
+    console.log(`✅ Status: Selected ITEM_COST_TYPEs: ${selectedItemCostTypes.length} of ${allItemCostTypes.length}`);
     
-  //   // Only rebuild if we're filtering (otherwise use the original hierarchy)
-  //   if (selectedItemCostTypes.length < allItemCostTypes.length) {
-  //     // Get the original dimension data
-  //     const originalDimData = this.state.dimensions.item_cost_type;
+    // Only rebuild if we're filtering (otherwise use the original hierarchy)
+    if (selectedItemCostTypes.length < allItemCostTypes.length) {
+      // Get the original dimension data
+      const originalDimData = this.state.dimensions.item_cost_type;
       
-  //     // Filter dimension data to only include selected types
-  //     const filteredDimData = originalDimData.filter(item => 
-  //       item.ITEM_COST_TYPE && selectedItemCostTypes.includes(item.ITEM_COST_TYPE)
-  //     );
+      // Filter dimension data to only include selected types
+      const filteredDimData = originalDimData.filter(item => 
+        item.ITEM_COST_TYPE && selectedItemCostTypes.includes(item.ITEM_COST_TYPE)
+      );
       
-  //     // Build the filtered hierarchy
-  //     const filteredHierarchy = this.buildFilteredItemCostTypeHierarchy(filteredDimData);
+      // Build the filtered hierarchy
+      const filteredHierarchy = this.buildFilteredItemCostTypeHierarchy(filteredDimData);
       
-  //     // Store in state
-  //     this.state.hierarchies.item_cost_type = filteredHierarchy;
+      // Store in state
+      this.state.hierarchies.item_cost_type = filteredHierarchy;
       
-  //     // console.log(`✅ Status: Rebuilt ITEM_COST_TYPE hierarchy with ${selectedItemCostTypes.length} types`);
-  //     return true;
-  //   } else {
-  //     // console.log("✅ Status: All ITEM_COST_TYPEs selected, no need to rebuild hierarchy");
+      // console.log(`✅ Status: Rebuilt ITEM_COST_TYPE hierarchy with ${selectedItemCostTypes.length} types`);
+      return true;
+    } else {
+      // console.log("✅ Status: All ITEM_COST_TYPEs selected, no need to rebuild hierarchy");
       
-  //     // Restore original hierarchy if we previously filtered
-  //     if (this.state._originalHierarchies && this.state._originalHierarchies.item_cost_type) {
-  //       this.state.hierarchies.item_cost_type = this.state._originalHierarchies.item_cost_type;
-  //       // console.log("✅ Status: Restored original ITEM_COST_TYPE hierarchy");
-  //     }
+      // Restore original hierarchy if we previously filtered
+      if (this.state._originalHierarchies && this.state._originalHierarchies.item_cost_type) {
+        this.state.hierarchies.item_cost_type = this.state._originalHierarchies.item_cost_type;
+        // console.log("✅ Status: Restored original ITEM_COST_TYPE hierarchy");
+      }
       
-  //     return false;
-  //   }
-  // }
+      return false;
+    }
+  }
 
 
   /**
    * Rebuild MATERIAL_TYPE hierarchy based on filter selections
    */
-  // rebuildMaterialTypeHierarchy() {
-  //   console.log("⏳ Status: Rebuilding MATERIAL_TYPE hierarchy based on filters...");
+  rebuildMaterialTypeHierarchy() {
+    console.log("⏳ Status: Rebuilding MATERIAL_TYPE hierarchy based on filters...");
     
-  //   // Get the filter selections for material type
-  //   const materialTypeFilter = this.filterSelections.materialType;
+    // Get the filter selections for material type
+    const materialTypeFilter = this.filterSelections.materialType;
     
-  //   // Get all available material types
-  //   const allMaterialTypes = [];
-  //   if (this.state.dimensions && this.state.dimensions.material_type) {
-  //     this.state.dimensions.material_type.forEach(item => {
-  //       if (item.MATERIAL_TYPE && !allMaterialTypes.includes(item.MATERIAL_TYPE)) {
-  //         allMaterialTypes.push(item.MATERIAL_TYPE);
-  //       }
-  //     });
-  //   }
+    // Get all available material types
+    const allMaterialTypes = [];
+    if (this.state.dimensions && this.state.dimensions.material_type) {
+      this.state.dimensions.material_type.forEach(item => {
+        if (item.MATERIAL_TYPE && !allMaterialTypes.includes(item.MATERIAL_TYPE)) {
+          allMaterialTypes.push(item.MATERIAL_TYPE);
+        }
+      });
+    }
     
-  //   // Determine selected material types (empty set means all selected)
-  //   let selectedMaterialTypes = [];
-  //   if (materialTypeFilter && materialTypeFilter.size > 0) {
-  //     // We store excluded values, so we need to invert the selection
-  //     selectedMaterialTypes = allMaterialTypes.filter(type => !materialTypeFilter.has(type));
-  //   } else {
-  //     // All types are selected
-  //     selectedMaterialTypes = [...allMaterialTypes];
-  //   }
+    // Determine selected material types (empty set means all selected)
+    let selectedMaterialTypes = [];
+    if (materialTypeFilter && materialTypeFilter.size > 0) {
+      // We store excluded values, so we need to invert the selection
+      selectedMaterialTypes = allMaterialTypes.filter(type => !materialTypeFilter.has(type));
+    } else {
+      // All types are selected
+      selectedMaterialTypes = [...allMaterialTypes];
+    }
     
-  //   // console.log(`✅ Status: Selected MATERIAL_TYPEs: ${selectedMaterialTypes.length} of ${allMaterialTypes.length}`);
+    // console.log(`✅ Status: Selected MATERIAL_TYPEs: ${selectedMaterialTypes.length} of ${allMaterialTypes.length}`);
     
-  //   // Only rebuild if we're filtering (otherwise use the original hierarchy)
-  //   if (selectedMaterialTypes.length < allMaterialTypes.length) {
-  //     // Get the original dimension data
-  //     const originalDimData = this.state.dimensions.material_type;
+    // Only rebuild if we're filtering (otherwise use the original hierarchy)
+    if (selectedMaterialTypes.length < allMaterialTypes.length) {
+      // Get the original dimension data
+      const originalDimData = this.state.dimensions.material_type;
       
-  //     // Filter dimension data to only include selected types
-  //     const filteredDimData = originalDimData.filter(item => 
-  //       item.MATERIAL_TYPE && selectedMaterialTypes.includes(item.MATERIAL_TYPE)
-  //     );
+      // Filter dimension data to only include selected types
+      const filteredDimData = originalDimData.filter(item => 
+        item.MATERIAL_TYPE && selectedMaterialTypes.includes(item.MATERIAL_TYPE)
+      );
       
-  //     // Build the filtered hierarchy
-  //     const filteredHierarchy = this.buildFilteredMaterialTypeHierarchy(filteredDimData);
+      // Build the filtered hierarchy
+      const filteredHierarchy = this.buildFilteredMaterialTypeHierarchy(filteredDimData);
       
-  //     // Store in state
-  //     this.state.hierarchies.material_type = filteredHierarchy;
+      // Store in state
+      this.state.hierarchies.material_type = filteredHierarchy;
       
-  //     // console.log(`✅ Status: Rebuilt MATERIAL_TYPE hierarchy with ${selectedMaterialTypes.length} types`);
-  //     return true;
-  //   } else {
-  //     // console.log("✅ Status: All MATERIAL_TYPEs selected, no need to rebuild hierarchy");
+      // console.log(`✅ Status: Rebuilt MATERIAL_TYPE hierarchy with ${selectedMaterialTypes.length} types`);
+      return true;
+    } else {
+      // console.log("✅ Status: All MATERIAL_TYPEs selected, no need to rebuild hierarchy");
       
-  //     // Restore original hierarchy if we previously filtered
-  //     if (this.state._originalHierarchies && this.state._originalHierarchies.material_type) {
-  //       this.state.hierarchies.material_type = this.state._originalHierarchies.material_type;
-  //       // console.log("✅ Status: Restored original MATERIAL_TYPE hierarchy");
-  //     }
+      // Restore original hierarchy if we previously filtered
+      if (this.state._originalHierarchies && this.state._originalHierarchies.material_type) {
+        this.state.hierarchies.material_type = this.state._originalHierarchies.material_type;
+        // console.log("✅ Status: Restored original MATERIAL_TYPE hierarchy");
+      }
       
-  //     return false;
-  //   }
-  // }
+      return false;
+    }
+  }
 
 
   /**
    * Rebuild YEAR hierarchy based on filter selections
    */
-  // rebuildYearHierarchy() {
-  //   console.log("⏳ Status: Rebuilding YEAR hierarchy based on filters...");
+  rebuildYearHierarchy() {
+    console.log("⏳ Status: Rebuilding YEAR hierarchy based on filters...");
     
-  //   // Get the filter selections for business year
-  //   const yearFilter = this.filterSelections.businessYear;
+    // Get the filter selections for business year
+    const yearFilter = this.filterSelections.businessYear;
     
-  //   // Get all available years
-  //   const allYears = [];
-  //   if (this.state.dimensions && this.state.dimensions.year) {
-  //     this.state.dimensions.year.forEach(item => {
-  //       if (item.YEAR && !allYears.includes(item.YEAR.toString())) {
-  //         allYears.push(item.YEAR.toString());
-  //       }
-  //     });
-  //   }
+    // Get all available years
+    const allYears = [];
+    if (this.state.dimensions && this.state.dimensions.year) {
+      this.state.dimensions.year.forEach(item => {
+        if (item.YEAR && !allYears.includes(item.YEAR.toString())) {
+          allYears.push(item.YEAR.toString());
+        }
+      });
+    }
     
-  //   // Determine selected years (empty set means all selected)
-  //   let selectedYears = [];
-  //   if (yearFilter && yearFilter.size > 0) {
-  //     // We store excluded values, so we need to invert the selection
-  //     selectedYears = allYears.filter(year => !yearFilter.has(year));
-  //   } else {
-  //     // All years are selected
-  //     selectedYears = [...allYears];
-  //   }
+    // Determine selected years (empty set means all selected)
+    let selectedYears = [];
+    if (yearFilter && yearFilter.size > 0) {
+      // We store excluded values, so we need to invert the selection
+      selectedYears = allYears.filter(year => !yearFilter.has(year));
+    } else {
+      // All years are selected
+      selectedYears = [...allYears];
+    }
     
-  //   console.log(`✅ Status: Selected YEARS: ${selectedYears.length} of ${allYears.length}`);
+    console.log(`✅ Status: Selected YEARS: ${selectedYears.length} of ${allYears.length}`);
     
-  //   // Only rebuild if we're filtering (otherwise use the original hierarchy)
-  //   if (selectedYears.length < allYears.length) {
-  //     // Get the original dimension data
-  //     const originalDimData = this.state.dimensions.year;
+    // Only rebuild if we're filtering (otherwise use the original hierarchy)
+    if (selectedYears.length < allYears.length) {
+      // Get the original dimension data
+      const originalDimData = this.state.dimensions.year;
       
-  //     // Filter dimension data to only include selected years
-  //     const filteredDimData = originalDimData.filter(item => 
-  //       item.YEAR && selectedYears.includes(item.YEAR.toString())
-  //     );
+      // Filter dimension data to only include selected years
+      const filteredDimData = originalDimData.filter(item => 
+        item.YEAR && selectedYears.includes(item.YEAR.toString())
+      );
       
-  //     // Build the filtered hierarchy
-  //     const filteredHierarchy = this.buildFilteredYearHierarchy(filteredDimData);
+      // Build the filtered hierarchy
+      const filteredHierarchy = this.buildFilteredYearHierarchy(filteredDimData);
       
-  //     // Store in state
-  //     this.state.hierarchies.year = filteredHierarchy;
+      // Store in state
+      this.state.hierarchies.year = filteredHierarchy;
       
-  //     // console.log(`✅ Status: Rebuilt YEAR hierarchy with ${selectedYears.length} years`);
-  //     return true;
-  //   } else {
-  //     // console.log("✅ Status: All YEARs selected, no need to rebuild hierarchy");
+      // console.log(`✅ Status: Rebuilt YEAR hierarchy with ${selectedYears.length} years`);
+      return true;
+    } else {
+      // console.log("✅ Status: All YEARs selected, no need to rebuild hierarchy");
       
-  //     // Restore original hierarchy if we previously filtered
-  //     if (this.state._originalHierarchies && this.state._originalHierarchies.year) {
-  //       this.state.hierarchies.year = this.state._originalHierarchies.year;
-  //       // console.log("✅ Status: Restored original YEAR hierarchy");
-  //     }
+      // Restore original hierarchy if we previously filtered
+      if (this.state._originalHierarchies && this.state._originalHierarchies.year) {
+        this.state.hierarchies.year = this.state._originalHierarchies.year;
+        // console.log("✅ Status: Restored original YEAR hierarchy");
+      }
       
-  //     return false;
-  //   }
-  // }
+      return false;
+    }
+  }
 
 
   /**
    * Rebuild MC hierarchy based on filter selections
    */
-  // rebuildMcHierarchy() {
-  //   console.log("⏳ Status: Rebuilding MC hierarchy based on filters...");
+  rebuildMcHierarchy() {
+    console.log("⏳ Status: Rebuilding MC hierarchy based on filters...");
     
-  //   // Get the filter selections for MC
-  //   const mcFilter = this.filterSelections.managementCentre;
+    // Get the filter selections for MC
+    const mcFilter = this.filterSelections.managementCentre;
     
-  //   // Get all available MCs
-  //   const allMCs = [];
-  //   if (this.state.dimensions && this.state.dimensions.mc) {
-  //     this.state.dimensions.mc.forEach(item => {
-  //       if (item.MC && !allMCs.includes(item.MC)) {
-  //         allMCs.push(item.MC);
-  //       }
-  //     });
-  //   }
+    // Get all available MCs
+    const allMCs = [];
+    if (this.state.dimensions && this.state.dimensions.mc) {
+      this.state.dimensions.mc.forEach(item => {
+        if (item.MC && !allMCs.includes(item.MC)) {
+          allMCs.push(item.MC);
+        }
+      });
+    }
     
-  //   // Determine selected MCs (empty set means all selected)
-  //   let selectedMCs = [];
-  //   if (mcFilter && mcFilter.size > 0) {
-  //     // We store excluded values, so we need to invert the selection
-  //     selectedMCs = allMCs.filter(mc => !mcFilter.has(mc));
-  //   } else {
-  //     // All MCs are selected
-  //     selectedMCs = [...allMCs];
-  //   }
+    // Determine selected MCs (empty set means all selected)
+    let selectedMCs = [];
+    if (mcFilter && mcFilter.size > 0) {
+      // We store excluded values, so we need to invert the selection
+      selectedMCs = allMCs.filter(mc => !mcFilter.has(mc));
+    } else {
+      // All MCs are selected
+      selectedMCs = [...allMCs];
+    }
     
-  //   console.log(`✅ Status: Selected MCs: ${selectedMCs.length} of ${allMCs.length}`);
+    console.log(`✅ Status: Selected MCs: ${selectedMCs.length} of ${allMCs.length}`);
     
-  //   // Only rebuild if we're filtering (otherwise use the original hierarchy)
-  //   if (selectedMCs.length < allMCs.length) {
-  //     // Get the original dimension data
-  //     const originalDimData = this.state.dimensions.mc;
+    // Only rebuild if we're filtering (otherwise use the original hierarchy)
+    if (selectedMCs.length < allMCs.length) {
+      // Get the original dimension data
+      const originalDimData = this.state.dimensions.mc;
       
-  //     // Filter dimension data to only include selected MCs
-  //     const filteredDimData = originalDimData.filter(item => 
-  //       item.MC && selectedMCs.includes(item.MC)
-  //     );
+      // Filter dimension data to only include selected MCs
+      const filteredDimData = originalDimData.filter(item => 
+        item.MC && selectedMCs.includes(item.MC)
+      );
       
-  //     // Build the filtered hierarchy
-  //     const filteredHierarchy = this.buildFilteredMcHierarchy(filteredDimData);
+      // Build the filtered hierarchy
+      const filteredHierarchy = this.buildFilteredMcHierarchy(filteredDimData);
       
-  //     // Store in state
-  //     this.state.hierarchies.mc = filteredHierarchy;
+      // Store in state
+      this.state.hierarchies.mc = filteredHierarchy;
         
-  //     // console.log(`✅ Status: Rebuilt MC hierarchy with ${selectedMCs.length} MCs`);
-  //     return true;
-  //   } else {
-  //     // console.log("✅ Status: All MCs selected, no need to rebuild hierarchy");
+      // console.log(`✅ Status: Rebuilt MC hierarchy with ${selectedMCs.length} MCs`);
+      return true;
+    } else {
+      // console.log("✅ Status: All MCs selected, no need to rebuild hierarchy");
       
-  //     // Restore original hierarchy if we previously filtered
-  //     if (this.state._originalHierarchies && this.state._originalHierarchies.mc) {
-  //       this.state.hierarchies.mc = this.state._originalHierarchies.mc;
-  //       // console.log("✅ Status: Restored original MC hierarchy");
-  //     }
+      // Restore original hierarchy if we previously filtered
+      if (this.state._originalHierarchies && this.state._originalHierarchies.mc) {
+        this.state.hierarchies.mc = this.state._originalHierarchies.mc;
+        // console.log("✅ Status: Restored original MC hierarchy");
+      }
       
-  //     return false;
-  //   }
-  // }
+      return false;
+    }
+  }
   
 
   /**
@@ -4120,172 +3277,172 @@ class EnhancedFilterSystem {
    * @param {Array} selectedRootGmids - Array of selected ROOT_GMID values
    * @returns {Object} - Hierarchy object with root, nodesMap and original data
    */
-  // buildFilteredGmidDisplayHierarchy(data, selectedRootGmids = null) {
-  //     console.log(`⏳ Status: Building GMID display hierarchy${selectedRootGmids ? ' with ROOT_GMID filtering' : ''}...`);
+  buildFilteredGmidDisplayHierarchy(data, selectedRootGmids = null) {
+      console.log(`⏳ Status: Building GMID display hierarchy${selectedRootGmids ? ' with ROOT_GMID filtering' : ''}...`);
       
-  //     // Check if we should apply ROOT_GMID filtering
-  //     const applyRootGmidFilter = selectedRootGmids && 
-  //                               Array.isArray(selectedRootGmids) && 
-  //                               selectedRootGmids.length > 0;
+      // Check if we should apply ROOT_GMID filtering
+      const applyRootGmidFilter = selectedRootGmids && 
+                                Array.isArray(selectedRootGmids) && 
+                                selectedRootGmids.length > 0;
       
-  //     if (applyRootGmidFilter) {
-  //         // console.log(`✅ Status: Filtering GMID hierarchy to include only ${selectedRootGmids.length} selected ROOT_GMIDs`);
-  //         data = data.filter(item => item.ROOT_GMID && selectedRootGmids.includes(item.ROOT_GMID));
-  //         console.log(`✅ Status: Filtered to ${data.length} GMID dimension records`);
-  //     }
+      if (applyRootGmidFilter) {
+          // console.log(`✅ Status: Filtering GMID hierarchy to include only ${selectedRootGmids.length} selected ROOT_GMIDs`);
+          data = data.filter(item => item.ROOT_GMID && selectedRootGmids.includes(item.ROOT_GMID));
+          console.log(`✅ Status: Filtered to ${data.length} GMID dimension records`);
+      }
       
-  //     // Create root node
-  //     const rootNode = { 
-  //         id: 'ROOT', 
-  //         label: 'All GMIDs', 
-  //         children: [], 
-  //         level: 0, 
-  //         path: ['ROOT'],
-  //         expanded: true,
-  //         isLeaf: false,
-  //         hasChildren: false
-  //     };
+      // Create root node
+      const rootNode = { 
+          id: 'ROOT', 
+          label: 'All GMIDs', 
+          children: [], 
+          level: 0, 
+          path: ['ROOT'],
+          expanded: true,
+          isLeaf: false,
+          hasChildren: false
+      };
       
-  //     // Map to store all nodes by their ID for quick lookup
-  //     const nodesMap = { 'ROOT': rootNode };
+      // Map to store all nodes by their ID for quick lookup
+      const nodesMap = { 'ROOT': rootNode };
       
-  //     // Debug: Keep track of how many nodes we're creating at each level
-  //     const levelCounts = { 0: 1 }; // Root node
+      // Debug: Keep track of how many nodes we're creating at each level
+      const levelCounts = { 0: 1 }; // Root node
       
-  //     // Process each row in the data
-  //     data.forEach((item, index) => {
-  //         if (!item) {
-  //             console.warn(`Skipping null item at index ${index}`);
-  //             return;
-  //         }
+      // Process each row in the data
+      data.forEach((item, index) => {
+          if (!item) {
+              console.warn(`Skipping null item at index ${index}`);
+              return;
+          }
           
-  //         // Handle missing required fields
-  //         if (!item.PATH_GMID || !item.DISPLAY) {
-  //             return;
-  //         }
+          // Handle missing required fields
+          if (!item.PATH_GMID || !item.DISPLAY) {
+              return;
+          }
           
-  //         // Split the PATH_GMID and DISPLAY columns by their respective delimiters
-  //         const pathSegments = item.PATH_GMID.split('/');
-  //         const displaySegments = item.DISPLAY.split('//');
+          // Split the PATH_GMID and DISPLAY columns by their respective delimiters
+          const pathSegments = item.PATH_GMID.split('/');
+          const displaySegments = item.DISPLAY.split('//');
           
-  //         // Validate that we have matching segments
-  //         if (pathSegments.length !== displaySegments.length) {
-  //             return;
-  //         }
+          // Validate that we have matching segments
+          if (pathSegments.length !== displaySegments.length) {
+              return;
+          }
           
-  //         // CRITICAL FIX: Determine the GMID for this row, handling null COMPONENT_GMID
-  //         let gmid;
-  //         if (pathSegments[pathSegments.length - 1] === '#') {
-  //             // When leaf segment is '#', use the entire PATH_GMID as factId
-  //             // This allows matching records with null COMPONENT_GMID but matching PATH_GMID
-  //             gmid = item.PATH_GMID;
-  //         } else {
-  //             // Otherwise, use the COMPONENT_GMID value (could be null)
-  //             gmid = item.COMPONENT_GMID || item.PATH_GMID; // Fallback to PATH_GMID if COMPONENT_GMID is null
-  //         }
+          // CRITICAL FIX: Determine the GMID for this row, handling null COMPONENT_GMID
+          let gmid;
+          if (pathSegments[pathSegments.length - 1] === '#') {
+              // When leaf segment is '#', use the entire PATH_GMID as factId
+              // This allows matching records with null COMPONENT_GMID but matching PATH_GMID
+              gmid = item.PATH_GMID;
+          } else {
+              // Otherwise, use the COMPONENT_GMID value (could be null)
+              gmid = item.COMPONENT_GMID || item.PATH_GMID; // Fallback to PATH_GMID if COMPONENT_GMID is null
+          }
           
-  //         // Track the maximum level
-  //         const maxLevel = pathSegments.length;
+          // Track the maximum level
+          const maxLevel = pathSegments.length;
           
-  //         let currentNode = rootNode;
-  //         let currentPath = ['ROOT'];
+          let currentNode = rootNode;
+          let currentPath = ['ROOT'];
           
-  //         // Process each level
-  //         for (let i = 0; i < maxLevel; i++) {
-  //             const pathSegment = pathSegments[i];
-  //             const displaySegment = displaySegments[i];
+          // Process each level
+          for (let i = 0; i < maxLevel; i++) {
+              const pathSegment = pathSegments[i];
+              const displaySegment = displaySegments[i];
               
-  //             // Skip if segment is empty
-  //             if (!displaySegment || displaySegment.trim() === '') {
-  //                 continue;
-  //             }
+              // Skip if segment is empty
+              if (!displaySegment || displaySegment.trim() === '') {
+                  continue;
+              }
               
-  //             // Create a unique node ID for this segment that's safe for DOM
-  //             const safeId = pathSegment.replace(/[^a-zA-Z0-9]/g, '_');
-  //             const nodeId = `LEVEL_${i+1}_${safeId}`;
+              // Create a unique node ID for this segment that's safe for DOM
+              const safeId = pathSegment.replace(/[^a-zA-Z0-9]/g, '_');
+              const nodeId = `LEVEL_${i+1}_${safeId}`;
               
-  //             // Track nodes created at this level
-  //             levelCounts[i+1] = (levelCounts[i+1] || 0) + 1;
+              // Track nodes created at this level
+              levelCounts[i+1] = (levelCounts[i+1] || 0) + 1;
               
-  //             // Check if we already have a node for this segment
-  //             if (!nodesMap[nodeId]) {
-  //                 // Create a new node
-  //                 const isLastLevel = i === maxLevel - 1;
-  //                 const newNode = {
-  //                     id: nodeId,
-  //                     label: displaySegment.trim(),
-  //                     levelNum: i + 1,
-  //                     levelValue: pathSegment.trim(),
-  //                     children: [],
-  //                     level: i + 1,
-  //                     path: [...currentPath, nodeId],
-  //                     expanded: i < 2, // Auto-expand first two levels
-  //                     isLeaf: isLastLevel,
-  //                     hasChildren: false,
-  //                     rootGmid: item.ROOT_GMID,
-  //                     rootDisplay: item.ROOT_DISPLAY,
-  //                     // CRITICAL: Store the factId for filtering (could be PATH_GMID or COMPONENT_GMID)
-  //                     factId: isLastLevel ? gmid : null
-  //                 };
+              // Check if we already have a node for this segment
+              if (!nodesMap[nodeId]) {
+                  // Create a new node
+                  const isLastLevel = i === maxLevel - 1;
+                  const newNode = {
+                      id: nodeId,
+                      label: displaySegment.trim(),
+                      levelNum: i + 1,
+                      levelValue: pathSegment.trim(),
+                      children: [],
+                      level: i + 1,
+                      path: [...currentPath, nodeId],
+                      expanded: i < 2, // Auto-expand first two levels
+                      isLeaf: isLastLevel,
+                      hasChildren: false,
+                      rootGmid: item.ROOT_GMID,
+                      rootDisplay: item.ROOT_DISPLAY,
+                      // CRITICAL: Store the factId for filtering (could be PATH_GMID or COMPONENT_GMID)
+                      factId: isLastLevel ? gmid : null
+                  };
                   
-  //                 nodesMap[nodeId] = newNode;
+                  nodesMap[nodeId] = newNode;
                   
-  //                 // Add to parent's children
-  //                 currentNode.children.push(newNode);
-  //                 currentNode.isLeaf = false;
-  //                 currentNode.hasChildren = true;
-  //             } else if (i === maxLevel - 1 && currentNode.id === nodesMap[nodeId].path[nodesMap[nodeId].path.length - 2]) {
-  //                 // Handle multiple GMIDs mapping to the same node
-  //                 const existingNode = nodesMap[nodeId];
+                  // Add to parent's children
+                  currentNode.children.push(newNode);
+                  currentNode.isLeaf = false;
+                  currentNode.hasChildren = true;
+              } else if (i === maxLevel - 1 && currentNode.id === nodesMap[nodeId].path[nodesMap[nodeId].path.length - 2]) {
+                  // Handle multiple GMIDs mapping to the same node
+                  const existingNode = nodesMap[nodeId];
                   
-  //                 if (!existingNode.factId) {
-  //                     existingNode.factId = gmid;
-  //                     existingNode.isLeaf = true;
-  //                 } else if (existingNode.factId !== gmid) {
-  //                     // Convert factId to array if it isn't already
-  //                     if (!Array.isArray(existingNode.factId)) {
-  //                         existingNode.factId = [existingNode.factId];
-  //                     }
-  //                     // Add this GMID if it's not already in the array
-  //                     if (!existingNode.factId.includes(gmid)) {
-  //                         existingNode.factId.push(gmid);
-  //                     }
-  //                 }
+                  if (!existingNode.factId) {
+                      existingNode.factId = gmid;
+                      existingNode.isLeaf = true;
+                  } else if (existingNode.factId !== gmid) {
+                      // Convert factId to array if it isn't already
+                      if (!Array.isArray(existingNode.factId)) {
+                          existingNode.factId = [existingNode.factId];
+                      }
+                      // Add this GMID if it's not already in the array
+                      if (!existingNode.factId.includes(gmid)) {
+                          existingNode.factId.push(gmid);
+                      }
+                  }
                   
-  //                 // Mark as non-leaf if it has children
-  //                 if (existingNode.children && existingNode.children.length > 0) {
-  //                     existingNode.isLeaf = false;
-  //                 }
-  //             }
+                  // Mark as non-leaf if it has children
+                  if (existingNode.children && existingNode.children.length > 0) {
+                      existingNode.isLeaf = false;
+                  }
+              }
               
-  //             // Update current node and path for next level
-  //             currentNode = nodesMap[nodeId];
-  //             currentPath = [...currentPath, nodeId];
-  //         }
-  //     });
+              // Update current node and path for next level
+              currentNode = nodesMap[nodeId];
+              currentPath = [...currentPath, nodeId];
+          }
+      });
             
-  //     // Sort nodes at each level
-  //     const sortHierarchyNodes = (node) => {
-  //         if (node.children && node.children.length > 0) {
-  //             // Sort children by label
-  //             node.children.sort((a, b) => {
-  //                 return a.label.localeCompare(b.label);
-  //             });
+      // Sort nodes at each level
+      const sortHierarchyNodes = (node) => {
+          if (node.children && node.children.length > 0) {
+              // Sort children by label
+              node.children.sort((a, b) => {
+                  return a.label.localeCompare(b.label);
+              });
               
-  //             // Recursively sort children's children
-  //             node.children.forEach(child => sortHierarchyNodes(child));
-  //         }
-  //     };
+              // Recursively sort children's children
+              node.children.forEach(child => sortHierarchyNodes(child));
+          }
+      };
       
-  //     sortHierarchyNodes(rootNode);
+      sortHierarchyNodes(rootNode);
       
-  //     // Return the hierarchy
-  //     return {
-  //         root: rootNode,
-  //         nodesMap: nodesMap,
-  //         flatData: data
-  //     };
-  // }
+      // Return the hierarchy
+      return {
+          root: rootNode,
+          nodesMap: nodesMap,
+          flatData: data
+      };
+  }
 
 
   /**
@@ -4293,81 +3450,81 @@ class EnhancedFilterSystem {
    * @param {Array} data - The filtered item cost type dimension data
    * @returns {Object} - Hierarchy object with root, nodesMap, and flatData
    */
-  // buildFilteredItemCostTypeHierarchy(data) {
-  //   console.log(`⏳ Status: Building filtered ITEM_COST_TYPE hierarchy with ${data.length} records...`);
+  buildFilteredItemCostTypeHierarchy(data) {
+    console.log(`⏳ Status: Building filtered ITEM_COST_TYPE hierarchy with ${data.length} records...`);
     
-  //   // Create root node
-  //   const root = {
-  //     id: 'ITEM_COST_TYPE_ROOT',
-  //     label: 'All Item Cost Types',
-  //     children: [],
-  //     level: 0,
-  //     expanded: true,
-  //     isLeaf: false,
-  //     hasChildren: false,
-  //     path: ['ITEM_COST_TYPE_ROOT'],
-  //     hierarchyName: 'item_cost_type'
-  //   };
+    // Create root node
+    const root = {
+      id: 'ITEM_COST_TYPE_ROOT',
+      label: 'All Item Cost Types',
+      children: [],
+      level: 0,
+      expanded: true,
+      isLeaf: false,
+      hasChildren: false,
+      path: ['ITEM_COST_TYPE_ROOT'],
+      hierarchyName: 'item_cost_type'
+    };
     
-  //   // Map to store all nodes by their ID for quick lookup
-  //   const nodesMap = { 'ITEM_COST_TYPE_ROOT': root };
+    // Map to store all nodes by their ID for quick lookup
+    const nodesMap = { 'ITEM_COST_TYPE_ROOT': root };
     
-  //   // Get unique item cost types from filtered dimension data
-  //   const itemCostTypeMap = new Map();
+    // Get unique item cost types from filtered dimension data
+    const itemCostTypeMap = new Map();
     
-  //   data.forEach(item => {
-  //     if (item && item.ITEM_COST_TYPE !== undefined) {
-  //       // Use description as label
-  //       const description = item.ITEM_COST_TYPE_DESC || item.ITEM_COST_TYPE;
+    data.forEach(item => {
+      if (item && item.ITEM_COST_TYPE !== undefined) {
+        // Use description as label
+        const description = item.ITEM_COST_TYPE_DESC || item.ITEM_COST_TYPE;
         
-  //       // Store the item cost type and its description
-  //       itemCostTypeMap.set(item.ITEM_COST_TYPE, description);
-  //     }
-  //   });
+        // Store the item cost type and its description
+        itemCostTypeMap.set(item.ITEM_COST_TYPE, description);
+      }
+    });
     
-  //   // Create nodes for each item cost type
-  //   itemCostTypeMap.forEach((description, itemCostTypeCode) => {
-  //     // Handle null values
-  //     const safeCode = itemCostTypeCode === null ? 'null' : itemCostTypeCode;
-  //     const nodeId = `ITEM_COST_TYPE_${safeCode}`;
+    // Create nodes for each item cost type
+    itemCostTypeMap.forEach((description, itemCostTypeCode) => {
+      // Handle null values
+      const safeCode = itemCostTypeCode === null ? 'null' : itemCostTypeCode;
+      const nodeId = `ITEM_COST_TYPE_${safeCode}`;
       
-  //     const node = {
-  //       id: nodeId,
-  //       label: description || 'null',
-  //       itemCostTypeCode: itemCostTypeCode,
-  //       children: [],
-  //       level: 1,
-  //       expanded: false,
-  //       isLeaf: true,
-  //       hasChildren: false,
-  //       path: ['ITEM_COST_TYPE_ROOT', nodeId],
-  //       factId: itemCostTypeCode,
-  //       hierarchyName: 'item_cost_type'
-  //     };
+      const node = {
+        id: nodeId,
+        label: description || 'null',
+        itemCostTypeCode: itemCostTypeCode,
+        children: [],
+        level: 1,
+        expanded: false,
+        isLeaf: true,
+        hasChildren: false,
+        path: ['ITEM_COST_TYPE_ROOT', nodeId],
+        factId: itemCostTypeCode,
+        hierarchyName: 'item_cost_type'
+      };
       
-  //     // Add to maps
-  //     nodesMap[nodeId] = node;
+      // Add to maps
+      nodesMap[nodeId] = node;
       
-  //     // Add as child to root
-  //     root.children.push(node);
-  //     root.hasChildren = true;
-  //   });
+      // Add as child to root
+      root.children.push(node);
+      root.hasChildren = true;
+    });
     
-  //   // Sort children alphabetically
-  //   root.children.sort((a, b) => {
-  //     const aLabel = a.label;
-  //     const bLabel = b.label;
-  //     return aLabel.localeCompare(bLabel);
-  //   });
+    // Sort children alphabetically
+    root.children.sort((a, b) => {
+      const aLabel = a.label;
+      const bLabel = b.label;
+      return aLabel.localeCompare(bLabel);
+    });
     
-  //   console.log(`✅ Status: Built filtered ITEM_COST_TYPE hierarchy with ${Object.keys(nodesMap).length} nodes`);
+    console.log(`✅ Status: Built filtered ITEM_COST_TYPE hierarchy with ${Object.keys(nodesMap).length} nodes`);
     
-  //   return {
-  //     root: root,
-  //     nodesMap: nodesMap,
-  //     flatData: data
-  //   };
-  // }
+    return {
+      root: root,
+      nodesMap: nodesMap,
+      flatData: data
+    };
+  }
 
 
   /**
@@ -4375,81 +3532,81 @@ class EnhancedFilterSystem {
    * @param {Array} data - The filtered material type dimension data
    * @returns {Object} - Hierarchy object with root, nodesMap, and flatData
    */
-  // buildFilteredMaterialTypeHierarchy(data) {
-  //   console.log(`⏳ Status: Building filtered MATERIAL_TYPE hierarchy with ${data.length} records...`);
+  buildFilteredMaterialTypeHierarchy(data) {
+    console.log(`⏳ Status: Building filtered MATERIAL_TYPE hierarchy with ${data.length} records...`);
     
-  //   // Create root node
-  //   const root = {
-  //     id: 'MATERIAL_TYPE_ROOT',
-  //     label: 'All Material Types',
-  //     children: [],
-  //     level: 0,
-  //     expanded: true,
-  //     isLeaf: false,
-  //     hasChildren: false,
-  //     path: ['MATERIAL_TYPE_ROOT'],
-  //     hierarchyName: 'material_type'
-  //   };
+    // Create root node
+    const root = {
+      id: 'MATERIAL_TYPE_ROOT',
+      label: 'All Material Types',
+      children: [],
+      level: 0,
+      expanded: true,
+      isLeaf: false,
+      hasChildren: false,
+      path: ['MATERIAL_TYPE_ROOT'],
+      hierarchyName: 'material_type'
+    };
     
-  //   // Map to store all nodes by their ID for quick lookup
-  //   const nodesMap = { 'MATERIAL_TYPE_ROOT': root };
+    // Map to store all nodes by their ID for quick lookup
+    const nodesMap = { 'MATERIAL_TYPE_ROOT': root };
     
-  //   // Get unique material types from filtered dimension data
-  //   const materialTypeMap = new Map();
+    // Get unique material types from filtered dimension data
+    const materialTypeMap = new Map();
     
-  //   data.forEach(item => {
-  //     if (item && item.MATERIAL_TYPE !== undefined) {
-  //       // Use description as label if available, otherwise use the code
-  //       const description = item.MATERIAL_TYPE_DESC || item.MATERIAL_TYPE;
+    data.forEach(item => {
+      if (item && item.MATERIAL_TYPE !== undefined) {
+        // Use description as label if available, otherwise use the code
+        const description = item.MATERIAL_TYPE_DESC || item.MATERIAL_TYPE;
         
-  //       // Store the material type and its description
-  //       materialTypeMap.set(item.MATERIAL_TYPE, description);
-  //     }
-  //   });
+        // Store the material type and its description
+        materialTypeMap.set(item.MATERIAL_TYPE, description);
+      }
+    });
     
-  //   // Create nodes for each material type
-  //   materialTypeMap.forEach((description, materialTypeCode) => {
-  //     // Handle null values
-  //     const safeCode = materialTypeCode === null ? 'null' : materialTypeCode;
-  //     const nodeId = `MATERIAL_TYPE_${safeCode}`;
+    // Create nodes for each material type
+    materialTypeMap.forEach((description, materialTypeCode) => {
+      // Handle null values
+      const safeCode = materialTypeCode === null ? 'null' : materialTypeCode;
+      const nodeId = `MATERIAL_TYPE_${safeCode}`;
       
-  //     const node = {
-  //       id: nodeId,
-  //       label: description || 'null',
-  //       materialTypeCode: materialTypeCode,
-  //       children: [],
-  //       level: 1,
-  //       expanded: false,
-  //       isLeaf: true,
-  //       hasChildren: false,
-  //       path: ['MATERIAL_TYPE_ROOT', nodeId],
-  //       factId: materialTypeCode,
-  //       hierarchyName: 'material_type'
-  //     };
+      const node = {
+        id: nodeId,
+        label: description || 'null',
+        materialTypeCode: materialTypeCode,
+        children: [],
+        level: 1,
+        expanded: false,
+        isLeaf: true,
+        hasChildren: false,
+        path: ['MATERIAL_TYPE_ROOT', nodeId],
+        factId: materialTypeCode,
+        hierarchyName: 'material_type'
+      };
       
-  //     // Add to maps
-  //     nodesMap[nodeId] = node;
+      // Add to maps
+      nodesMap[nodeId] = node;
       
-  //     // Add as child to root
-  //     root.children.push(node);
-  //     root.hasChildren = true;
-  //   });
+      // Add as child to root
+      root.children.push(node);
+      root.hasChildren = true;
+    });
     
-  //   // Sort children alphabetically
-  //   root.children.sort((a, b) => {
-  //     const aLabel = a.label;
-  //     const bLabel = b.label;
-  //     return aLabel.localeCompare(bLabel);
-  //   });
+    // Sort children alphabetically
+    root.children.sort((a, b) => {
+      const aLabel = a.label;
+      const bLabel = b.label;
+      return aLabel.localeCompare(bLabel);
+    });
     
-  //   console.log(`✅ Status: Built filtered MATERIAL_TYPE hierarchy with ${Object.keys(nodesMap).length} nodes`);
+    console.log(`✅ Status: Built filtered MATERIAL_TYPE hierarchy with ${Object.keys(nodesMap).length} nodes`);
     
-  //   return {
-  //     root: root,
-  //     nodesMap: nodesMap,
-  //     flatData: data
-  //   };
-  // }
+    return {
+      root: root,
+      nodesMap: nodesMap,
+      flatData: data
+    };
+  }
 
 
   /**
@@ -4457,74 +3614,74 @@ class EnhancedFilterSystem {
    * @param {Array} data - The filtered year dimension data
    * @returns {Object} - Hierarchy object with root, nodesMap, and flatData
    */
-  // buildFilteredYearHierarchy(data) {
-  //   console.log(`⏳ Status: Building filtered YEAR hierarchy with ${data.length} records...`);
+  buildFilteredYearHierarchy(data) {
+    console.log(`⏳ Status: Building filtered YEAR hierarchy with ${data.length} records...`);
     
-  //   // Create root node
-  //   const root = {
-  //     id: 'YEAR_ROOT',
-  //     label: 'All Years',
-  //     children: [],
-  //     level: 0,
-  //     expanded: true,
-  //     isLeaf: false,
-  //     hasChildren: false,
-  //     path: ['YEAR_ROOT'],
-  //     hierarchyName: 'year'
-  //   };
+    // Create root node
+    const root = {
+      id: 'YEAR_ROOT',
+      label: 'All Years',
+      children: [],
+      level: 0,
+      expanded: true,
+      isLeaf: false,
+      hasChildren: false,
+      path: ['YEAR_ROOT'],
+      hierarchyName: 'year'
+    };
     
-  //   // Map to store all nodes by their ID for quick lookup
-  //   const nodesMap = { 'YEAR_ROOT': root };
+    // Map to store all nodes by their ID for quick lookup
+    const nodesMap = { 'YEAR_ROOT': root };
     
-  //   // Get unique years from filtered dimension data
-  //   const uniqueYears = new Set();
+    // Get unique years from filtered dimension data
+    const uniqueYears = new Set();
     
-  //   data.forEach(item => {
-  //     if (item && item.YEAR) {
-  //       uniqueYears.add(item.YEAR.toString());
-  //     }
-  //   });
+    data.forEach(item => {
+      if (item && item.YEAR) {
+        uniqueYears.add(item.YEAR.toString());
+      }
+    });
     
-  //   // Create nodes for each year
-  //   uniqueYears.forEach(year => {
-  //     const nodeId = `YEAR_${year}`;
+    // Create nodes for each year
+    uniqueYears.forEach(year => {
+      const nodeId = `YEAR_${year}`;
       
-  //     const node = {
-  //       id: nodeId,
-  //       label: year,
-  //       children: [],
-  //       level: 1,
-  //       expanded: false,
-  //       isLeaf: true,
-  //       hasChildren: false,
-  //       path: ['YEAR_ROOT', nodeId],
-  //       factId: year,
-  //       hierarchyName: 'year'
-  //     };
+      const node = {
+        id: nodeId,
+        label: year,
+        children: [],
+        level: 1,
+        expanded: false,
+        isLeaf: true,
+        hasChildren: false,
+        path: ['YEAR_ROOT', nodeId],
+        factId: year,
+        hierarchyName: 'year'
+      };
       
-  //     // Add to maps
-  //     nodesMap[nodeId] = node;
+      // Add to maps
+      nodesMap[nodeId] = node;
       
-  //     // Add as child to root
-  //     root.children.push(node);
-  //     root.hasChildren = true;
-  //   });
+      // Add as child to root
+      root.children.push(node);
+      root.hasChildren = true;
+    });
     
-  //   // Sort children chronologically
-  //   root.children.sort((a, b) => {
-  //     const yearA = parseInt(a.label);
-  //     const yearB = parseInt(b.label);
-  //     return yearA - yearB;
-  //   });
+    // Sort children chronologically
+    root.children.sort((a, b) => {
+      const yearA = parseInt(a.label);
+      const yearB = parseInt(b.label);
+      return yearA - yearB;
+    });
     
-  //   console.log(`✅ Status: Built filtered YEAR hierarchy with ${Object.keys(nodesMap).length} nodes`);
+    console.log(`✅ Status: Built filtered YEAR hierarchy with ${Object.keys(nodesMap).length} nodes`);
     
-  //   return {
-  //     root: root,
-  //     nodesMap: nodesMap,
-  //     flatData: data
-  //   };
-  // }
+    return {
+      root: root,
+      nodesMap: nodesMap,
+      flatData: data
+    };
+  }
 
 
   /**
@@ -4532,377 +3689,377 @@ class EnhancedFilterSystem {
    * @param {Array} data - The filtered management centre dimension data
    * @returns {Object} - Hierarchy object with root, nodesMap, and flatData
    */
-  // buildFilteredMcHierarchy(data) {
-  //   console.log(`⏳ Status: Building filtered MC hierarchy with ${data.length} records...`);
+  buildFilteredMcHierarchy(data) {
+    console.log(`⏳ Status: Building filtered MC hierarchy with ${data.length} records...`);
     
-  //   // Create root node
-  //   const root = {
-  //     id: 'MC_ROOT',
-  //     label: 'All Management Centres',
-  //     children: [],
-  //     level: 0,
-  //     expanded: true,
-  //     isLeaf: false,
-  //     hasChildren: false,
-  //     path: ['MC_ROOT'],
-  //     hierarchyName: 'mc'
-  //   };
+    // Create root node
+    const root = {
+      id: 'MC_ROOT',
+      label: 'All Management Centres',
+      children: [],
+      level: 0,
+      expanded: true,
+      isLeaf: false,
+      hasChildren: false,
+      path: ['MC_ROOT'],
+      hierarchyName: 'mc'
+    };
     
-  //   // Map to store all nodes by their ID for quick lookup
-  //   const nodesMap = { 'MC_ROOT': root };
+    // Map to store all nodes by their ID for quick lookup
+    const nodesMap = { 'MC_ROOT': root };
     
-  //   // Check if we have PATH data for hierarchical structure
-  //   const hasPath = data.some(item => item.PATH);
+    // Check if we have PATH data for hierarchical structure
+    const hasPath = data.some(item => item.PATH);
     
-  //   if (hasPath) {
-  //     // Process MC data as a hierarchical structure using PATH
-  //     this.buildPathHierarchy(data, root, nodesMap, 'MC', '//');
-  //   } else {
-  //     // Process as flat structure if no PATH data
-  //     const mcMap = new Map();
+    if (hasPath) {
+      // Process MC data as a hierarchical structure using PATH
+      this.buildPathHierarchy(data, root, nodesMap, 'MC', '//');
+    } else {
+      // Process as flat structure if no PATH data
+      const mcMap = new Map();
       
-  //     // Collect unique MC values with descriptions
-  //     data.forEach(item => {
-  //       if (item && item.MC) {
-  //         const description = item.MC_DESC || item.MC;
-  //         mcMap.set(item.MC, description);
-  //       }
-  //     });
+      // Collect unique MC values with descriptions
+      data.forEach(item => {
+        if (item && item.MC) {
+          const description = item.MC_DESC || item.MC;
+          mcMap.set(item.MC, description);
+        }
+      });
       
-  //     // Create nodes for each MC
-  //     mcMap.forEach((description, mcCode) => {
-  //       const nodeId = `MC_${mcCode}`;
+      // Create nodes for each MC
+      mcMap.forEach((description, mcCode) => {
+        const nodeId = `MC_${mcCode}`;
         
-  //       const node = {
-  //         id: nodeId,
-  //         label: description,
-  //         children: [],
-  //         level: 1,
-  //         expanded: false,
-  //         isLeaf: true,
-  //         hasChildren: false,
-  //         path: ['MC_ROOT', nodeId],
-  //         factId: mcCode,
-  //         hierarchyName: 'mc'
-  //       };
+        const node = {
+          id: nodeId,
+          label: description,
+          children: [],
+          level: 1,
+          expanded: false,
+          isLeaf: true,
+          hasChildren: false,
+          path: ['MC_ROOT', nodeId],
+          factId: mcCode,
+          hierarchyName: 'mc'
+        };
         
-  //       // Add to maps
-  //       nodesMap[nodeId] = node;
+        // Add to maps
+        nodesMap[nodeId] = node;
         
-  //       // Add as child to root
-  //       root.children.push(node);
-  //       root.hasChildren = true;
-  //     });
+        // Add as child to root
+        root.children.push(node);
+        root.hasChildren = true;
+      });
       
-  //     // Sort children alphabetically
-  //     root.children.sort((a, b) => {
-  //       const aLabel = a.label;
-  //       const bLabel = b.label;
-  //       return aLabel.localeCompare(bLabel);
-  //     });
-  //   }
+      // Sort children alphabetically
+      root.children.sort((a, b) => {
+        const aLabel = a.label;
+        const bLabel = b.label;
+        return aLabel.localeCompare(bLabel);
+      });
+    }
     
-  //   console.log(`✅ Status: Built filtered MC hierarchy with ${Object.keys(nodesMap).length} nodes`);
+    console.log(`✅ Status: Built filtered MC hierarchy with ${Object.keys(nodesMap).length} nodes`);
     
-  //   return {
-  //     root: root,
-  //     nodesMap: nodesMap,
-  //     flatData: data
-  //   };
-  // } 
+    return {
+      root: root,
+      nodesMap: nodesMap,
+      flatData: data
+    };
+  } 
 
   
   /**
    * Rebuild Legal Entity hierarchy based on filter selections
    */
-  // rebuildLegalEntityHierarchy() {
-  //   console.log("⏳ Status: Rebuilding Legal Entity hierarchy based on filters...");
+  rebuildLegalEntityHierarchy() {
+    console.log("⏳ Status: Rebuilding Legal Entity hierarchy based on filters...");
     
-  //   // Get the filter selections for Legal Entity
-  //   const leFilter = this.filterSelections.legalEntity;
+    // Get the filter selections for Legal Entity
+    const leFilter = this.filterSelections.legalEntity;
     
-  //   // Get all available legal entities
-  //   const allLEs = [];
-  //   if (this.state.dimensions && this.state.dimensions.le) {
-  //     this.state.dimensions.le.forEach(item => {
-  //       if (item.LE && !allLEs.includes(item.LE)) {
-  //         allLEs.push(item.LE);
-  //       }
-  //     });
-  //   }
+    // Get all available legal entities
+    const allLEs = [];
+    if (this.state.dimensions && this.state.dimensions.le) {
+      this.state.dimensions.le.forEach(item => {
+        if (item.LE && !allLEs.includes(item.LE)) {
+          allLEs.push(item.LE);
+        }
+      });
+    }
     
-  //   // Determine selected legal entities (empty set means all selected)
-  //   let selectedLEs = [];
-  //   if (leFilter && leFilter.size > 0) {
-  //     // We store excluded values, so we need to invert the selection
-  //     selectedLEs = allLEs.filter(le => !leFilter.has(le));
-  //   } else {
-  //     // All legal entities are selected
-  //     selectedLEs = [...allLEs];
-  //   }
+    // Determine selected legal entities (empty set means all selected)
+    let selectedLEs = [];
+    if (leFilter && leFilter.size > 0) {
+      // We store excluded values, so we need to invert the selection
+      selectedLEs = allLEs.filter(le => !leFilter.has(le));
+    } else {
+      // All legal entities are selected
+      selectedLEs = [...allLEs];
+    }
     
-  //   console.log(`⏳ Status: Selected LEs: ${selectedLEs.length} of ${allLEs.length}`);
+    console.log(`⏳ Status: Selected LEs: ${selectedLEs.length} of ${allLEs.length}`);
     
-  //   // Only rebuild if we're filtering (otherwise use the original hierarchy)
-  //   if (selectedLEs.length < allLEs.length) {
-  //     // 1. Filter fact data based on selected legal entities
-  //     if (this.state.factData && this.state.factData.length > 0) {
-  //       const originalFactData = this.state.factData;
+    // Only rebuild if we're filtering (otherwise use the original hierarchy)
+    if (selectedLEs.length < allLEs.length) {
+      // 1. Filter fact data based on selected legal entities
+      if (this.state.factData && this.state.factData.length > 0) {
+        const originalFactData = this.state.factData;
         
-  //       // Create filtered data if it doesn't exist yet
-  //       if (!this.state.filteredData) {
-  //         this.state.filteredData = [...originalFactData];
-  //       }
+        // Create filtered data if it doesn't exist yet
+        if (!this.state.filteredData) {
+          this.state.filteredData = [...originalFactData];
+        }
         
-  //       // Apply filter to fact data (may already be filtered by other dimensions)
-  //       this.state.filteredData = this.state.filteredData.filter(record => 
-  //         record.LE && selectedLEs.includes(record.LE)
-  //       );
+        // Apply filter to fact data (may already be filtered by other dimensions)
+        this.state.filteredData = this.state.filteredData.filter(record => 
+          record.LE && selectedLEs.includes(record.LE)
+        );
         
-  //       console.log(`✅ Status: Filtered FACT data based on LE: ${originalFactData.length} -> ${this.state.filteredData.length} records`);
+        console.log(`✅ Status: Filtered FACT data based on LE: ${originalFactData.length} -> ${this.state.filteredData.length} records`);
         
-  //       // Check if any records remain after filtering
-  //       if (this.state.filteredData.length === 0) {
-  //         // Create an empty hierarchy when no data matches
-  //         console.log("✅ Status: No records match LE filter, creating empty hierarchy");
-  //         this.createEmptyHierarchy(this.filterMeta.legalEntity);
+        // Check if any records remain after filtering
+        if (this.state.filteredData.length === 0) {
+          // Create an empty hierarchy when no data matches
+          console.log("✅ Status: No records match LE filter, creating empty hierarchy");
+          this.createEmptyHierarchy(this.filterMeta.legalEntity);
           
-  //         // Set a flag to indicate we have an empty result set
-  //         this.state._emptyFilterResult = true;
-  //         return true;
-  //       }
-  //     }
+          // Set a flag to indicate we have an empty result set
+          this.state._emptyFilterResult = true;
+          return true;
+        }
+      }
       
-  //     // 2. Get the original dimension data
-  //     const originalDimData = this.state.dimensions.le;
+      // 2. Get the original dimension data
+      const originalDimData = this.state.dimensions.le;
       
-  //     // 3. Filter dimension data to only include selected legal entities
-  //     const filteredDimData = originalDimData.filter(item => 
-  //       item.LE && selectedLEs.includes(item.LE)
-  //     );
+      // 3. Filter dimension data to only include selected legal entities
+      const filteredDimData = originalDimData.filter(item => 
+        item.LE && selectedLEs.includes(item.LE)
+      );
       
-  //     // 4. Build the filtered hierarchy using the filtered dimension data
-  //     const filteredHierarchy = this.buildFilteredLegalEntityHierarchy(filteredDimData);
+      // 4. Build the filtered hierarchy using the filtered dimension data
+      const filteredHierarchy = this.buildFilteredLegalEntityHierarchy(filteredDimData);
       
-  //     // 5. Store filtered hierarchy in state
-  //     this.state.hierarchies.le = filteredHierarchy;
+      // 5. Store filtered hierarchy in state
+      this.state.hierarchies.le = filteredHierarchy;
         
-  //     // console.log(`✅ Status: Rebuilt LE hierarchy with ${selectedLEs.length} legal entities from ${filteredDimData.length} dimension records`);
-  //     return true;
-  //   } else {
-  //     // console.log("✅ Status: All Legal Entities selected, no need to rebuild hierarchy");
+      // console.log(`✅ Status: Rebuilt LE hierarchy with ${selectedLEs.length} legal entities from ${filteredDimData.length} dimension records`);
+      return true;
+    } else {
+      // console.log("✅ Status: All Legal Entities selected, no need to rebuild hierarchy");
       
-  //     // Restore original hierarchy if we previously filtered
-  //     if (this.state._originalHierarchies && this.state._originalHierarchies.le) {
-  //       this.state.hierarchies.le = this.state._originalHierarchies.le;
-  //       // console.log("✅ Status: Restored original LE hierarchy");
-  //     }
+      // Restore original hierarchy if we previously filtered
+      if (this.state._originalHierarchies && this.state._originalHierarchies.le) {
+        this.state.hierarchies.le = this.state._originalHierarchies.le;
+        // console.log("✅ Status: Restored original LE hierarchy");
+      }
       
-  //     return false;
-  //   }
-  // }
+      return false;
+    }
+  }
 
   
   /**
    * Rebuild Cost Element hierarchy based on filter selections
    */
-  // rebuildCostElementHierarchy() {
-  //   console.log("⏳ Status: Rebuilding Cost Element hierarchy based on filters...");
+  rebuildCostElementHierarchy() {
+    console.log("⏳ Status: Rebuilding Cost Element hierarchy based on filters...");
     
-  //   // Get the filter selections for Cost Element
-  //   const ceFilter = this.filterSelections.costElement;
+    // Get the filter selections for Cost Element
+    const ceFilter = this.filterSelections.costElement;
     
-  //   // Get all available cost elements
-  //   const allCEs = [];
-  //   if (this.state.dimensions && this.state.dimensions.cost_element) {
-  //     this.state.dimensions.cost_element.forEach(item => {
-  //       if (item.COST_ELEMENT && !allCEs.includes(item.COST_ELEMENT)) {
-  //         allCEs.push(item.COST_ELEMENT);
-  //       }
-  //     });
-  //   }
+    // Get all available cost elements
+    const allCEs = [];
+    if (this.state.dimensions && this.state.dimensions.cost_element) {
+      this.state.dimensions.cost_element.forEach(item => {
+        if (item.COST_ELEMENT && !allCEs.includes(item.COST_ELEMENT)) {
+          allCEs.push(item.COST_ELEMENT);
+        }
+      });
+    }
     
-  //   // Determine selected cost elements (empty set means all selected)
-  //   let selectedCEs = [];
-  //   if (ceFilter && ceFilter.size > 0) {
-  //     // We store excluded values, so we need to invert the selection
-  //     selectedCEs = allCEs.filter(ce => !ceFilter.has(ce));
-  //   } else {
-  //     // All cost elements are selected
-  //     selectedCEs = [...allCEs];
-  //   }
+    // Determine selected cost elements (empty set means all selected)
+    let selectedCEs = [];
+    if (ceFilter && ceFilter.size > 0) {
+      // We store excluded values, so we need to invert the selection
+      selectedCEs = allCEs.filter(ce => !ceFilter.has(ce));
+    } else {
+      // All cost elements are selected
+      selectedCEs = [...allCEs];
+    }
     
-  //   console.log(`✅ Status: Selected Cost Elements: ${selectedCEs.length} of ${allCEs.length}`);
+    console.log(`✅ Status: Selected Cost Elements: ${selectedCEs.length} of ${allCEs.length}`);
     
-  //   // Only rebuild if we're filtering (otherwise use the original hierarchy)
-  //   if (selectedCEs.length < allCEs.length) {
-  //     // 1. Filter fact data based on selected cost elements
-  //     if (this.state.factData && this.state.factData.length > 0) {
-  //       const originalFactData = this.state.factData;
+    // Only rebuild if we're filtering (otherwise use the original hierarchy)
+    if (selectedCEs.length < allCEs.length) {
+      // 1. Filter fact data based on selected cost elements
+      if (this.state.factData && this.state.factData.length > 0) {
+        const originalFactData = this.state.factData;
         
-  //       // Create filtered data if it doesn't exist yet
-  //       if (!this.state.filteredData) {
-  //         this.state.filteredData = [...originalFactData];
-  //       }
+        // Create filtered data if it doesn't exist yet
+        if (!this.state.filteredData) {
+          this.state.filteredData = [...originalFactData];
+        }
         
-  //       // Apply filter to fact data (may already be filtered by other dimensions)
-  //       this.state.filteredData = this.state.filteredData.filter(record => 
-  //         record.COST_ELEMENT && selectedCEs.includes(record.COST_ELEMENT)
-  //       );
+        // Apply filter to fact data (may already be filtered by other dimensions)
+        this.state.filteredData = this.state.filteredData.filter(record => 
+          record.COST_ELEMENT && selectedCEs.includes(record.COST_ELEMENT)
+        );
         
-  //       console.log(`✅ Status: Filtered FACT data based on COST_ELEMENT: ${originalFactData.length} -> ${this.state.filteredData.length} records`);
+        console.log(`✅ Status: Filtered FACT data based on COST_ELEMENT: ${originalFactData.length} -> ${this.state.filteredData.length} records`);
         
-  //       // Check if any records remain after filtering
-  //       if (this.state.filteredData.length === 0) {
-  //         // Create an empty hierarchy when no data matches
-  //         console.log("✅ Status: No records match COST_ELEMENT filter, creating empty hierarchy");
-  //         this.createEmptyHierarchy(this.filterMeta.costElement);
+        // Check if any records remain after filtering
+        if (this.state.filteredData.length === 0) {
+          // Create an empty hierarchy when no data matches
+          console.log("✅ Status: No records match COST_ELEMENT filter, creating empty hierarchy");
+          this.createEmptyHierarchy(this.filterMeta.costElement);
           
-  //         // Set a flag to indicate we have an empty result set
-  //         this.state._emptyFilterResult = true;
-  //         return true;
-  //       }
-  //     }
+          // Set a flag to indicate we have an empty result set
+          this.state._emptyFilterResult = true;
+          return true;
+        }
+      }
       
-  //     // 2. Get the original dimension data
-  //     const originalDimData = this.state.dimensions.cost_element;
+      // 2. Get the original dimension data
+      const originalDimData = this.state.dimensions.cost_element;
       
-  //     // 3. Filter dimension data to only include selected cost elements
-  //     const filteredDimData = originalDimData.filter(item => 
-  //       item.COST_ELEMENT && selectedCEs.includes(item.COST_ELEMENT)
-  //     );
+      // 3. Filter dimension data to only include selected cost elements
+      const filteredDimData = originalDimData.filter(item => 
+        item.COST_ELEMENT && selectedCEs.includes(item.COST_ELEMENT)
+      );
       
-  //     // 4. Build the filtered hierarchy using the filtered dimension data
-  //     const filteredHierarchy = this.buildFilteredCostElementHierarchy(filteredDimData);
+      // 4. Build the filtered hierarchy using the filtered dimension data
+      const filteredHierarchy = this.buildFilteredCostElementHierarchy(filteredDimData);
       
-  //     // 5. Store filtered hierarchy in state
-  //     this.state.hierarchies.cost_element = filteredHierarchy;
+      // 5. Store filtered hierarchy in state
+      this.state.hierarchies.cost_element = filteredHierarchy;
         
-  //     // console.log(`✅ Status: Rebuilt Cost Element hierarchy with ${selectedCEs.length} cost elements from ${filteredDimData.length} dimension records`);
-  //     return true;
-  //   } else {
-  //     // console.log("✅ Status: All Cost Elements selected, no need to rebuild hierarchy");
+      // console.log(`✅ Status: Rebuilt Cost Element hierarchy with ${selectedCEs.length} cost elements from ${filteredDimData.length} dimension records`);
+      return true;
+    } else {
+      // console.log("✅ Status: All Cost Elements selected, no need to rebuild hierarchy");
       
-  //     // Restore original hierarchy if we previously filtered
-  //     if (this.state._originalHierarchies && this.state._originalHierarchies.cost_element) {
-  //       this.state.hierarchies.cost_element = this.state._originalHierarchies.cost_element;
-  //       // console.log("✅ Status: Restored original Cost Element hierarchy");
-  //     }
+      // Restore original hierarchy if we previously filtered
+      if (this.state._originalHierarchies && this.state._originalHierarchies.cost_element) {
+        this.state.hierarchies.cost_element = this.state._originalHierarchies.cost_element;
+        // console.log("✅ Status: Restored original Cost Element hierarchy");
+      }
       
-  //     return false;
-  //   }
-  // }
+      return false;
+    }
+  }
 
   
   /**
    * Rebuild Smartcode hierarchy based on filter selections
    */
-  // rebuildSmartcodeHierarchy() {
-  //   console.log("⏳ Status: Rebuilding Smartcode hierarchy based on filters...");
+  rebuildSmartcodeHierarchy() {
+    console.log("⏳ Status: Rebuilding Smartcode hierarchy based on filters...");
     
-  //   // Get the filter selections for Smartcode
-  //   const scFilter = this.filterSelections.smartcode;
+    // Get the filter selections for Smartcode
+    const scFilter = this.filterSelections.smartcode;
     
-  //   // Get all available smartcodes
-  //   const allSCs = [];
-  //   if (this.state.dimensions && this.state.dimensions.smartcode) {
-  //     this.state.dimensions.smartcode.forEach(item => {
-  //       if (item.SMARTCODE && !allSCs.includes(item.SMARTCODE)) {
-  //         allSCs.push(item.SMARTCODE);
-  //       }
-  //     });
-  //   }
+    // Get all available smartcodes
+    const allSCs = [];
+    if (this.state.dimensions && this.state.dimensions.smartcode) {
+      this.state.dimensions.smartcode.forEach(item => {
+        if (item.SMARTCODE && !allSCs.includes(item.SMARTCODE)) {
+          allSCs.push(item.SMARTCODE);
+        }
+      });
+    }
     
-  //   // Determine selected smartcodes (empty set means all selected)
-  //   let selectedSCs = [];
-  //   if (scFilter && scFilter.size > 0) {
-  //     // We store excluded values, so we need to invert the selection
-  //     selectedSCs = allSCs.filter(sc => !scFilter.has(sc));
-  //   } else {
-  //     // All smartcodes are selected
-  //     selectedSCs = [...allSCs];
-  //   }
+    // Determine selected smartcodes (empty set means all selected)
+    let selectedSCs = [];
+    if (scFilter && scFilter.size > 0) {
+      // We store excluded values, so we need to invert the selection
+      selectedSCs = allSCs.filter(sc => !scFilter.has(sc));
+    } else {
+      // All smartcodes are selected
+      selectedSCs = [...allSCs];
+    }
     
-  //   console.log(`✅ Status: Selected Smartcodes: ${selectedSCs.length} of ${allSCs.length}`);
+    console.log(`✅ Status: Selected Smartcodes: ${selectedSCs.length} of ${allSCs.length}`);
     
-  //   // Only rebuild if we're filtering (otherwise use the original hierarchy)
-  //   if (selectedSCs.length < allSCs.length) {
-  //     // 1. Get the original dimension data
-  //     const originalDimData = this.state.dimensions.smartcode;
+    // Only rebuild if we're filtering (otherwise use the original hierarchy)
+    if (selectedSCs.length < allSCs.length) {
+      // 1. Get the original dimension data
+      const originalDimData = this.state.dimensions.smartcode;
       
-  //     // 2. Filter dimension data to only include selected smartcodes
-  //     const filteredDimData = originalDimData.filter(item => 
-  //       item.SMARTCODE && selectedSCs.includes(item.SMARTCODE)
-  //     );
+      // 2. Filter dimension data to only include selected smartcodes
+      const filteredDimData = originalDimData.filter(item => 
+        item.SMARTCODE && selectedSCs.includes(item.SMARTCODE)
+      );
       
-  //     // 5. Filter fact data based on selected smartcodes
-  //     if (this.state.factData && this.state.factData.length > 0) {
-  //       const originalFactData = this.state.factData;
+      // 5. Filter fact data based on selected smartcodes
+      if (this.state.factData && this.state.factData.length > 0) {
+        const originalFactData = this.state.factData;
         
-  //       // Filter records to only include those with selected ROOT_SMARTCODE values
-  //       if (!this.state.filteredData) {
-  //         this.state.filteredData = [...originalFactData];
-  //       }
+        // Filter records to only include those with selected ROOT_SMARTCODE values
+        if (!this.state.filteredData) {
+          this.state.filteredData = [...originalFactData];
+        }
         
-  //       // Apply filter to fact data (may already be filtered by other dimensions)
-  //       this.state.filteredData = this.state.filteredData.filter(record => 
-  //         record.ROOT_SMARTCODE && selectedSCs.includes(record.ROOT_SMARTCODE)
-  //       );
+        // Apply filter to fact data (may already be filtered by other dimensions)
+        this.state.filteredData = this.state.filteredData.filter(record => 
+          record.ROOT_SMARTCODE && selectedSCs.includes(record.ROOT_SMARTCODE)
+        );
         
-  //       console.log(`✅ Status: Filtered FACT data based on SMARTCODE: ${originalFactData.length} -> ${this.state.filteredData.length} records`);
+        console.log(`✅ Status: Filtered FACT data based on SMARTCODE: ${originalFactData.length} -> ${this.state.filteredData.length} records`);
         
-  //       // Check if any records remain after filtering
-  //       if (this.state.filteredData.length === 0) {
-  //         // Create an empty hierarchy when no data matches
-  //         console.log("✅ Status: No records match SMARTCODE filter, creating empty hierarchy");
+        // Check if any records remain after filtering
+        if (this.state.filteredData.length === 0) {
+          // Create an empty hierarchy when no data matches
+          console.log("✅ Status: No records match SMARTCODE filter, creating empty hierarchy");
           
-  //         // Create an empty hierarchy with just a root node
-  //         const emptyHierarchy = {
-  //           root: {
-  //             id: 'SMARTCODE_ROOT',
-  //             label: 'All Smartcodes (No matching records)',
-  //             children: [],
-  //             level: 0,
-  //             expanded: true,
-  //             isLeaf: true,
-  //             hasChildren: false,
-  //             path: ['SMARTCODE_ROOT'],
-  //             hierarchyName: 'smartcode'
-  //           },
-  //           nodesMap: { 'SMARTCODE_ROOT': this.state.hierarchies.smartcode.root },
-  //           flatData: []
-  //         };
+          // Create an empty hierarchy with just a root node
+          const emptyHierarchy = {
+            root: {
+              id: 'SMARTCODE_ROOT',
+              label: 'All Smartcodes (No matching records)',
+              children: [],
+              level: 0,
+              expanded: true,
+              isLeaf: true,
+              hasChildren: false,
+              path: ['SMARTCODE_ROOT'],
+              hierarchyName: 'smartcode'
+            },
+            nodesMap: { 'SMARTCODE_ROOT': this.state.hierarchies.smartcode.root },
+            flatData: []
+          };
           
-  //         // Store the empty hierarchy
-  //         this.state.hierarchies.smartcode = emptyHierarchy;
+          // Store the empty hierarchy
+          this.state.hierarchies.smartcode = emptyHierarchy;
           
-  //         // Set a flag to indicate we have an empty result set
-  //         this.state._emptyFilterResult = true;
-  //         return true;
-  //       }
-  //     }
+          // Set a flag to indicate we have an empty result set
+          this.state._emptyFilterResult = true;
+          return true;
+        }
+      }
       
-  //     // Only build the filtered hierarchy if there's matching data
-  //     // 3. Build the filtered hierarchy using the filtered dimension data
-  //     const filteredHierarchy = this.buildFilteredSmartcodeHierarchy(filteredDimData);
+      // Only build the filtered hierarchy if there's matching data
+      // 3. Build the filtered hierarchy using the filtered dimension data
+      const filteredHierarchy = this.buildFilteredSmartcodeHierarchy(filteredDimData);
       
-  //     // 4. Store filtered hierarchy in state
-  //     this.state.hierarchies.smartcode = filteredHierarchy;
+      // 4. Store filtered hierarchy in state
+      this.state.hierarchies.smartcode = filteredHierarchy;
         
-  //     // console.log(`✅ Status: Rebuilt Smartcode hierarchy with ${selectedSCs.length} smartcodes from ${filteredDimData.length} dimension records`);
-  //     return true;
-  //   } else {
-  //     // console.log("✅ Status: All Smartcodes selected, no need to rebuild hierarchy");
+      // console.log(`✅ Status: Rebuilt Smartcode hierarchy with ${selectedSCs.length} smartcodes from ${filteredDimData.length} dimension records`);
+      return true;
+    } else {
+      // console.log("✅ Status: All Smartcodes selected, no need to rebuild hierarchy");
       
-  //     // Restore original hierarchy if we previously filtered
-  //     if (this.state._originalHierarchies && this.state._originalHierarchies.smartcode) {
-  //       this.state.hierarchies.smartcode = this.state._originalHierarchies.smartcode;
-  //       // console.log("✅ Status: Restored original Smartcode hierarchy");
-  //     }
+      // Restore original hierarchy if we previously filtered
+      if (this.state._originalHierarchies && this.state._originalHierarchies.smartcode) {
+        this.state.hierarchies.smartcode = this.state._originalHierarchies.smartcode;
+        // console.log("✅ Status: Restored original Smartcode hierarchy");
+      }
       
-  //     return false;
-  //   }
-  // }
+      return false;
+    }
+  }
 
 
   /**
@@ -5036,67 +4193,67 @@ class EnhancedFilterSystem {
  * @param {Array} data - The filtered legal entity dimension data
  * @returns {Object} - Hierarchy object with root, nodesMap, and flatData
  */
-  // buildFilteredLegalEntityHierarchy(data) {
-  //   console.log(`⏳ Status: Building filtered legal entity hierarchy with ${data.length} records...`);
+  buildFilteredLegalEntityHierarchy(data) {
+    console.log(`⏳ Status: Building filtered legal entity hierarchy with ${data.length} records...`);
     
-  //   // Create root node
-  //   const root = {
-  //     id: 'LE_ROOT',
-  //     label: 'All Legal Entities',
-  //     children: [],
-  //     level: 0,
-  //     expanded: true,
-  //     isLeaf: false,
-  //     hasChildren: false,
-  //     path: ['LE_ROOT'],
-  //     hierarchyName: 'le'
-  //   };
+    // Create root node
+    const root = {
+      id: 'LE_ROOT',
+      label: 'All Legal Entities',
+      children: [],
+      level: 0,
+      expanded: true,
+      isLeaf: false,
+      hasChildren: false,
+      path: ['LE_ROOT'],
+      hierarchyName: 'le'
+    };
     
-  //   // Map to store all nodes by their ID for quick lookup
-  //   const nodesMap = { 'LE_ROOT': root };
+    // Map to store all nodes by their ID for quick lookup
+    const nodesMap = { 'LE_ROOT': root };
     
-  //   // Check if we have PATH data for hierarchical structure
-  //   const hasPath = data.some(item => item.PATH);
+    // Check if we have PATH data for hierarchical structure
+    const hasPath = data.some(item => item.PATH);
     
-  //   if (hasPath) {
-  //     // Process legal entity data as a hierarchical structure using PATH
-  //     // Use a more robust approach to ensure proper hierarchy building
-  //     try {
-  //       // Extract unique PATH values for analysis
-  //       const paths = data.filter(item => item.PATH).map(item => item.PATH);
-  //       // console.log(`✅ Status: Found ${paths.length} unique PATH values for Legal Entities`);
+    if (hasPath) {
+      // Process legal entity data as a hierarchical structure using PATH
+      // Use a more robust approach to ensure proper hierarchy building
+      try {
+        // Extract unique PATH values for analysis
+        const paths = data.filter(item => item.PATH).map(item => item.PATH);
+        // console.log(`✅ Status: Found ${paths.length} unique PATH values for Legal Entities`);
         
-  //       // Get common delimiter (should be '//')
-  //       const pathSeparator = '//';
+        // Get common delimiter (should be '//')
+        const pathSeparator = '//';
         
-  //       // console.log(`Using path separator: "${pathSeparator}" for Legal Entity hierarchy`);
+        // console.log(`Using path separator: "${pathSeparator}" for Legal Entity hierarchy`);
         
-  //       // Build the hierarchy using the robust path processing
-  //       this.buildPathHierarchy(data, root, nodesMap, 'LE', pathSeparator);
+        // Build the hierarchy using the robust path processing
+        this.buildPathHierarchy(data, root, nodesMap, 'LE', pathSeparator);
         
-  //       // Log hierarchy building success
-  //       console.log(`✅ Status: Successfully built Legal Entity hierarchy: ${root.children.length} top-level nodes, ${Object.keys(nodesMap).length} total nodes`);
-  //     } catch (error) {
-  //       console.error("❌ Alert! Error building Legal Entity hierarchy:", error);
-  //       // Fall back to flat structure on error
-  //       this.buildFlatHierarchy(data, root, nodesMap, 'LE', 'LE_DESC');
-  //     }
-  //   } else {
-  //     // Process as flat structure if no PATH data
-  //     this.buildFlatHierarchy(data, root, nodesMap, 'LE', 'LE_DESC');
-  //   }
+        // Log hierarchy building success
+        console.log(`✅ Status: Successfully built Legal Entity hierarchy: ${root.children.length} top-level nodes, ${Object.keys(nodesMap).length} total nodes`);
+      } catch (error) {
+        console.error("❌ Alert! Error building Legal Entity hierarchy:", error);
+        // Fall back to flat structure on error
+        this.buildFlatHierarchy(data, root, nodesMap, 'LE', 'LE_DESC');
+      }
+    } else {
+      // Process as flat structure if no PATH data
+      this.buildFlatHierarchy(data, root, nodesMap, 'LE', 'LE_DESC');
+    }
     
-  //   // Ensure root has children flag set correctly
-  //   root.hasChildren = root.children.length > 0;
+    // Ensure root has children flag set correctly
+    root.hasChildren = root.children.length > 0;
     
-  //   console.log(`✅ Status: Built filtered LE hierarchy with ${Object.keys(nodesMap).length} nodes`);
+    console.log(`✅ Status: Built filtered LE hierarchy with ${Object.keys(nodesMap).length} nodes`);
     
-  //   return {
-  //     root: root,
-  //     nodesMap: nodesMap,
-  //     flatData: data
-  //   };
-  // }
+    return {
+      root: root,
+      nodesMap: nodesMap,
+      flatData: data
+    };
+  }
 
 
   /**
@@ -5104,68 +4261,68 @@ class EnhancedFilterSystem {
    * @param {Array} data - The filtered cost element dimension data
    * @returns {Object} - Hierarchy object with root, nodesMap, and flatData
    */
-  // buildFilteredCostElementHierarchy(data) {
-  //   console.log(`⏳ Status: Building filtered Cost Element hierarchy with ${data.length} records...`);
+  buildFilteredCostElementHierarchy(data) {
+    console.log(`⏳ Status: Building filtered Cost Element hierarchy with ${data.length} records...`);
     
-  //   // Create root node
-  //   const root = {
-  //     id: 'COST_ELEMENT_ROOT',
-  //     label: 'All Cost Elements',
-  //     children: [],
-  //     level: 0,
-  //     expanded: true,
-  //     isLeaf: false,
-  //     hasChildren: false,
-  //     path: ['COST_ELEMENT_ROOT'],
-  //     hierarchyName: 'cost_element'
-  //   };
+    // Create root node
+    const root = {
+      id: 'COST_ELEMENT_ROOT',
+      label: 'All Cost Elements',
+      children: [],
+      level: 0,
+      expanded: true,
+      isLeaf: false,
+      hasChildren: false,
+      path: ['COST_ELEMENT_ROOT'],
+      hierarchyName: 'cost_element'
+    };
     
-  //   // Map to store all nodes by their ID for quick lookup
-  //   const nodesMap = { 'COST_ELEMENT_ROOT': root };
+    // Map to store all nodes by their ID for quick lookup
+    const nodesMap = { 'COST_ELEMENT_ROOT': root };
     
-  //   // Check if we have PATH data for hierarchical structure
-  //   const hasPath = data.some(item => item.PATH);
+    // Check if we have PATH data for hierarchical structure
+    const hasPath = data.some(item => item.PATH);
     
-  //   if (hasPath) {
-  //     // Process cost element data as a hierarchical structure using PATH
-  //     // We'll use a more robust approach to ensure proper hierarchy building
-  //     try {
-  //       // Extract unique PATH values for analysis
-  //       const paths = data.filter(item => item.PATH).map(item => item.PATH);
-  //       // console.log(`✅ Status: Found ${paths.length} unique PATH values for Cost Elements`);
+    if (hasPath) {
+      // Process cost element data as a hierarchical structure using PATH
+      // We'll use a more robust approach to ensure proper hierarchy building
+      try {
+        // Extract unique PATH values for analysis
+        const paths = data.filter(item => item.PATH).map(item => item.PATH);
+        // console.log(`✅ Status: Found ${paths.length} unique PATH values for Cost Elements`);
         
-  //       // Get common delimiter (should be '//')
-  //       // Use // as the default path separator as specified
-  //       const pathSeparator = '//';
+        // Get common delimiter (should be '//')
+        // Use // as the default path separator as specified
+        const pathSeparator = '//';
         
-  //       // console.log(`✅ Status: Using path separator: "${pathSeparator}" for Cost Element hierarchy`);
+        // console.log(`✅ Status: Using path separator: "${pathSeparator}" for Cost Element hierarchy`);
         
-  //       // Build the hierarchy using the robust path processing
-  //       this.buildPathHierarchy(data, root, nodesMap, 'COST_ELEMENT', pathSeparator);
+        // Build the hierarchy using the robust path processing
+        this.buildPathHierarchy(data, root, nodesMap, 'COST_ELEMENT', pathSeparator);
         
-  //       // Log hierarchy building success
-  //       console.log(`✅ Status: Successfully built Cost Element hierarchy: ${root.children.length} top-level nodes, ${Object.keys(nodesMap).length} total nodes`);
-  //     } catch (error) {
-  //       console.error("❌ Alert! Error building Cost Element hierarchy:", error);
-  //       // Fall back to flat structure on error
-  //       this.buildFlatHierarchy(data, root, nodesMap, 'COST_ELEMENT', 'COST_ELEMENT_DESC');
-  //     }
-  //   } else {
-  //     // Process as flat structure if no PATH data
-  //     this.buildFlatHierarchy(data, root, nodesMap, 'COST_ELEMENT', 'COST_ELEMENT_DESC');
-  //   }
+        // Log hierarchy building success
+        console.log(`✅ Status: Successfully built Cost Element hierarchy: ${root.children.length} top-level nodes, ${Object.keys(nodesMap).length} total nodes`);
+      } catch (error) {
+        console.error("❌ Alert! Error building Cost Element hierarchy:", error);
+        // Fall back to flat structure on error
+        this.buildFlatHierarchy(data, root, nodesMap, 'COST_ELEMENT', 'COST_ELEMENT_DESC');
+      }
+    } else {
+      // Process as flat structure if no PATH data
+      this.buildFlatHierarchy(data, root, nodesMap, 'COST_ELEMENT', 'COST_ELEMENT_DESC');
+    }
     
-  //   // Ensure root has children flag set correctly
-  //   root.hasChildren = root.children.length > 0;
+    // Ensure root has children flag set correctly
+    root.hasChildren = root.children.length > 0;
     
-  //   console.log(`✅ Status: Built filtered Cost Element hierarchy with ${Object.keys(nodesMap).length} nodes`);
+    console.log(`✅ Status: Built filtered Cost Element hierarchy with ${Object.keys(nodesMap).length} nodes`);
     
-  //   return {
-  //     root: root,
-  //     nodesMap: nodesMap,
-  //     flatData: data
-  //   };
-  // }
+    return {
+      root: root,
+      nodesMap: nodesMap,
+      flatData: data
+    };
+  }
 
 
   /**
@@ -5173,84 +4330,84 @@ class EnhancedFilterSystem {
    * @param {Array} data - The filtered smartcode dimension data
    * @returns {Object} - Hierarchy object with root, nodesMap, and flatData
    */
-  // buildFilteredSmartcodeHierarchy(data) {
-  //   console.log(`⏳ Status: Building filtered Smartcode hierarchy with ${data.length} records...`);
+  buildFilteredSmartcodeHierarchy(data) {
+    console.log(`⏳ Status: Building filtered Smartcode hierarchy with ${data.length} records...`);
     
-  //   // Create root node
-  //   const root = {
-  //     id: 'SMARTCODE_ROOT',
-  //     label: 'All Smartcodes',
-  //     children: [],
-  //     level: 0,
-  //     expanded: true,
-  //     isLeaf: false,
-  //     hasChildren: false,
-  //     path: ['SMARTCODE_ROOT'],
-  //     hierarchyName: 'smartcode'
-  //   };
+    // Create root node
+    const root = {
+      id: 'SMARTCODE_ROOT',
+      label: 'All Smartcodes',
+      children: [],
+      level: 0,
+      expanded: true,
+      isLeaf: false,
+      hasChildren: false,
+      path: ['SMARTCODE_ROOT'],
+      hierarchyName: 'smartcode'
+    };
     
-  //   // Map to store all nodes by their ID for quick lookup
-  //   const nodesMap = { 'SMARTCODE_ROOT': root };
+    // Map to store all nodes by their ID for quick lookup
+    const nodesMap = { 'SMARTCODE_ROOT': root };
     
-  //   // Check if we have PATH data for hierarchical structure
-  //   const hasPath = data.some(item => item.PATH);
+    // Check if we have PATH data for hierarchical structure
+    const hasPath = data.some(item => item.PATH);
     
-  //   if (hasPath) {
-  //     // Process smartcode data as a hierarchical structure using PATH
-  //     this.buildPathHierarchy(data, root, nodesMap, 'SMARTCODE', '//');
-  //   } else {
-  //     // Process as flat structure if no PATH data
-  //     const scMap = new Map();
+    if (hasPath) {
+      // Process smartcode data as a hierarchical structure using PATH
+      this.buildPathHierarchy(data, root, nodesMap, 'SMARTCODE', '//');
+    } else {
+      // Process as flat structure if no PATH data
+      const scMap = new Map();
       
-  //     // Collect unique SMARTCODE values with descriptions
-  //     data.forEach(item => {
-  //       if (item && item.SMARTCODE) {
-  //         const description = item.SMARTCODE_DESC || item.SMARTCODE;
-  //         scMap.set(item.SMARTCODE, description);
-  //       }
-  //     });
+      // Collect unique SMARTCODE values with descriptions
+      data.forEach(item => {
+        if (item && item.SMARTCODE) {
+          const description = item.SMARTCODE_DESC || item.SMARTCODE;
+          scMap.set(item.SMARTCODE, description);
+        }
+      });
       
-  //     // Create nodes for each SMARTCODE
-  //     scMap.forEach((description, scCode) => {
-  //       const nodeId = `SMARTCODE_${scCode}`;
+      // Create nodes for each SMARTCODE
+      scMap.forEach((description, scCode) => {
+        const nodeId = `SMARTCODE_${scCode}`;
         
-  //       const node = {
-  //         id: nodeId,
-  //         label: description,
-  //         children: [],
-  //         level: 1,
-  //         expanded: false,
-  //         isLeaf: true,
-  //         hasChildren: false,
-  //         path: ['SMARTCODE_ROOT', nodeId],
-  //         factId: scCode,
-  //         hierarchyName: 'smartcode'
-  //       };
+        const node = {
+          id: nodeId,
+          label: description,
+          children: [],
+          level: 1,
+          expanded: false,
+          isLeaf: true,
+          hasChildren: false,
+          path: ['SMARTCODE_ROOT', nodeId],
+          factId: scCode,
+          hierarchyName: 'smartcode'
+        };
         
-  //       // Add to maps
-  //       nodesMap[nodeId] = node;
+        // Add to maps
+        nodesMap[nodeId] = node;
         
-  //       // Add as child to root
-  //       root.children.push(node);
-  //       root.hasChildren = true;
-  //     });
+        // Add as child to root
+        root.children.push(node);
+        root.hasChildren = true;
+      });
       
-  //     // Sort children alphabetically
-  //     root.children.sort((a, b) => {
-  //       const aLabel = a.label;
-  //       const bLabel = b.label;
-  //       return aLabel.localeCompare(bLabel);
-  //     });
-  //   }
+      // Sort children alphabetically
+      root.children.sort((a, b) => {
+        const aLabel = a.label;
+        const bLabel = b.label;
+        return aLabel.localeCompare(bLabel);
+      });
+    }
     
-  //   console.log(`✅ Status: Built filtered Smartcode hierarchy with ${Object.keys(nodesMap).length} nodes`);
+    console.log(`✅ Status: Built filtered Smartcode hierarchy with ${Object.keys(nodesMap).length} nodes`);
     
-  //   return {
-  //     root: root,
-  //     nodesMap: nodesMap,
-  //     flatData: data
-  //   };
-  // }
+    return {
+      root: root,
+      nodesMap: nodesMap,
+      flatData: data
+    };
+  }
 
 
   /**
@@ -5259,75 +4416,75 @@ class EnhancedFilterSystem {
    * @param {Object} root - The root node to add children to
    * @param {Object} nodesMap - The map of node IDs to node objects
    */
-  // buildMcHierarchyFromPath(data, root, nodesMap) {
-  //   // Maps to track nodes by path
-  //   const nodeByPath = new Map();
+  buildMcHierarchyFromPath(data, root, nodesMap) {
+    // Maps to track nodes by path
+    const nodeByPath = new Map();
     
-  //   // Process each item to build the hierarchy
-  //   data.forEach(item => {
-  //       if (!item.PATH) return;
+    // Process each item to build the hierarchy
+    data.forEach(item => {
+        if (!item.PATH) return;
         
-  //       // Split the path into segments
-  //       const segments = item.PATH.split('//').filter(s => s.trim() !== '');
-  //       if (segments.length === 0) return;
+        // Split the path into segments
+        const segments = item.PATH.split('//').filter(s => s.trim() !== '');
+        if (segments.length === 0) return;
         
-  //       // Process each segment in the path
-  //       let parentNode = root;
-  //       let currentPath = root.id;
+        // Process each segment in the path
+        let parentNode = root;
+        let currentPath = root.id;
         
-  //       for (let i = 0; i < segments.length; i++) {
-  //           const segment = segments[i];
-  //           const isLastSegment = i === segments.length - 1;
+        for (let i = 0; i < segments.length; i++) {
+            const segment = segments[i];
+            const isLastSegment = i === segments.length - 1;
             
-  //           // Build up the path for this segment
-  //           currentPath = `${currentPath}/${segment}`;
+            // Build up the path for this segment
+            currentPath = `${currentPath}/${segment}`;
             
-  //           // Check if we already have a node for this path
-  //           let node = nodeByPath.get(currentPath);
+            // Check if we already have a node for this path
+            let node = nodeByPath.get(currentPath);
             
-  //           if (!node) {
-  //               // Create a unique ID for this node
-  //               const nodeId = `MC_SEGMENT_${currentPath.replace(/[^a-zA-Z0-9_]/g, '_')}`;
+            if (!node) {
+                // Create a unique ID for this node
+                const nodeId = `MC_SEGMENT_${currentPath.replace(/[^a-zA-Z0-9_]/g, '_')}`;
                 
-  //               // Create new node
-  //               node = {
-  //                   id: nodeId,
-  //                   label: segment,
-  //                   children: [],
-  //                   level: i + 1,
-  //                   expanded: false,
-  //                   isLeaf: isLastSegment,
-  //                   hasChildren: !isLastSegment,
-  //                   factId: isLastSegment ? item.MC : null,
-  //                   path: [...parentNode.path, nodeId],
-  //                   hierarchyName: 'mc'
-  //               };
+                // Create new node
+                node = {
+                    id: nodeId,
+                    label: segment,
+                    children: [],
+                    level: i + 1,
+                    expanded: false,
+                    isLeaf: isLastSegment,
+                    hasChildren: !isLastSegment,
+                    factId: isLastSegment ? item.MC : null,
+                    path: [...parentNode.path, nodeId],
+                    hierarchyName: 'mc'
+                };
                 
-  //               // Store in maps
-  //               nodesMap[nodeId] = node;
-  //               nodeByPath.set(currentPath, node);
+                // Store in maps
+                nodesMap[nodeId] = node;
+                nodeByPath.set(currentPath, node);
                 
-  //               // Add as child to parent node
-  //               parentNode.children.push(node);
-  //               parentNode.hasChildren = true;
-  //               parentNode.isLeaf = false;
-  //           }
+                // Add as child to parent node
+                parentNode.children.push(node);
+                parentNode.hasChildren = true;
+                parentNode.isLeaf = false;
+            }
             
-  //           // Update parent for next iteration
-  //           parentNode = node;
-  //       }
-  //   });
+            // Update parent for next iteration
+            parentNode = node;
+        }
+    });
     
-  //   // Recursively sort nodes at each level
-  //   const sortNodes = (node) => {
-  //       if (node.children && node.children.length > 0) {
-  //           node.children.sort((a, b) => a.label.localeCompare(b.label));
-  //           node.children.forEach(sortNodes);
-  //       }
-  //   };
+    // Recursively sort nodes at each level
+    const sortNodes = (node) => {
+        if (node.children && node.children.length > 0) {
+            node.children.sort((a, b) => a.label.localeCompare(b.label));
+            node.children.forEach(sortNodes);
+        }
+    };
     
-  //   sortNodes(root);
-  // }
+    sortNodes(root);
+  }
 
   
   /**
@@ -5336,62 +4493,61 @@ class EnhancedFilterSystem {
    * @param {Object} dimension - Dimension configuration
    * @returns {Array} - Filtered data
    */
-  // applyHierarchicalFilter(data, dimension) {
-  //   // Get hierarchy
-  //   const hierarchy = this.state.hierarchies[dimension.dimensionKey];
-  //   if (!hierarchy || !hierarchy.root) {
-  //     console.warn(`⚠️ Warning: Hierarchy not found for ${dimension.label}, falling back to direct filtering`);
-  //     return data.filter(record => {
-  //       const value = record[dimension.factField];
-  //       return value !== undefined && !this.filterSelections[dimension.id].has(value);
-  //     });
-  //   }
+  applyHierarchicalFilter(data, dimension) {
+    // Get hierarchy
+    const hierarchy = this.state.hierarchies[dimension.dimensionKey];
+    if (!hierarchy || !hierarchy.root) {
+      console.warn(`⚠️ Warning: Hierarchy not found for ${dimension.label}, falling back to direct filtering`);
+      return data.filter(record => {
+        const value = record[dimension.factField];
+        return value !== undefined && !this.filterSelections[dimension.id].has(value);
+      });
+    }
     
-  //   // Get all excluded fact IDs
-  //   const excludedFactIds = new Set();
+    // Get all excluded fact IDs
+    const excludedFactIds = new Set();
     
-  //   // Process each excluded node
-  //   this.filterSelections[dimension.id].forEach(nodeId => {
-  //     const node = hierarchy.nodesMap[nodeId];
-  //     if (node) {
-  //       // Add this node's factId if it's a leaf node
-  //       if (node.factId) {
-  //         if (Array.isArray(node.factId)) {
-  //           // Handle multiple factIds (sometimes nodes can map to multiple values)
-  //           node.factId.forEach(id => excludedFactIds.add(id));
-  //         } else {
-  //           excludedFactIds.add(node.factId);
-  //         }
-  //       }
+    // Process each excluded node
+    this.filterSelections[dimension.id].forEach(nodeId => {
+      const node = hierarchy.nodesMap[nodeId];
+      if (node) {
+        // Add this node's factId if it's a leaf node
+        if (node.factId) {
+          if (Array.isArray(node.factId)) {
+            // Handle multiple factIds (sometimes nodes can map to multiple values)
+            node.factId.forEach(id => excludedFactIds.add(id));
+          } else {
+            excludedFactIds.add(node.factId);
+          }
+        }
         
-  //       // Add descendant factIds if precomputed
-  //       if (node.descendantFactIds && node.descendantFactIds.length > 0) {
-  //         node.descendantFactIds.forEach(id => excludedFactIds.add(id));
-  //       } else if (node.children && node.children.length > 0) {
-  //         // Otherwise collect all leaf descendants
-  //         this.collectLeafDescendantFactIds(node, hierarchy.nodesMap).forEach(id => excludedFactIds.add(id));
-  //       }
-  //     }
-  //   });
+        // Add descendant factIds if precomputed
+        if (node.descendantFactIds && node.descendantFactIds.length > 0) {
+          node.descendantFactIds.forEach(id => excludedFactIds.add(id));
+        } else if (node.children && node.children.length > 0) {
+          // Otherwise collect all leaf descendants
+          this.collectLeafDescendantFactIds(node, hierarchy.nodesMap).forEach(id => excludedFactIds.add(id));
+        }
+      }
+    });
     
-  //   console.log(`✅ Status: Collected ${excludedFactIds.size} excluded factIds for ${dimension.label}`);
+    console.log(`✅ Status: Collected ${excludedFactIds.size} excluded factIds for ${dimension.label}`);
     
-  //   // If we have no excluded factIds and no selected nodes, everything is selected
-  //   if (excludedFactIds.size === 0 && this.filterSelections[dimension.id].size === 0) {
-  //     return data;
-  //   }
+    // If we have no excluded factIds and no selected nodes, everything is selected
+    if (excludedFactIds.size === 0 && this.filterSelections[dimension.id].size === 0) {
+      return data;
+    }
     
-  //   // Filter data
-  //   const filteredData = data.filter(record => {
-  //     const value = record[dimension.factField];
-  //     return value !== undefined && !excludedFactIds.has(value);
-  //   });
+    // Filter data
+    const filteredData = data.filter(record => {
+      const value = record[dimension.factField];
+      return value !== undefined && !excludedFactIds.has(value);
+    });
     
-  //   console.log(`✅ Status: Applied ${dimension.label} filter: ${data.length} -> ${filteredData.length} records`);
+    console.log(`✅ Status: Applied ${dimension.label} filter: ${data.length} -> ${filteredData.length} records`);
     
-  //   return filteredData;
-  // }
-  
+    return filteredData;
+  }
 
   
   // Enhanced method to collect factIds from all leaf descendants

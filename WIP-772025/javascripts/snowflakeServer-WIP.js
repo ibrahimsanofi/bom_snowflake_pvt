@@ -689,195 +689,8 @@ app.get('/api/data/DIM_GMID_DISPLAY/filtered', async (req, res) => {
     }
 });
 
-
 /**
- * Optimized GMID filtering using INNER JOIN with FACT_BOM
- * This approach is much more efficient than filtering with large ROOT_GMID lists
- * Usage: POST /api/data/DIM_GMID_DISPLAY/filtered-join
- * Body: { 
- *   "factFilters": { "LE": ["value1"], "COST_ELEMENT": ["value2"] },
- *   "maxRecords": 10000,
- *   "orderBy": "ROOT_GMID"
- * }
- */
-app.post('/api/data/DIM_GMID_DISPLAY/filtered-join', async (req, res) => {
-    try {
-        console.log('🚀 Optimized GMID filtering with INNER JOIN request:', req.body);
-        
-        const { factFilters = {}, maxRecords = 10000, orderBy = 'ROOT_GMID' } = req.body;
-        
-        // Validate input
-        if (!factFilters || typeof factFilters !== 'object' || Object.keys(factFilters).length === 0) {
-            return res.status(400).json({ 
-                error: 'factFilters object with at least one filter is required',
-                example: { 
-                    factFilters: { 
-                        "LE": ["MGM1001"], 
-                        "COST_ELEMENT": ["ELEM001"] 
-                    } 
-                }
-            });
-        }
-        
-        // Build WHERE clause for FACT_BOM filters
-        const whereConditions = [];
-        const params = [];
-        
-        Object.entries(factFilters).forEach(([field, values]) => {
-            if (values && Array.isArray(values) && values.length > 0) {
-                const upperField = field.toUpperCase();
-                const validFields = [
-                    'LE', 'COST_ELEMENT', 'ROOT_GMID', 'ROOT_SMARTCODE', 
-                    'ITEM_COST_TYPE', 'COMPONENT_MATERIAL_TYPE', 'MC', 'ZYEAR'
-                ];
-                
-                if (!validFields.includes(upperField)) {
-                    throw new Error(`Invalid field '${field}'. Valid fields: ${validFields.join(', ')}`);
-                }
-                
-                if (values.length > 100) {
-                    throw new Error(`Too many values for field '${field}' (${values.length}). Maximum 100 values allowed.`);
-                }
-                
-                const placeholders = values.map(() => '?').join(',');
-                whereConditions.push(`f.${upperField} IN (${placeholders})`);
-                params.push(...values);
-            }
-        });
-        
-        // Validate max records limit
-        const recordLimit = Math.min(Math.max(maxRecords, 1), 50000); // Between 1 and 50k
-        
-        // Validate order by field
-        const validOrderFields = ['ROOT_GMID', 'PATH_GMID', 'DISPLAY'];
-        const orderByField = validOrderFields.includes(orderBy.toUpperCase()) ? 
-                            orderBy.toUpperCase() : 'ROOT_GMID';
-        
-        // Build optimized SQL with INNER JOIN
-        const sql = `
-            SELECT DISTINCT
-                g.PATH_GMID,
-                g.ROOT_GMID,
-                g.COMPONENT_GMID,
-                g.DISPLAY
-            FROM ONEMNS_PROD.DMT_BOM.DIM_GMID_DISPLAY g 
-            INNER JOIN ONEMNS_PROD.DMT_BOM.FACT_BOM f 
-                ON g.PATH_GMID = f.PATH_GMID
-            WHERE ${whereConditions.join(' AND ')}
-                AND f.PATH_GMID IS NOT NULL 
-                AND g.DISPLAY IS NOT NULL
-                AND g.ROOT_GMID IS NOT NULL
-            ORDER BY g.${orderByField}, g.PATH_GMID
-            LIMIT ${recordLimit}
-        `.trim();
-        
-        console.log(`📊 Executing optimized GMID JOIN query:`);
-        console.log(`📊 Filters: ${Object.keys(factFilters).length} dimensions`);
-        console.log(`📊 Parameters: ${params.length} values`);
-        console.log(`📊 Max records: ${recordLimit}`);
-        console.log(`📊 SQL: ${sql}`);
-        
-        const startTime = Date.now();
-        const conn = await connectToSnowflake();
-        
-        // Execute with streaming for large results
-        const stream = conn.execute({
-            sqlText: sql,
-            binds: params,
-            streamResult: true
-        }).streamRows();
-        
-        // Set response headers
-        res.setHeader('Content-Type', 'application/x-ndjson');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('X-Query-Type', 'INNER-JOIN');
-        res.setHeader('X-Filter-Count', Object.keys(factFilters).length.toString());
-        res.setHeader('X-Parameter-Count', params.length.toString());
-        res.setHeader('X-Max-Records', recordLimit.toString());
-        
-        let rowCount = 0;
-        let rootGmidCounts = {};
-        let pathGmidCounts = {};
-        
-        stream.on('data', row => {
-            res.write(JSON.stringify(row) + '\n');
-            rowCount++;
-            
-            // Track distribution for logging
-            if (row.ROOT_GMID) {
-                rootGmidCounts[row.ROOT_GMID] = (rootGmidCounts[row.ROOT_GMID] || 0) + 1;
-            }
-            if (row.PATH_GMID) {
-                pathGmidCounts[row.PATH_GMID] = (pathGmidCounts[row.PATH_GMID] || 0) + 1;
-            }
-            
-            if (rowCount % 1000 === 0) {
-                console.log(`📊 Streamed ${rowCount} optimized GMID rows...`);
-            }
-        });
-        
-        stream.on('end', () => {
-            const duration = Date.now() - startTime;
-            const uniqueRootGmids = Object.keys(rootGmidCounts).length;
-            const uniquePathGmids = Object.keys(pathGmidCounts).length;
-            
-            console.log(`✅ Optimized GMID JOIN query completed in ${duration}ms:`);
-            console.log(`   📊 ${rowCount} total records returned`);
-            console.log(`   🎯 ${uniqueRootGmids} unique ROOT_GMIDs`);
-            console.log(`   📋 ${uniquePathGmids} unique PATH_GMIDs`);
-            console.log(`   ⚡ Performance: ${Math.round(rowCount / (duration / 1000))} rows/second`);
-            
-            // Log top ROOT_GMIDs by count
-            const topRootGmids = Object.entries(rootGmidCounts)
-                .sort(([,a], [,b]) => b - a)
-                .slice(0, 5);
-            
-            if (topRootGmids.length > 0) {
-                console.log(`   📈 Top ROOT_GMIDs: ${topRootGmids.map(([id, count]) => `${id}(${count})`).join(', ')}`);
-            }
-            
-            res.end();
-        });
-        
-        stream.on('error', err => {
-            console.error('❌ Stream error in optimized GMID JOIN:', err);
-            if (!res.headersSent) {
-                res.status(500).json({ 
-                    error: 'Database query failed',
-                    message: err.message,
-                    suggestion: 'Check filter values and try again'
-                });
-            } else {
-                res.end();
-            }
-        });
-        
-    } catch (error) {
-        console.error('❌ Error in optimized GMID JOIN endpoint:', error);
-        
-        if (error.message.includes('Invalid field') || error.message.includes('Too many values')) {
-            res.status(400).json({ 
-                error: 'Invalid request parameters',
-                message: error.message 
-            });
-        } else if (error.message.includes('connection') || error.message.includes('timeout')) {
-            res.status(503).json({ 
-                error: 'Database connection issue',
-                message: 'Please try again in a moment'
-            });
-        } else {
-            res.status(500).json({ 
-                error: 'Internal server error',
-                message: error.message 
-            });
-        }
-    }
-});
-
-
-/**
- * Improved DIM_GMID_DISPLAY filtered endpoint with PATH_GMID support
+ * ENHANCED: Improved DIM_GMID_DISPLAY filtered endpoint with PATH_GMID support
  * Usage: GET /api/data/DIM_GMID_DISPLAY/filtered?ROOT_GMID=value1,value2&PATH_GMID=path1,path2
  */
 app.get('/api/data/DIM_GMID_DISPLAY/filtered-enhanced', async (req, res) => {
@@ -1173,7 +986,7 @@ app.get('/api/data/FACT_BOM/filtered', async (req, res) => {
 
 
 /**
- * Fallback filtered endpoint for other dimension tables
+ * GENERIC: Fallback filtered endpoint for other dimension tables
  * Usage: GET /api/data/:table/filtered?FIELD1=value1,value2&FIELD2=value3
  */
 app.get('/api/data/:table/filtered', async (req, res) => {
@@ -1383,7 +1196,8 @@ app.use((req, res) => {
 
 
 /**
- * This endpoint first filters FACT_BOM, then uses results to filter DIM_GMID_DISPLAY. Costly. Replaced.
+ * NEW: Comprehensive GMID filtering endpoint
+ * This endpoint first filters FACT_BOM, then uses results to filter DIM_GMID_DISPLAY
  * Usage: POST /api/data/comprehensive-gmid-filter
  * Body: { 
  *   "factFilters": { "LE": ["value1"], "COST_ELEMENT": ["value2"] },
@@ -1588,7 +1402,7 @@ app.post('/api/data/comprehensive-gmid-filter', async (req, res) => {
 
 
 /**
- * GMID relationship analysis endpoint
+ * NEW: GMID relationship analysis endpoint
  * Analyzes the relationship between FACT_BOM and DIM_GMID_DISPLAY
  * Usage: POST /api/data/gmid-relationship-analysis
  * Body: { "sampleSize": 1000, "includeOrphans": true }

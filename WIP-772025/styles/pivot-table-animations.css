@@ -1,0 +1,247 @@
+/* --------------------------------
+   ANIMATIONS & TRANSITIONS
+-------------------------------- */
+
+/* Expand/Collapse Button Animations */
+.expand-collapse {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
+              background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, background-color;
+  position: relative;
+}
+
+.expand-collapse:hover {
+  transform: scale(1.1);
+  background-color: rgba(37, 99, 235, 0.15);
+}
+
+.expand-collapse:active {
+  transform: scale(0.9);
+}
+
+/* Plus/Minus icon animations */
+.expand-collapse.collapsed:before {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: center;
+}
+
+.expand-collapse.expanded:before {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: center;
+}
+
+.expand-collapse.expanding:before {
+  animation: rotateFromPlusToMinus 0.3s forwards;
+}
+
+.expand-collapse.collapsing:before {
+  animation: rotateFromMinusToPlus 0.3s forwards;
+}
+
+@keyframes rotateFromPlusToMinus {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(180deg); }
+}
+
+@keyframes rotateFromMinusToPlus {
+  0% { transform: rotate(180deg); }
+  100% { transform: rotate(0deg); }
+}
+
+/* Row appearance/disappearance animations */
+tr[data-parent-id] {
+  transition: opacity 0.3s ease-out, 
+              transform 0.3s ease-out;
+  will-change: opacity, transform;
+}
+
+tr.expanding {
+  animation: expandRowAnimation 0.3s forwards;
+}
+
+tr.collapsing {
+  animation: collapseRowAnimation 0.3s forwards;
+}
+
+@keyframes expandRowAnimation {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes collapseRowAnimation {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+/* Improved feedback for expand/collapse interactions */
+.expand-collapse::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.2) 0%, rgba(37, 99, 235, 0) 70%);
+  border-radius: 50%;
+  opacity: 0;
+  transform: scale(0);
+  transition: transform 0.4s ease-out, opacity 0.4s ease-out;
+  pointer-events: none;
+}
+
+.expand-collapse:active::after {
+  opacity: 1;
+  transform: scale(2);
+  transition: transform 0.2s ease-out, opacity 0.1s ease-out;
+}
+
+/* --------------------------------
+   SEARCH FUNCTIONALITY
+-------------------------------- */
+
+/* Search Container */
+.filter-search-container {
+  position: relative;
+  margin: 8px;
+  padding: 4px;
+  background-color: #f8fafc;
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* Search Input */
+.filter-search {
+  width: 100%;
+  padding: 8px 30px 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #334155;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.filter-search:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.filter-search::placeholder {
+  color: #94a3b8;
+}
+
+/* Clear Button */
+.filter-search-clear {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.filter-search-clear:hover {
+  background-color: #e2e8f0;
+  color: #1e293b;
+}
+
+.filter-search-clear:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+/* Hidden Items */
+.filter-item.hidden {
+  display: none;
+}
+
+/* No Results Message */
+.no-results-message {
+  padding: 12px;
+  text-align: center;
+  color: #64748b;
+  font-style: italic;
+  font-size: 14px;
+  background-color: #f8fafc;
+  border-radius: 4px;
+  margin: 8px;
+}
+
+/* Highlight search matches */
+.search-highlight {
+  background-color: rgba(245, 158, 11, 0.2);
+  padding: 0 2px;
+  border-radius: 2px;
+  font-weight: 500;
+}
+
+/* --------------------------------
+   PERFORMANCE OPTIMIZATIONS
+-------------------------------- */
+
+/* Use hardware acceleration for smooth animations */
+.expand-collapse,
+tr[data-parent-id],
+.hierarchy-cell,
+.column-header {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+/* Prevent reflows during animations */
+.pivot-table-container {
+  contain: layout style;
+}
+
+/* Improve scrolling performance */
+.pivot-table-container {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* --------------------------------
+   RESPONSIVENESS IMPROVEMENTS
+-------------------------------- */
+
+/* Ensure consistent padding on mobile devices */
+@media (max-width: 768px) {
+  .filter-search-container {
+    margin: 4px;
+  }
+  
+  .filter-search {
+    padding: 6px 26px 6px 8px;
+    font-size: 13px;
+  }
+  
+  .filter-search-clear {
+    right: 8px;
+    width: 18px;
+    height: 18px;
+  }
+}
