@@ -604,16 +604,64 @@ const PivotTemplateSystem = {
         this.renderTemplate3Body(elements, pivotData, rowFields, columnFields, valueFields, pivotTable);
     },
 
-    
-    renderTemplate3Header: function(elements, pivotData, rowFields, columnFields, valueFields, pivotTable) {
-        const columns = pivotData.columns.filter(col => 
-            col._id !== 'ROOT' && 
-            col._id !== 'VALUE' && 
-            col.label !== 'VALUE' && 
-            col.hierarchyField
-        );
+
+    /**
+     * Enhanced column processing that includes root nodes and their values
+     */
+    getTemplate3ColumnsWithRoot: function(pivotData, columnFields, pivotTable) {
+        // Get all columns including root
+        const allColumns = pivotData.columns.filter(col => {
+            // Include everything except system columns, but KEEP root nodes
+            return col._id !== 'VALUE' && 
+                col.label !== 'VALUE' && 
+                col.label !== 'Value' &&
+                col._id !== 'default' && 
+                col._id !== 'no_columns' &&
+                col.label !== 'Measures';
+        });
         
-        const leafColumns = pivotTable.getVisibleLeafColumns(columns);
+        console.log(`🔍 Template3: Processing ${allColumns.length} columns (including root)`);
+        
+        // Separate root and non-root columns
+        const rootColumns = allColumns.filter(col => col._id === 'ROOT');
+        const nonRootColumns = allColumns.filter(col => col._id !== 'ROOT' && col.hierarchyField);
+        
+        // Get visible leaf columns from non-root
+        const leafColumns = pivotTable.getVisibleLeafColumns(nonRootColumns);
+        
+        // Combine: root nodes first, then leaf nodes
+        const orderedColumns = [];
+        
+        // Add root nodes that have data
+        rootColumns.forEach(rootCol => {
+            if (this.shouldDisplayRootNode(rootCol, pivotTable)) {
+                orderedColumns.push({
+                    ...rootCol,
+                    isRootNode: true,
+                    displayOrder: 0
+                });
+                console.log(`✅ Including root node: ${rootCol.label || 'ROOT'}`);
+            }
+        });
+        
+        // Add leaf columns with proper ordering
+        leafColumns.forEach((leafCol, index) => {
+            orderedColumns.push({
+                ...leafCol,
+                isRootNode: false,
+                displayOrder: index + 1
+            });
+        });
+        
+        console.log(`📊 Template3 final column order: ${orderedColumns.length} columns (${rootColumns.length} root + ${leafColumns.length} leaf)`);
+        
+        return orderedColumns;
+    },
+
+
+    renderTemplate3Header: function(elements, pivotData, rowFields, columnFields, valueFields, pivotTable) {
+        // Use enhanced column processing
+        const orderedColumns = this.getTemplate3ColumnsWithRoot(pivotData, columnFields, pivotTable);
         
         let headerHtml = '';
         
@@ -622,7 +670,7 @@ const PivotTemplateSystem = {
         const rowDimName = this.getRealDimensionName(rowFields[0]);
         headerHtml += `<th class="t3-row-header" rowspan="3">${rowDimName}</th>`;
         
-        const totalValueCells = leafColumns.length * valueFields.length;
+        const totalValueCells = orderedColumns.length * valueFields.length;
         headerHtml += `<th class="t3-measures-header" colspan="${totalValueCells}">MEASURES</th>`;
         headerHtml += '</tr>';
         
@@ -630,17 +678,21 @@ const PivotTemplateSystem = {
         headerHtml += '<tr>';
         valueFields.forEach(field => {
             const fieldLabel = pivotTable.getFieldLabel(field);
-            headerHtml += `<th class="t3-measure-header" colspan="${leafColumns.length}">${fieldLabel}</th>`;
+            headerHtml += `<th class="t3-measure-header" colspan="${orderedColumns.length}">${fieldLabel}</th>`;
         });
         headerHtml += '</tr>';
         
-        // Row 3: Column dimension headers
+        // Row 3: Column dimension headers (including root)
         headerHtml += '<tr>';
         valueFields.forEach(() => {
-            leafColumns.forEach(col => {
-                headerHtml += `<th class="t3-column-header">`;
+            orderedColumns.forEach(col => {
+                const isRootNode = col.isRootNode || col._id === 'ROOT';
+                const cssClass = isRootNode ? 't3-column-header root-node' : 't3-column-header';
                 
-                if (pivotTable.originalColumnHasChildren(col)) {
+                headerHtml += `<th class="${cssClass}" data-column-id="${col._id}" data-is-root="${isRootNode}">`;
+                
+                // Add expand/collapse control for non-root nodes that have children
+                if (!isRootNode && pivotTable.originalColumnHasChildren(col)) {
                     const expandClass = col.expanded ? 'expanded' : 'collapsed';
                     const dimName = data.extractDimensionName(columnFields[0]);
                     headerHtml += `<span class="expand-collapse ${expandClass}" 
@@ -648,26 +700,33 @@ const PivotTemplateSystem = {
                         data-hierarchy="${dimName}" 
                         data-zone="column"
                         onclick="window.handleExpandCollapseClick(event)"></span>`;
+                } else if (isRootNode) {
+                    // Root nodes get special expand/collapse handling
+                    const expandClass = col.expanded ? 'expanded' : 'collapsed';
+                    const dimName = data.extractDimensionName(columnFields[0]);
+                    headerHtml += `<span class="expand-collapse ${expandClass} root-expand" 
+                        data-node-id="${col._id}" 
+                        data-hierarchy="${dimName}" 
+                        data-zone="column"
+                        onclick="window.handleExpandCollapseClick(event)"
+                        title="Expand/collapse all ${dimName} items"></span>`;
                 }
                 
-                headerHtml += `<span class="column-label">${pivotTable.getDisplayLabel(col)}</span>`;
+                const displayLabel = pivotTable.getDisplayLabel(col);
+                headerHtml += `<span class="column-label ${isRootNode ? 'root-label' : ''}">${displayLabel}</span>`;
                 headerHtml += '</th>';
             });
         });
         headerHtml += '</tr>';
         
         elements.pivotTableHeader.innerHTML = headerHtml;
+        console.log(`✅ Template3 header built with ${orderedColumns.length} columns including root nodes`);
     },
 
     
     renderTemplate3Body: function(elements, pivotData, rowFields, columnFields, valueFields, pivotTable) {
         const visibleRows = pivotTable.getVisibleRowsWithoutDuplicates(pivotData.rows);
-        const columns = pivotData.columns.filter(col => 
-            col._id !== 'ROOT' && 
-            col._id !== 'VALUE' && 
-            col.hierarchyField
-        );
-        const leafColumns = pivotTable.getVisibleLeafColumns(columns);
+        const orderedColumns = this.getTemplate3ColumnsWithRoot(pivotData, columnFields, pivotTable);
         
         let bodyHtml = '';
         
@@ -677,11 +736,21 @@ const PivotTemplateSystem = {
             // Row cell
             bodyHtml += this.renderTemplate3RowCell(row, rowFields[0]);
             
-            // Cross-tabulated value cells
+            // Cross-tabulated value cells (including root node values)
             valueFields.forEach(field => {
-                leafColumns.forEach(col => {
-                    const value = pivotTable.calculateMultiDimensionalValue([row], [col], field);
-                    bodyHtml += pivotTable.renderValueCell(value);
+                orderedColumns.forEach((col, colIndex) => {
+                    let value;
+                    
+                    if (col.isRootNode || col._id === 'ROOT') {
+                        // Calculate aggregated value for root node
+                        value = this.calculateRootNodeValue(row, col, field, pivotTable);
+                        console.log(`🧮 Root node value for ${row.label || row._id} × ${field}: ${value}`);
+                    } else {
+                        // Regular cross-tabulation for non-root nodes
+                        value = pivotTable.calculateMultiDimensionalValue([row], [col], field);
+                    }
+                    
+                    bodyHtml += this.renderTemplate3ValueCell(value, col, colIndex, field, pivotTable);
                 });
             });
             
@@ -690,6 +759,125 @@ const PivotTemplateSystem = {
         
         elements.pivotTableBody.innerHTML = bodyHtml;
         pivotTable.attachEventListeners(elements.pivotTableBody);
+        
+        console.log(`✅ Template3 body built with ${visibleRows.length} rows × ${orderedColumns.length} columns`);
+    },
+
+
+    /**
+     * Calculate aggregated value for root node (sum of all children)
+     */
+    calculateRootNodeValue: function(row, rootColumn, field, pivotTable) {
+        console.log(`🧮 Calculating root value for row: ${row.label || row._id}, field: ${field}`);
+        
+        // Method 1: Try to get the total from the pivot data directly
+        const rowData = this.findRowData(row._id);
+        if (rowData && rowData[field] !== undefined) {
+            console.log(`✅ Found direct root value: ${rowData[field]}`);
+            return rowData[field];
+        }
+        
+        // Method 2: Calculate by summing all child values in this dimension
+        const dimName = data.extractDimensionName(rootColumn.hierarchyField);
+        const hierarchy = pivotTable.state?.hierarchies?.[dimName];
+        
+        if (hierarchy && hierarchy.root && hierarchy.root.children) {
+            let total = 0;
+            let hasData = false;
+            
+            hierarchy.root.children.forEach(childId => {
+                const childNode = hierarchy.nodesMap[childId];
+                if (childNode) {
+                    // Create a mock column node for calculation
+                    const mockChildColumn = {
+                        _id: childId,
+                        hierarchyField: rootColumn.hierarchyField,
+                        factId: childNode.factId
+                    };
+                    
+                    const childValue = pivotTable.calculateMultiDimensionalValue([row], [mockChildColumn], field);
+                    if (typeof childValue === 'number' && !isNaN(childValue)) {
+                        total += childValue;
+                        hasData = true;
+                        console.log(`  + Child ${childId}: ${childValue}`);
+                    }
+                }
+            });
+            
+            if (hasData) {
+                console.log(`✅ Calculated root total from children: ${total}`);
+                return total;
+            }
+        }
+        
+        // Method 3: Fallback - try standard calculation
+        const fallbackValue = pivotTable.calculateMultiDimensionalValue([row], [rootColumn], field);
+        console.log(`⚠️ Using fallback calculation: ${fallbackValue}`);
+        return fallbackValue || 0;
+    },
+
+
+    /**
+     * Enhanced value cell rendering with root node styling
+     */
+    renderTemplate3ValueCell: function(value, column, columnIndex, field, pivotTable) {
+        let numericValue;
+
+        if (value === undefined || value === null) {
+            numericValue = 0;
+        } else if (typeof value === 'number') {
+            numericValue = value;
+        } else {
+            numericValue = parseFloat(String(value));
+            if (isNaN(numericValue)) numericValue = 0;
+        }
+
+        const isRootNode = column.isRootNode || column._id === 'ROOT';
+        
+        let cellClass = 'value-cell';
+        if (isRootNode) {
+            cellClass += ' root-value-cell';
+        }
+        
+        if (numericValue !== 0) {
+            cellClass += ' non-zero-value';
+            if (numericValue < 0) {
+                cellClass += ' negative-value';
+            }
+            if (Math.abs(numericValue) >= 1000000) {
+                cellClass += ' large-value';
+            } else if (Math.abs(numericValue) >= 1000) {
+                cellClass += ' medium-value';
+            }
+        }
+
+        const formattedValue = pivotTable.formatValue(numericValue);
+
+        return `<td class="${cellClass}" 
+                    data-raw-value="${numericValue}" 
+                    data-column-index="${columnIndex}" 
+                    data-field="${field}"
+                    data-is-root="${isRootNode}"
+                    data-column-id="${column._id}">
+            <div class="cell-content">${formattedValue}</div>
+        </td>`;
+    },
+
+
+    /**
+     * Helper method to find row data in pivot table
+     */
+    findRowData: function(rowId) {
+        // This should be added to the main pivot table class
+        if (this.state && this.state.factData) {
+            return this.state.factData.find(row => row._id === rowId);
+        }
+        
+        if (this.pivotData && this.pivotData.data) {
+            return this.pivotData.data.find(row => row._id === rowId);
+        }
+        
+        return null;
     },
 
     
@@ -698,300 +886,160 @@ const PivotTemplateSystem = {
      * Multi-row with single column cross-tabulation
      */
     renderTemplate4: function(elements, pivotData, rowFields, columnFields, valueFields, pivotTable) {
-        console.log(`📊 Template4 Enhanced: Excel-style frozen panes (${rowFields.length} rows × ${columnFields.length} column × ${valueFields.length} values)`);
+        console.log(`📊 Template4 Refactored: Multi-row × single column (${rowFields.length} rows × ${columnFields.length} column × ${valueFields.length} values)`);
         
-        // Apply frozen panes CSS classes
-        this.applyTemplate4FrozenClasses(elements, rowFields, columnFields, valueFields);
+        // Apply Template 4 CSS classes for width calculation
+        this.applyTemplate4WidthClasses(elements, rowFields, columnFields, valueFields);
         
-        // Create properly aligned frozen panes structure
-        this.createFrozenPanesStructure(elements);
+        // Use Template 3's proven header structure, but with multiple row dimensions
+        this.renderTemplate4HeaderBasedOnTemplate3(elements, pivotData, rowFields, columnFields, valueFields, pivotTable);
         
-        // Render frozen row dimensions with proper alignment
-        this.renderTemplate4FrozenRowDimensions(elements, pivotData, rowFields, valueFields, pivotTable);
+        // Use Template 3's proven body structure, but with multiple row dimensions  
+        this.renderTemplate4BodyBasedOnTemplate3(elements, pivotData, rowFields, columnFields, valueFields, pivotTable);
         
-        // Render scrollable value area with proper alignment
-        this.renderTemplate4ScrollableValueArea(elements, pivotData, rowFields, columnFields, valueFields, pivotTable);
-        
-        // Setup enhanced synchronized scrolling
-        this.setupTemplate4SynchronizedScrolling(elements);
-        
-        // Final alignment pass
-        setTimeout(() => {
-            const frozenArea = elements.frozenTableBody?.closest('.frozen-row-dimensions');
-            const scrollableArea = elements.scrollableTableBody?.closest('.scrollable-value-area');
-            if (frozenArea && scrollableArea) {
-                this.alignRowHeights(frozenArea, scrollableArea);
-            }
-        }, 100);
-        
-        console.log('✅ Template4 enhanced rendering complete');
+        console.log('✅ Template4 refactored rendering complete');
     },
 
 
     /**
-     * Cleanup function for Template 4
+     * Apply CSS classes for Template 4 width calculation
      */
-    cleanupTemplate4: function() {
-        // Clear any stored timeouts
-        if (this._resizeTimeout) {
-            clearTimeout(this._resizeTimeout);
-            this._resizeTimeout = null;
-        }
-        
-        // Disconnect resize observer
-        if (this._template4ResizeObserver) {
-            this._template4ResizeObserver.disconnect();
-            this._template4ResizeObserver = null;
-        }
-        
-        console.log('🧹 Template4 cleanup complete');
-    },
-
-
-    /**
-     * Create the frozen panes HTML structure
-     */
-    createFrozenPanesStructure: function(elements) {
-        const container = elements.pivotTableHeader?.closest('.pivot-table-container');
-        if (!container) return;
-        
-        // Clear existing content
-        container.innerHTML = '';
-        
-        // Create the main template4 wrapper
-        const template4Wrapper = document.createElement('div');
-        template4Wrapper.className = 'template4-wrapper';
-        
-        // Create frozen row dimensions area
-        const frozenArea = document.createElement('div');
-        frozenArea.className = 'frozen-row-dimensions';
-        frozenArea.innerHTML = `
-            <table>
-                <thead id="frozenTableHeader"></thead>
-                <tbody id="frozenTableBody"></tbody>
-            </table>
-        `;
-        
-        // Create scrollable value area
-        const scrollableArea = document.createElement('div');
-        scrollableArea.className = 'scrollable-value-area';
-        scrollableArea.innerHTML = `
-            <table>
-                <thead id="scrollableTableHeader"></thead>
-                <tbody id="scrollableTableBody"></tbody>
-            </table>
-        `;
-        
-        // Create the 1px grey frozen separator
-        const separator = document.createElement('div');
-        separator.className = 'frozen-separator';
-        separator.title = 'Frozen pane separator';
-        separator.style.cssText = `
-            position: absolute;
-            top: 0;
-            left: 45%;
-            width: 1px;
-            height: 100%;
-            background: #6c757d;
-            z-index: 200;
-            cursor: col-resize;
-        `;
-        
-        // Append all elements
-        template4Wrapper.appendChild(frozenArea);
-        template4Wrapper.appendChild(scrollableArea);
-        template4Wrapper.appendChild(separator);
-        container.appendChild(template4Wrapper);
-        
-        // Update elements references
-        elements.frozenTableHeader = document.getElementById('frozenTableHeader');
-        elements.frozenTableBody = document.getElementById('frozenTableBody');
-        elements.scrollableTableHeader = document.getElementById('scrollableTableHeader');
-        elements.scrollableTableBody = document.getElementById('scrollableTableBody');
-        
-        // Apply the height adjustment
-        this.adjustTemplate4Height(elements);
-        
-        console.log('✅ Created properly aligned frozen panes structure');
-    },
-
-
-    /**
-     * Apply CSS classes for frozen panes
-     */
-    applyTemplate4FrozenClasses: function(elements, rowFields, columnFields, valueFields) {
+    applyTemplate4WidthClasses: function(elements, rowFields, columnFields, valueFields) {
         const container = elements.pivotTableHeader?.closest('.pivot-table-container');
         if (!container) return;
         
         const rowCount = rowFields.length;
+        const valueCount = valueFields.length;
         
         // Remove existing classes
         container.classList.remove(
-            'row-dimensions-2', 'row-dimensions-3', 'row-dimensions-4', 'row-dimensions-5'
+            'row-dimensions-1', 'row-dimensions-2', 'row-dimensions-3', 'row-dimensions-4', 'row-dimensions-5',
+            'value-fields-1', 'value-fields-2', 'value-fields-3', 'value-fields-4', 'value-fields-5'
         );
         
         // Add current classes
         container.classList.add(`row-dimensions-${Math.min(rowCount, 5)}`);
+        container.classList.add(`value-fields-${Math.min(valueCount, 5)}`);
         
-        console.log(`🎨 Applied Template4 frozen classes: row-dimensions-${rowCount}`);
+        console.log(`🎨 Applied Template4 classes: row-dimensions-${rowCount}, value-fields-${valueCount}`);
     },
 
-    
+
     /**
-     * Render frozen row dimensions (left side)
+     * Render header based on Template 3 structure, but with multiple row dimensions
      */
-    renderTemplate4FrozenRowDimensions: function(elements, pivotData, rowFields, valueFields, pivotTable) {
-        if (!elements.frozenTableHeader || !elements.frozenTableBody) {
-            console.warn('⚠️ Template4 frozen elements not found');
-            return;
-        }
+    renderTemplate4HeaderBasedOnTemplate3: function(elements, pivotData, rowFields, columnFields, valueFields, pivotTable) {
+        console.log(`🏗️ Building Template4 header based on Template3 structure`);
         
-        console.log(`🏗️ Building Template4 frozen row dimensions: ${rowFields.length} dimensions`);
+        // Get columns using Template 3's proven method
+        const orderedColumns = this.getTemplate3ColumnsWithRoot(pivotData, columnFields, pivotTable);
         
-        // CRITICAL FIX: Create 3-row header structure to match scrollable area
         let headerHtml = '';
         
-        // Row 1: Row headers with rowspan=3 (only create cells in first row)
+        // Row 1: Multiple row headers + Measures header (Template 3 style)
         headerHtml += '<tr>';
+        
+        // Multiple row dimension headers (each with rowspan="3")
         rowFields.forEach((field, index) => {
-            const dimName = this.getRealDimensionName(field);
-            headerHtml += `<th class="t4-row-header" data-dimension-index="${index}" rowspan="3">`;
-            headerHtml += `<div class="header-content">${dimName}</div>`;
-            headerHtml += '</th>';
+            const rowDimName = this.getRealDimensionName(field);
+            headerHtml += `<th class="t4-row-header" data-dimension-index="${index}" rowspan="3">${rowDimName}</th>`;
         });
-        headerHtml += '</tr>';
         
-        // Row 2: Empty row (the rowspan from row 1 covers this)
-        headerHtml += '<tr></tr>';
-        
-        // Row 3: Empty row (the rowspan from row 1 covers this)
-        headerHtml += '<tr></tr>';
-        
-        console.log('🔍 Template4 header HTML (3 rows):', headerHtml);
-        
-        elements.frozenTableHeader.innerHTML = headerHtml;
-        
-        // Body for frozen area
-        let rowCombinations;
-        try {
-            rowCombinations = pivotTable.generateEnhancedRowCombinations(rowFields);
-        } catch (error) {
-            console.error('❌ Error generating row combinations:', error);
-            rowCombinations = [];
-        }
-        
-        let bodyHtml = '';
-        
-        if (!rowCombinations || rowCombinations.length === 0) {
-            bodyHtml = `<tr><td colspan="${rowFields.length}" class="empty-message">No data to display. Try expanding some dimensions.</td></tr>`;
-        } else {
-            rowCombinations.forEach((combination, rowIndex) => {
-                if (!combination || !combination.nodes) {
-                    console.warn(`⚠️ Invalid combination at index ${rowIndex}`);
-                    return;
-                }
-                
-                bodyHtml += `<tr class="${rowIndex % 2 === 0 ? 'even' : 'odd'}" data-row-index="${rowIndex}">`;
-                
-                // Only dimension cells in frozen area
-                combination.nodes.forEach((node, dimIndex) => {
-                    if (dimIndex < rowFields.length) {
-                        bodyHtml += this.renderTemplate4FrozenDimensionCell(node, rowFields[dimIndex], dimIndex);
-                    }
-                });
-                
-                bodyHtml += '</tr>';
-            });
-        }
-        
-        elements.frozenTableBody.innerHTML = bodyHtml;
-        
-        // Attach event listeners
-        if (pivotTable && typeof pivotTable.attachEventListeners === 'function') {
-            pivotTable.attachEventListeners(elements.frozenTableBody);
-        }
-        
-        console.log(`✅ Template4 frozen header: 3 rows created, ${rowFields.length} columns with rowspan=3`);
-        console.log('🔍 Final frozen header HTML:', elements.frozenTableHeader.innerHTML);
-    },
-
-
-    /**
-     * Render scrollable value area (right side)
-     */
-    renderTemplate4ScrollableValueArea: function(elements, pivotData, rowFields, columnFields, valueFields, pivotTable) {
-        if (!elements.scrollableTableHeader || !elements.scrollableTableBody) return;
-        
-        const columns = pivotData.columns.filter(col => 
-            col._id !== 'ROOT' && 
-            col._id !== 'VALUE' && 
-            col.hierarchyField
-        );
-        const leafColumns = pivotTable.getVisibleLeafColumns(columns);
-        
-        console.log(`🏗️ Building scrollable value area: ${leafColumns.length} columns × ${valueFields.length} values`);
-        
-        // Header for scrollable area
-        let headerHtml = '';
-        
-        // Row 1: Measures header
-        headerHtml += '<tr>';
-        const totalValueCells = leafColumns.length * valueFields.length;
+        // Measures header (Template 3 style)
+        const totalValueCells = orderedColumns.length * valueFields.length;
         headerHtml += `<th class="t4-measures-header" colspan="${totalValueCells}">MEASURES</th>`;
         headerHtml += '</tr>';
         
-        // Row 2: Value field headers
+        // Row 2: Value field headers (Template 3 style)
         headerHtml += '<tr>';
-        valueFields.forEach((field, index) => {
+        valueFields.forEach(field => {
             const fieldLabel = pivotTable.getFieldLabel(field);
-            headerHtml += `<th class="t4-measure-header" colspan="${leafColumns.length}" data-value-index="${index}">`;
-            headerHtml += `<div class="header-content">${fieldLabel}</div>`;
-            headerHtml += '</th>';
+            headerHtml += `<th class="t4-measure-header" colspan="${orderedColumns.length}">${fieldLabel}</th>`;
         });
         headerHtml += '</tr>';
         
-        // Row 3: Column dimension headers
+        // Row 3: Column dimension headers (Template 3 style, including root)
         headerHtml += '<tr>';
-        valueFields.forEach((field) => {
-            leafColumns.forEach((col, colIndex) => {
-                headerHtml += `<th class="t4-column-header" data-column-index="${colIndex}" data-measure="${field}">`;
+        valueFields.forEach(() => {
+            orderedColumns.forEach(col => {
+                const isRootNode = col.isRootNode || col._id === 'ROOT';
+                const cssClass = isRootNode ? 't4-column-header root-node' : 't4-column-header';
                 
-                // Add expand/collapse control if column has children
-                if (pivotTable.originalColumnHasChildren(col)) {
+                headerHtml += `<th class="${cssClass}" data-column-id="${col._id}" data-is-root="${isRootNode}">`;
+                
+                // Add expand/collapse control (Template 3 style)
+                if (!isRootNode && pivotTable.originalColumnHasChildren(col)) {
                     const expandClass = col.expanded ? 'expanded' : 'collapsed';
                     const dimName = data.extractDimensionName(columnFields[0]);
                     headerHtml += `<span class="expand-collapse ${expandClass}" 
                         data-node-id="${col._id}" 
                         data-hierarchy="${dimName}" 
                         data-zone="column"
+                        onclick="window.handleExpandCollapseClick(event)"></span>`;
+                } else if (isRootNode) {
+                    // Root nodes get special expand/collapse handling (Template 3 style)
+                    const expandClass = col.expanded ? 'expanded' : 'collapsed';
+                    const dimName = data.extractDimensionName(columnFields[0]);
+                    headerHtml += `<span class="expand-collapse ${expandClass} root-expand" 
+                        data-node-id="${col._id}" 
+                        data-hierarchy="${dimName}" 
+                        data-zone="column"
                         onclick="window.handleExpandCollapseClick(event)"
-                        title="Expand/collapse ${pivotTable.getDisplayLabel(col)}"></span>`;
+                        title="Expand/collapse all ${dimName} items"></span>`;
                 }
                 
                 const displayLabel = pivotTable.getDisplayLabel(col);
-                headerHtml += `<span class="column-label" title="${displayLabel}">${displayLabel}</span>`;
+                headerHtml += `<span class="column-label ${isRootNode ? 'root-label' : ''}">${displayLabel}</span>`;
                 headerHtml += '</th>';
             });
         });
         headerHtml += '</tr>';
         
-        elements.scrollableTableHeader.innerHTML = headerHtml;
+        elements.pivotTableHeader.innerHTML = headerHtml;
+        console.log(`✅ Template4 header built with ${rowFields.length} row dimensions and Template3-style column structure`);
+    },
+
+
+    /**
+     * Render body based on Template 3 structure, but with multiple row dimensions
+     */
+    renderTemplate4BodyBasedOnTemplate3: function(elements, pivotData, rowFields, columnFields, valueFields, pivotTable) {
+        console.log(`🏗️ Building Template4 body based on Template3 structure`);
         
-        // Body for scrollable area
+        // Get columns using Template 3's proven method
+        const orderedColumns = this.getTemplate3ColumnsWithRoot(pivotData, columnFields, pivotTable);
+        
+        // Use Template 2's proven multi-row combination generation
         const rowCombinations = pivotTable.generateEnhancedRowCombinations(rowFields);
+        
         let bodyHtml = '';
         
         if (rowCombinations.length === 0) {
-            bodyHtml = `<tr><td colspan="${totalValueCells}" class="empty-message">No data to display.</td></tr>`;
+            const totalCols = rowFields.length + (orderedColumns.length * valueFields.length);
+            bodyHtml = `<tr><td colspan="${totalCols}" class="empty-message">No data to display. Try expanding some dimensions.</td></tr>`;
         } else {
-            rowCombinations.forEach((combination, rowIndex) => {
-                bodyHtml += `<tr class="${rowIndex % 2 === 0 ? 'even' : 'odd'}" data-row-index="${rowIndex}">`;
+            rowCombinations.forEach((combination, index) => {
+                bodyHtml += `<tr class="${index % 2 === 0 ? 'even' : 'odd'}">`;
                 
-                // Only value cells in scrollable area
-                valueFields.forEach((field, valueIndex) => {
-                    leafColumns.forEach((col, colIndex) => {
-                        const value = pivotTable.calculateMultiDimensionalValue(combination.nodes, [col], field);
-                        bodyHtml += this.renderTemplate4ScrollableValueCell(value, valueIndex, colIndex);
+                // Multiple row dimension cells (Template 2 style)
+                combination.nodes.forEach((node, dimIndex) => {
+                    bodyHtml += this.renderTemplate4MultiRowDimensionCell(node, rowFields[dimIndex], dimIndex);
+                });
+                
+                // Cross-tabulated value cells (Template 3 style, including root node values)
+                valueFields.forEach(field => {
+                    orderedColumns.forEach((col, colIndex) => {
+                        let value;
+                        
+                        if (col.isRootNode || col._id === 'ROOT') {
+                            // Calculate aggregated value for root node (Template 3 style)
+                            value = this.calculateTemplate4RootNodeValue(combination.nodes, col, field, pivotTable);
+                        } else {
+                            // Regular cross-tabulation for non-root nodes
+                            value = pivotTable.calculateMultiDimensionalValue(combination.nodes, [col], field);
+                        }
+                        
+                        bodyHtml += this.renderTemplate4ValueCell(value, col, colIndex, field, pivotTable);
                     });
                 });
                 
@@ -999,17 +1047,17 @@ const PivotTemplateSystem = {
             });
         }
         
-        elements.scrollableTableBody.innerHTML = bodyHtml;
-        pivotTable.attachEventListeners(elements.scrollableTableBody);
+        elements.pivotTableBody.innerHTML = bodyHtml;
+        pivotTable.attachEventListeners(elements.pivotTableBody);
         
-        console.log(`✅ Scrollable value area built with ${totalValueCells} columns`);
+        console.log(`✅ Template4 body built with ${rowCombinations.length} row combinations × ${orderedColumns.length} columns`);
     },
 
 
     /**
-     * Render dimension cell for frozen area
+     * Render individual row dimension cell for Template 4 (based on Template 2's approach)
      */
-    renderTemplate4FrozenDimensionCell: function(node, field, dimIndex) {
+    renderTemplate4MultiRowDimensionCell: function(node, field, dimIndex) {
         if (!node) {
             return `<td class="t4-dimension-cell dimension-${dimIndex} empty" data-dimension-index="${dimIndex}">
                 <div class="cell-content">-</div>
@@ -1017,16 +1065,19 @@ const PivotTemplateSystem = {
         }
 
         const level = node.level || 0;
+        const indentationPx = 4 + (level * 20);
         const dimName = data.extractDimensionName(field);
         
-        let cellHtml = `<td class="t4-dimension-cell dimension-${dimIndex}" data-level="${level}" data-dimension-index="${dimIndex}">`;
-        cellHtml += '<div class="cell-content">';
+        let cellHtml = `<td class="t4-dimension-cell dimension-${dimIndex}" data-level="${level}" data-dimension-index="${dimIndex}" data-dimension="${dimName}">`;
+        cellHtml += `<div class="cell-content" style="padding-left: ${indentationPx}px;">`;
         
-        // Add expand/collapse control or leaf indicator
-        if (pivotTable.nodeHasChildren(node)) {
+        // Add expand/collapse control or leaf indicator (Template 2 style)
+        const hasChildren = this.nodeHasChildrenSafe(node, window.pivotTable || null, dimName);
+        
+        if (hasChildren) {
             const expandClass = node.expanded ? 'expanded' : 'collapsed';
             cellHtml += `<span class="expand-collapse ${expandClass}" 
-                data-node-id="${node._id}" 
+                data-node-id="${node._id || node.id}" 
                 data-hierarchy="${dimName}" 
                 data-zone="row"
                 data-dimension-index="${dimIndex}"
@@ -1047,9 +1098,55 @@ const PivotTemplateSystem = {
 
 
     /**
-     * Render value cell for scrollable area
+     * Calculate root node value for Template 4 (based on Template 3's method)
      */
-    renderTemplate4ScrollableValueCell: function(value, valueIndex, columnIndex) {
+    calculateTemplate4RootNodeValue: function(rowNodes, rootColumn, field, pivotTable) {
+        console.log(`🧮 Template4: Calculating root value for ${rowNodes.length} row nodes, field: ${field}`);
+        
+        // Use Template 3's proven root calculation method but with multiple row nodes
+        const dimName = data.extractDimensionName(rootColumn.hierarchyField);
+        const hierarchy = pivotTable.state?.hierarchies?.[dimName];
+        
+        if (hierarchy && hierarchy.root && hierarchy.root.children) {
+            let total = 0;
+            let hasData = false;
+            
+            hierarchy.root.children.forEach(childId => {
+                const childNode = hierarchy.nodesMap[childId];
+                if (childNode) {
+                    // Create a mock column node for calculation
+                    const mockChildColumn = {
+                        _id: childId,
+                        hierarchyField: rootColumn.hierarchyField,
+                        factId: childNode.factId
+                    };
+                    
+                    // Use multi-dimensional calculation with all row nodes
+                    const childValue = pivotTable.calculateMultiDimensionalValue(rowNodes, [mockChildColumn], field);
+                    if (typeof childValue === 'number' && !isNaN(childValue)) {
+                        total += childValue;
+                        hasData = true;
+                    }
+                }
+            });
+            
+            if (hasData) {
+                console.log(`✅ Template4: Calculated root total from children: ${total}`);
+                return total;
+            }
+        }
+        
+        // Fallback - try standard calculation with all row nodes
+        const fallbackValue = pivotTable.calculateMultiDimensionalValue(rowNodes, [rootColumn], field);
+        console.log(`⚠️ Template4: Using fallback calculation: ${fallbackValue}`);
+        return fallbackValue || 0;
+    },
+
+
+    /**
+     * Render value cell for Template 4 (based on Template 3's approach)
+     */
+    renderTemplate4ValueCell: function(value, column, columnIndex, field, pivotTable) {
         let numericValue;
 
         if (value === undefined || value === null) {
@@ -1061,7 +1158,13 @@ const PivotTemplateSystem = {
             if (isNaN(numericValue)) numericValue = 0;
         }
 
-        let cellClass = 'value-cell';
+        const isRootNode = column.isRootNode || column._id === 'ROOT';
+        
+        let cellClass = 'value-cell t4-value-cell';
+        if (isRootNode) {
+            cellClass += ' root-value-cell';
+        }
+        
         if (numericValue !== 0) {
             cellClass += ' non-zero-value';
             if (numericValue < 0) {
@@ -1076,203 +1179,14 @@ const PivotTemplateSystem = {
 
         const formattedValue = pivotTable.formatValue(numericValue);
 
-        return `<td class="${cellClass}" data-raw-value="${numericValue}" data-value-index="${valueIndex}" data-column-index="${columnIndex}">
+        return `<td class="${cellClass}" 
+                    data-raw-value="${numericValue}" 
+                    data-column-index="${columnIndex}" 
+                    data-field="${field}"
+                    data-is-root="${isRootNode}"
+                    data-column-id="${column._id}">
             <div class="cell-content">${formattedValue}</div>
         </td>`;
-    },
-
-
-    /**
-     * Setup synchronized scrolling between frozen and scrollable areas
-     */
-    setupTemplate4SynchronizedScrolling: function(elements) {
-        const frozenArea = elements.frozenTableBody?.closest('.frozen-row-dimensions');
-        const scrollableArea = elements.scrollableTableBody?.closest('.scrollable-value-area');
-        
-        if (!frozenArea || !scrollableArea) {
-            console.warn('⚠️ Cannot setup synchronized scrolling - missing areas');
-            return;
-        }
-        
-        let isScrolling = false;
-        let scrollTimeout = null;
-        
-        // Enhanced vertical scroll synchronization
-        const syncVerticalScroll = (source, target) => {
-            if (isScrolling) return;
-            
-            isScrolling = true;
-            target.scrollTop = source.scrollTop;
-            
-            // Clear any existing timeout
-            if (scrollTimeout) {
-                clearTimeout(scrollTimeout);
-            }
-            
-            // Reset scrolling flag after animation frame
-            scrollTimeout = setTimeout(() => {
-                isScrolling = false;
-            }, 16); // ~60fps
-        };
-        
-        // Frozen area scroll -> sync scrollable area
-        frozenArea.addEventListener('scroll', (e) => {
-            syncVerticalScroll(frozenArea, scrollableArea);
-            
-            // Also sync any table rows that might be out of alignment
-            this.alignRowHeights(frozenArea, scrollableArea);
-        });
-        
-        // Scrollable area scroll -> sync frozen area
-        scrollableArea.addEventListener('scroll', (e) => {
-            syncVerticalScroll(scrollableArea, frozenArea);
-            
-            // Sync row heights
-            this.alignRowHeights(frozenArea, scrollableArea);
-        });
-        
-        // Initial alignment
-        this.alignRowHeights(frozenArea, scrollableArea);
-        
-        // Setup resize observer for dynamic row height synchronization
-        if (window.ResizeObserver) {
-            const resizeObserver = new ResizeObserver(entries => {
-                // Debounce the resize handling
-                clearTimeout(this._resizeTimeout);
-                this._resizeTimeout = setTimeout(() => {
-                    this.alignRowHeights(frozenArea, scrollableArea);
-                }, 100);
-            });
-            
-            resizeObserver.observe(frozenArea);
-            resizeObserver.observe(scrollableArea);
-            
-            // Store observer for cleanup
-            this._template4ResizeObserver = resizeObserver;
-        }
-        
-        console.log('✅ Template4 enhanced synchronized scrolling setup complete');
-    },
-
-
-    /**
-     * Align row heights between frozen and scrollable areas
-     */
-    alignRowHeights: function(frozenArea, scrollableArea) {
-        try {
-            const frozenRows = frozenArea.querySelectorAll('tbody tr');
-            const scrollableRows = scrollableArea.querySelectorAll('tbody tr');
-            
-            if (frozenRows.length !== scrollableRows.length) {
-                console.warn(`⚠️ Row count mismatch: frozen(${frozenRows.length}) vs scrollable(${scrollableRows.length})`);
-            }
-            
-            // Reset all heights first
-            [...frozenRows, ...scrollableRows].forEach(row => {
-                row.style.height = 'auto';
-                row.style.minHeight = '40px';
-            });
-            
-            // Calculate and apply maximum height for each row pair
-            const maxRows = Math.min(frozenRows.length, scrollableRows.length);
-            
-            for (let i = 0; i < maxRows; i++) {
-                const frozenRow = frozenRows[i];
-                const scrollableRow = scrollableRows[i];
-                
-                if (!frozenRow || !scrollableRow) continue;
-                
-                // Get natural heights
-                const frozenHeight = frozenRow.offsetHeight;
-                const scrollableHeight = scrollableRow.offsetHeight;
-                const maxHeight = Math.max(frozenHeight, scrollableHeight, 40); // Minimum 40px
-                
-                // Apply the same height to both rows
-                frozenRow.style.height = `${maxHeight}px`;
-                frozenRow.style.minHeight = `${maxHeight}px`;
-                frozenRow.style.maxHeight = `${maxHeight}px`;
-                
-                scrollableRow.style.height = `${maxHeight}px`;
-                scrollableRow.style.minHeight = `${maxHeight}px`;
-                scrollableRow.style.maxHeight = `${maxHeight}px`;
-            }
-            
-            // console.log(`🔄 Aligned ${maxRows} row pairs`);
-            
-        } catch (error) {
-            console.error('Error aligning row heights:', error);
-        }
-    },
-
-
-    /**
-     * Enhanced Template 4 container height management
-     */
-    adjustTemplate4Height: function(elements) {
-        const container = elements.pivotTableHeader?.closest('.pivot-table-container');
-        if (!container) return;
-        
-        // Calculate optimal height based on content
-        const frozenArea = container.querySelector('.frozen-row-dimensions');
-        const scrollableArea = container.querySelector('.scrollable-value-area');
-        
-        if (frozenArea && scrollableArea) {
-            const frozenTable = frozenArea.querySelector('table');
-            const scrollableTable = scrollableArea.querySelector('table');
-            
-            if (frozenTable && scrollableTable) {
-                // Get the natural content height
-                const frozenContentHeight = frozenTable.offsetHeight;
-                const scrollableContentHeight = scrollableTable.offsetHeight;
-                const maxContentHeight = Math.max(frozenContentHeight, scrollableContentHeight);
-                
-                // Calculate desired height
-                const viewportHeight = window.innerHeight;
-                const maxAllowedHeight = viewportHeight * 0.4; // 40% of screen
-                const minHeight = 300;
-                const headerHeight = 120; // Approximate header height
-                
-                // Desired height is content + headers, but capped at 40% screen
-                const desiredHeight = Math.min(
-                    maxContentHeight + headerHeight,
-                    maxAllowedHeight
-                );
-                
-                const finalHeight = Math.max(desiredHeight, minHeight);
-                
-                // Apply the height
-                container.style.height = `${finalHeight}px`;
-                container.style.maxHeight = `${maxAllowedHeight}px`;
-                
-                console.log(`📏 Template4 height: ${finalHeight}px (max: ${maxAllowedHeight}px, content: ${maxContentHeight}px)`);
-            }
-        }
-    },
-
-
-    /**
-     * Synchronize row heights between frozen and scrollable areas
-     */
-    synchronizeRowHeights: function(frozenArea, scrollableArea) {
-        const frozenRows = frozenArea.querySelectorAll('tbody tr');
-        const scrollableRows = scrollableArea.querySelectorAll('tbody tr');
-        
-        // Reset heights
-        [...frozenRows, ...scrollableRows].forEach(row => {
-            row.style.height = 'auto';
-        });
-        
-        // Calculate and apply maximum height for each row
-        for (let i = 0; i < Math.min(frozenRows.length, scrollableRows.length); i++) {
-            const frozenHeight = frozenRows[i].offsetHeight;
-            const scrollableHeight = scrollableRows[i].offsetHeight;
-            const maxHeight = Math.max(frozenHeight, scrollableHeight);
-            
-            frozenRows[i].style.height = `${maxHeight}px`;
-            scrollableRows[i].style.height = `${maxHeight}px`;
-        }
-        
-        console.log(`🔄 Synchronized ${Math.min(frozenRows.length, scrollableRows.length)} row heights`);
     },
 
 
@@ -1280,249 +1194,157 @@ const PivotTemplateSystem = {
      * TEMPLATE 5: 2+ rows + 2+ columns + values
      * Full multi-dimensional cross-tabulation
      */
+    
     renderTemplate5: function(elements, pivotData, rowFields, columnFields, valueFields, pivotTable) {
-        console.log(`📊 Template5 Enhanced: Excel-like frozen multi-dimensional (${rowFields.length} rows × ${columnFields.length} columns × ${valueFields.length} values)`);
+        console.log(`📊 Template5 Refactored: Multi-row × hierarchical multi-column (${rowFields.length} rows × ${columnFields.length} columns × ${valueFields.length} values)`);
         
         // Apply Template 5 CSS classes for width calculation
         this.applyTemplate5WidthClasses(elements, rowFields, columnFields, valueFields);
         
-        // Create Excel-like frozen panes structure
-        this.createTemplate5FrozenStructure(elements);
+        // Use Template 6's proven header structure, but with multiple row dimensions
+        this.renderTemplate5HeaderBasedOnTemplate6(elements, pivotData, rowFields, columnFields, valueFields, pivotTable);
         
-        // Render frozen row dimensions (45% left side)
-        this.renderTemplate5FrozenRowDimensions(elements, pivotData, rowFields, valueFields, pivotTable);
+        // Use Template 6's proven body structure, but with multiple row dimensions
+        this.renderTemplate5BodyBasedOnTemplate6(elements, pivotData, rowFields, columnFields, valueFields, pivotTable);
         
-        // Render scrollable value area (55% right side)  
-        this.renderTemplate5ScrollableValueArea(elements, pivotData, rowFields, columnFields, valueFields, pivotTable);
-        
-        // Setup synchronized scrolling
-        this.setupTemplate5SynchronizedScrolling(elements);
-        
-        console.log('✅ Template5 enhanced rendering complete');
+        console.log('✅ Template5 refactored rendering complete');
     },
 
 
     /**
-     * Apply CSS classes for proper width calculation
+     * Apply CSS classes for Template 5 width calculation
      */
     applyTemplate5WidthClasses: function(elements, rowFields, columnFields, valueFields) {
         const container = elements.pivotTableHeader?.closest('.pivot-table-container');
         if (!container) return;
         
         const rowCount = rowFields.length;
+        const columnCount = columnFields.length;
+        const valueCount = valueFields.length;
         
         // Remove existing classes
         container.classList.remove(
-            'row-dimensions-1', 'row-dimensions-2', 'row-dimensions-3', 'row-dimensions-4', 'row-dimensions-5'
+            'row-dimensions-1', 'row-dimensions-2', 'row-dimensions-3', 'row-dimensions-4', 'row-dimensions-5',
+            'column-dimensions-1', 'column-dimensions-2', 'column-dimensions-3', 'column-dimensions-4', 'column-dimensions-5',
+            'value-fields-1', 'value-fields-2', 'value-fields-3', 'value-fields-4', 'value-fields-5'
         );
         
         // Add current classes
         container.classList.add(`row-dimensions-${Math.min(rowCount, 5)}`);
+        container.classList.add(`column-dimensions-${Math.min(columnCount, 5)}`);
+        container.classList.add(`value-fields-${Math.min(valueCount, 5)}`);
         
-        console.log(`🎨 Applied Template5 classes: row-dimensions-${rowCount}`);
+        console.log(`🎨 Applied Template5 classes: row-dimensions-${rowCount}, column-dimensions-${columnCount}, value-fields-${valueCount}`);
     },
 
 
     /**
-     * Create Excel-like frozen panes structure
+     * Render header based on Template 6 structure, but with multiple row dimensions
      */
-    createTemplate5FrozenStructure: function(elements) {
-        const container = elements.pivotTableHeader?.closest('.pivot-table-container');
-        if (!container) return;
+    renderTemplate5HeaderBasedOnTemplate6: function(elements, pivotData, rowFields, columnFields, valueFields, pivotTable) {
+        console.log(`🏗️ Building Template5 header based on Template6 structure`);
         
-        // Clear existing content
-        container.innerHTML = '';
+        // Get hierarchical column combinations using Template 6's proven method
+        const columnCombinations = this.generateTemplate6ColumnCombinations(pivotData, columnFields, pivotTable);
         
-        // Create frozen row dimensions area (45% left)
-        const frozenArea = document.createElement('div');
-        frozenArea.className = 'frozen-row-dimensions';
-        frozenArea.innerHTML = `
-            <table>
-                <thead id="template5FrozenHeader"></thead>
-                <tbody id="template5FrozenBody"></tbody>
-            </table>
-        `;
-        
-        // Create scrollable value area (55% right)
-        const scrollableArea = document.createElement('div');
-        scrollableArea.className = 'scrollable-value-area';
-        scrollableArea.innerHTML = `
-            <table>
-                <thead id="template5ScrollableHeader"></thead>
-                <tbody id="template5ScrollableBody"></tbody>
-            </table>
-        `;
-        
-        // Create frozen separator (1px grey line)
-        const separator = document.createElement('div');
-        separator.className = 'frozen-separator';
-        separator.title = 'Frozen boundary - row dimensions cannot expand beyond this line';
-        
-        // Append all elements
-        container.appendChild(frozenArea);
-        container.appendChild(scrollableArea);
-        container.appendChild(separator);
-        
-        // Update elements references
-        elements.template5FrozenHeader = document.getElementById('template5FrozenHeader');
-        elements.template5FrozenBody = document.getElementById('template5FrozenBody');
-        elements.template5ScrollableHeader = document.getElementById('template5ScrollableHeader');
-        elements.template5ScrollableBody = document.getElementById('template5ScrollableBody');
-        
-        console.log('✅ Created Template5 frozen structure with 45:55 split');
-    },
-
-
-    /**
-     * Render frozen row dimensions area (45% left side)
-     */
-    renderTemplate5FrozenRowDimensions: function(elements, pivotData, rowFields, columnFields, valueFields, pivotTable) {
-        if (!elements.template5FrozenHeader || !elements.template5FrozenBody) {
-            console.warn('⚠️ Template5 frozen elements not found');
-            return;
-        }
-        
-        // Add validation for required parameters
-        if (!rowFields || !Array.isArray(rowFields) || rowFields.length === 0) {
-            console.error('❌ renderTemplate5FrozenRowDimensions: invalid rowFields', rowFields);
-            elements.template5FrozenHeader.innerHTML = '<tr><th class="error">No row fields available</th></tr>';
-            elements.template5FrozenBody.innerHTML = '<tr><td class="error">Cannot render without valid row fields</td></tr>';
-            return;
-        }
-        
-        console.log(`🏗️ Building Template5 frozen row dimensions: ${rowFields.length} dimensions`);
-        
-        // FIXED: More flexible pivotTable reference
-        let actualPivotTable = pivotTable;
-        
-        // Try to find pivotTable in different ways
-        if (!actualPivotTable && typeof window !== 'undefined' && window.pivotTable) {
-            actualPivotTable = window.pivotTable;
-            console.log('📍 Found pivotTable on window object');
-        }
-        
-        // Try to find it as a global
-        if (!actualPivotTable && typeof pivotTable !== 'undefined') {
-            actualPivotTable = pivotTable;
-            console.log('📍 Found pivotTable as global');
-        }
-        
-        // FIXED: Calculate proper rowspan
-        const columnFieldsLength = (columnFields && Array.isArray(columnFields)) ? columnFields.length : 0;
-        const headerRowCount = 2 + columnFieldsLength; // MEASURES + value fields + column dimensions
-        
-        console.log(`🔍 Template5 will create ${headerRowCount} header rows (2 + ${columnFieldsLength} column dimensions)`);
-        
-        // Build multi-row header structure (this always works)
         let headerHtml = '';
         
-        // Row 1: Row headers with proper rowspan
+        // Calculate total header rows needed: 1 (row headers) + 1 (measures) + N (value fields) + M (column dimensions)
+        const totalHeaderRows = 2 + valueFields.length + columnFields.length;
+        
+        // Row 1: Multiple row headers with mega rowspan + Measures header (Template 6 style)
         headerHtml += '<tr>';
+        
+        // Multiple row dimension headers (each with rowspan covering all header rows)
         rowFields.forEach((field, index) => {
-            if (field) {
-                const dimName = this.getRealDimensionName(field);
-                headerHtml += `<th class="t5-row-header" data-dimension-index="${index}" rowspan="${headerRowCount}">`;
-                headerHtml += `<div class="header-content">${dimName}</div>`;
-                headerHtml += '</th>';
-            } else {
-                console.warn(`⚠️ Undefined field at index ${index} in rowFields`);
-                headerHtml += `<th class="t5-row-header error" data-dimension-index="${index}" rowspan="${headerRowCount}">`;
-                headerHtml += `<div class="header-content">Invalid Field</div>`;
-                headerHtml += '</th>';
-            }
+            const rowDimName = this.getRealDimensionName(field);
+            headerHtml += `<th class="t5-row-header" data-dimension-index="${index}" rowspan="${totalHeaderRows}">${rowDimName}</th>`;
+        });
+        
+        // Measures header spanning all value cells (Template 6 style)
+        const totalValueCells = columnCombinations.length * valueFields.length;
+        headerHtml += `<th class="t5-measures-header" colspan="${totalValueCells}">MEASURES</th>`;
+        headerHtml += '</tr>';
+        
+        // Row 2: Value field headers (Template 6 style)
+        headerHtml += '<tr>';
+        valueFields.forEach((field, valueIndex) => {
+            const fieldLabel = pivotTable.getFieldLabel(field);
+            headerHtml += `<th class="t5-measure-header" colspan="${columnCombinations.length}" data-value-index="${valueIndex}">`;
+            headerHtml += `<div class="header-content">${fieldLabel}</div>`;
+            headerHtml += '</th>';
         });
         headerHtml += '</tr>';
         
-        // Rows 2 to N: Empty rows (covered by rowspan from row 1)
-        for (let i = 1; i < headerRowCount; i++) {
-            headerHtml += '<tr></tr>';
-        }
+        // Rows 3+: Hierarchical column dimension headers (Template 6 style)
+        headerHtml += this.buildTemplate5HierarchicalColumnHeaders(columnCombinations, columnFields, valueFields, pivotTable);
         
-        console.log(`🔍 Template5 header HTML (${headerRowCount} rows):`, headerHtml);
-        elements.template5FrozenHeader.innerHTML = headerHtml;
-        
-        // ENHANCED: Use the enhanced row combination generation
-        let bodyHtml = '';
-        let rowCombinations = [];
-        
-        // Use the enhanced row combination generation
-        rowCombinations = this.generateTemplate5RowCombinations(rowFields, pivotData, actualPivotTable);
-        
-        if (!rowCombinations || rowCombinations.length === 0) {
-            bodyHtml = `<tr><td colspan="${rowFields.length}" class="empty-message">No data to display. Check data source or expand dimensions.</td></tr>`;
-        } else {
-            console.log(`🏗️ Rendering ${rowCombinations.length} row combinations for Template5`);
-            
-            rowCombinations.forEach((combination, rowIndex) => {
-                if (!combination || !combination.nodes || !Array.isArray(combination.nodes)) {
-                    console.warn(`⚠️ Invalid combination at index ${rowIndex}:`, combination);
-                    bodyHtml += `<tr class="${rowIndex % 2 === 0 ? 'even' : 'odd'}" data-row-index="${rowIndex}">`;
-                    bodyHtml += `<td colspan="${rowFields.length}" class="error">Invalid row combination</td>`;
-                    bodyHtml += '</tr>';
-                    return;
-                }
-                
-                bodyHtml += `<tr class="${rowIndex % 2 === 0 ? 'even' : 'odd'}" data-row-index="${rowIndex}">`;
-                
-                // Render each dimension cell with proper hierarchy
-                combination.nodes.forEach((node, dimIndex) => {
-                    if (dimIndex < rowFields.length) {
-                        bodyHtml += this.renderTemplate5FrozenDimensionCell(node, rowFields[dimIndex], dimIndex, actualPivotTable);
-                    }
-                });
-                
-                bodyHtml += '</tr>';
-            });
-        }
-        
-        elements.template5FrozenBody.innerHTML = bodyHtml;
-        
-        // FIXED: Safe event listener attachment
-        if (actualPivotTable && typeof actualPivotTable.attachEventListeners === 'function') {
-            try {
-                actualPivotTable.attachEventListeners(elements.template5FrozenBody);
-                console.log('✅ Event listeners attached successfully');
-            } catch (error) {
-                console.warn('⚠️ Error attaching event listeners:', error);
-            }
-        }
-        
-        console.log(`✅ Template5 frozen area built with ${rowCombinations.length} rows and ${headerRowCount}-row header span`);
+        elements.pivotTableHeader.innerHTML = headerHtml;
+        console.log(`✅ Template5 header built with ${rowFields.length} row dimensions and Template6-style hierarchical columns`);
     },
 
 
     /**
-     * Render scrollable value area (55% right side)
+     * Build hierarchical column headers for Template 5 (based on Template 6's proven approach)
      */
-    renderTemplate5ScrollableValueArea: function(elements, pivotData, rowFields, columnFields, valueFields, pivotTable) {
-        if (!elements.template5ScrollableHeader || !elements.template5ScrollableBody) return;
+    buildTemplate5HierarchicalColumnHeaders: function(columnCombinations, columnFields, valueFields, pivotTable) {
+        let headerHtml = '';
         
-        // Get column combinations for multi-column layout
-        const columnCombinations = this.generateTemplate5ColumnCombinations(pivotData, columnFields, pivotTable);
+        // Build each column dimension level (Template 6 style)
+        columnFields.forEach((field, levelIndex) => {
+            headerHtml += '<tr>';
+            
+            valueFields.forEach((valueField, valueIndex) => {
+                if (levelIndex === 0) {
+                    // Top level - higher dimension nodes with expand/collapse (Template 6 style)
+                    const topLevelSpans = this.calculateTemplate6TopLevelSpans(columnCombinations, levelIndex);
+                    topLevelSpans.forEach(spanInfo => {
+                        headerHtml += this.renderTemplate6HigherDimensionHeader(spanInfo, field, levelIndex, valueIndex, pivotTable);
+                    });
+                } else {
+                    // Lower dimension nodes - repeated for each higher dimension node (Template 6 style)
+                    headerHtml += this.renderTemplate6LowerDimensionHeaders(columnCombinations, field, levelIndex, valueField, valueIndex, pivotTable);
+                }
+            });
+            
+            headerHtml += '</tr>';
+        });
         
-        console.log(`🏗️ Building Template5 scrollable value area: ${columnCombinations.length} column combinations × ${valueFields.length} values`);
+        return headerHtml;
+    },
+
+
+    /**
+     * Render body based on Template 6 structure, but with multiple row dimensions
+     */
+    renderTemplate5BodyBasedOnTemplate6: function(elements, pivotData, rowFields, columnFields, valueFields, pivotTable) {
+        console.log(`🏗️ Building Template5 body based on Template6 structure`);
         
-        // Build multi-level header for scrollable area
-        let headerHtml = this.buildTemplate5MultiLevelHeader(columnCombinations, columnFields, valueFields, pivotTable);
+        // Get hierarchical column combinations using Template 6's proven method
+        const columnCombinations = this.generateTemplate6ColumnCombinations(pivotData, columnFields, pivotTable);
         
-        elements.template5ScrollableHeader.innerHTML = headerHtml;
-        
-        // Body for scrollable area - cross-tabulated values
+        // Use Template 4's proven multi-row combination generation
         const rowCombinations = pivotTable.generateEnhancedRowCombinations(rowFields);
+        
         let bodyHtml = '';
         
-        if (rowCombinations.length === 0) {
-            const totalCols = columnCombinations.length * valueFields.length;
-            bodyHtml = `<tr><td colspan="${totalCols}" class="empty-message">No data to display.</td></tr>`;
+        if (rowCombinations.length === 0 || columnCombinations.length === 0) {
+            const totalCols = rowFields.length + (columnCombinations.length * valueFields.length);
+            bodyHtml = `<tr><td colspan="${totalCols}" class="empty-message">No data to display. Try expanding some dimensions.</td></tr>`;
         } else {
-            rowCombinations.forEach((rowCombo, rowIndex) => {
-                bodyHtml += `<tr class="${rowIndex % 2 === 0 ? 'even' : 'odd'}" data-row-index="${rowIndex}">`;
+            rowCombinations.forEach((combination, index) => {
+                bodyHtml += `<tr class="${index % 2 === 0 ? 'even' : 'odd'}">`;
                 
-                // Cross-tabulated value cells
-                valueFields.forEach((field, valueIndex) => {
-                    columnCombinations.forEach((colCombo, colIndex) => {
-                        const value = pivotTable.calculateMultiDimensionalValue(rowCombo.nodes, colCombo.nodes, field);
-                        bodyHtml += this.renderTemplate5ValueCell(value, valueIndex, colIndex, pivotTable);
+                // Multiple row dimension cells (Template 4 style)
+                combination.nodes.forEach((node, dimIndex) => {
+                    bodyHtml += this.renderTemplate5MultiRowDimensionCell(node, rowFields[dimIndex], dimIndex);
+                });
+                
+                // Cross-tabulated value cells (Template 6 style)
+                valueFields.forEach(field => {
+                    columnCombinations.forEach((combo, colIndex) => {
+                        const value = pivotTable.calculateMultiDimensionalValue(combination.nodes, combo.nodes, field);
+                        bodyHtml += this.renderTemplate5ValueCell(value, field, colIndex, pivotTable);
                     });
                 });
                 
@@ -1530,49 +1352,90 @@ const PivotTemplateSystem = {
             });
         }
         
-        elements.template5ScrollableBody.innerHTML = bodyHtml;
-        pivotTable.attachEventListeners(elements.template5ScrollableBody);
+        elements.pivotTableBody.innerHTML = bodyHtml;
+        pivotTable.attachEventListeners(elements.pivotTableBody);
         
-        console.log(`✅ Template5 scrollable area built with ${columnCombinations.length} column combinations`);
+        console.log(`✅ Template5 body built with ${rowCombinations.length} row combinations × ${columnCombinations.length} column combinations`);
     },
 
 
     /**
-     * Generate column combinations for Template 5
+     * Render individual row dimension cell for Template 5 (based on Template 4's approach)
      */
-    generateTemplate5ColumnCombinations: function(pivotData, columnFields, pivotTable) {
-        // Filter out VALUE columns and ROOT columns
-        const columns = pivotData.columns.filter(col => {
-            return col._id !== 'ROOT' && 
-                col._id !== 'VALUE' && 
-                col.label !== 'VALUE' && 
-                col.label !== 'Value' &&
-                col._id !== 'default' && 
-                col._id !== 'no_columns' &&
-                col.label !== 'Measures' &&
-                col.hierarchyField;
-        });
+    renderTemplate5MultiRowDimensionCell: function(node, field, dimIndex) {
+        if (!node) {
+            return `<td class="t5-dimension-cell dimension-${dimIndex} empty" data-dimension-index="${dimIndex}">
+                <div class="cell-content">-</div>
+            </td>`;
+        }
+
+        const level = node.level || 0;
+        const indentationPx = 4 + (level * 20);
+        const dimName = data.extractDimensionName(field);
         
-        console.log(`🔍 Template5: Found ${columns.length} valid column nodes from ${columnFields.length} column fields`);
+        let cellHtml = `<td class="t5-dimension-cell dimension-${dimIndex}" data-level="${level}" data-dimension-index="${dimIndex}" data-dimension="${dimName}">`;
+        cellHtml += `<div class="cell-content" style="padding-left: ${indentationPx}px;">`;
         
-        if (columnFields.length === 1) {
-            // Single column dimension - return visible nodes respecting expand/collapse
-            const visibleNodes = this.getVisibleColumnNodesHierarchical(columns, columnFields[0], pivotTable);
-            console.log(`🔍 Template5: Single column dimension, ${visibleNodes.length} visible nodes`);
-            return visibleNodes.map(col => ({
-                nodes: [col],
-                labels: [pivotTable.getDisplayLabel(col)],
-                key: col._id
-            }));
-        } else if (columnFields.length >= 2) {
-            // Multi-column dimensions - generate hierarchical combinations
-            console.log(`🔍 Template5: Multi-column dimensions, generating hierarchical combinations...`);
-            return this.generateHierarchicalColumnCombinations(columns, columnFields, pivotTable);
+        // Add expand/collapse control or leaf indicator (Template 4 style)
+        const hasChildren = this.nodeHasChildrenSafe(node, window.pivotTable || null, dimName);
+        
+        if (hasChildren) {
+            const expandClass = node.expanded ? 'expanded' : 'collapsed';
+            cellHtml += `<span class="expand-collapse ${expandClass}" 
+                data-node-id="${node._id || node.id}" 
+                data-hierarchy="${dimName}" 
+                data-zone="row"
+                data-dimension-index="${dimIndex}"
+                onclick="window.handleExpandCollapseClick(event)"
+                title="Expand/collapse ${pivotTable.getDisplayLabel(node)}"></span>`;
+        } else {
+            cellHtml += '<span class="leaf-node-empty"></span>';
         }
         
-        return [];
+        const displayLabel = pivotTable.getDisplayLabel(node);
+        cellHtml += `<span class="dimension-label" title="${displayLabel}">${displayLabel}</span>`;
+        
+        cellHtml += '</div>';
+        cellHtml += '</td>';
+        
+        return cellHtml;
     },
 
+    /**
+     * Render value cell for Template 5 (based on Template 6's approach)
+     */
+    renderTemplate5ValueCell: function(value, field, columnIndex, pivotTable) {
+        let numericValue;
+
+        if (value === undefined || value === null) {
+            numericValue = 0;
+        } else if (typeof value === 'number') {
+            numericValue = value;
+        } else {
+            numericValue = parseFloat(String(value));
+            if (isNaN(numericValue)) numericValue = 0;
+        }
+
+        let cellClass = 'value-cell t5-value-cell';
+        if (numericValue !== 0) {
+            cellClass += ' non-zero-value';
+            if (numericValue < 0) {
+                cellClass += ' negative-value';
+            }
+            if (Math.abs(numericValue) >= 1000000) {
+                cellClass += ' large-value';
+            } else if (Math.abs(numericValue) >= 1000) {
+                cellClass += ' medium-value';
+            }
+        }
+
+        const formattedValue = pivotTable.formatValue(numericValue);
+
+        return `<td class="${cellClass}" data-raw-value="${numericValue}" data-column-index="${columnIndex}" data-field="${field}">
+            <div class="cell-content">${formattedValue}</div>
+        </td>`;
+    },
+    
 
     /**
      * Get visible column nodes respecting hierarchy and expand/collapse state
@@ -2536,17 +2399,8 @@ const PivotTemplateSystem = {
     generateTemplate6ColumnCombinations: function(pivotData, columnFields, pivotTable) {
         console.log(`🔍 Generating Template6 hierarchical column combinations for ${columnFields.length} dimensions`);
         
-        // Filter out system columns
-        const columns = pivotData.columns.filter(col => {
-            return col._id !== 'ROOT' && 
-                col._id !== 'VALUE' && 
-                col.label !== 'VALUE' && 
-                col.label !== 'Value' &&
-                col._id !== 'default' && 
-                col._id !== 'no_columns' &&
-                col.label !== 'Measures' &&
-                col.hierarchyField;
-        });
+        // FIXED: Allow root nodes to be displayed
+        const columns = this.filterColumnsForDisplay(pivotData.columns, true);
         
         console.log(`🔍 Found ${columns.length} valid column nodes from ${columnFields.length} column fields`);
         
@@ -2816,10 +2670,11 @@ const PivotTemplateSystem = {
     renderTemplate6HigherDimensionHeader: function(spanInfo, field, levelIndex, valueIndex, pivotTable) {
         const node = spanInfo.node;
         const spanCount = spanInfo.spanCount;
+        const isRootNode = node._id === 'ROOT';
         
-        let headerHtml = `<th class="t6-column-header dimension-level-${levelIndex}" colspan="${spanCount}" data-node-id="${node._id}" data-value-index="${valueIndex}">`;
+        let headerHtml = `<th class="t6-column-header dimension-level-${levelIndex} ${isRootNode ? 'root-node' : ''}" colspan="${spanCount}" data-node-id="${node._id}" data-value-index="${valueIndex}">`;
         
-        // IMPROVEMENT 2: Always add expand/collapse for higher dimension nodes (no leaf icons in column zone)
+        // Always add expand/collapse for higher dimension nodes (including root)
         const dimName = data.extractDimensionName(field);
         const isExpanded = this.isColumnNodeExpanded(node, dimName, pivotTable);
         const expandClass = isExpanded ? 'expanded' : 'collapsed';
@@ -2831,14 +2686,12 @@ const PivotTemplateSystem = {
             onclick="window.handleExpandCollapseClick(event)"
             title="Expand/collapse ${pivotTable.getDisplayLabel(node)} (spans ${spanCount} columns)"></span>`;
         
-        console.log(`🎯 Template6 Higher: Added expand/collapse to ${node.label} (span: ${spanCount})`);
-        
         const displayLabel = pivotTable.getDisplayLabel(node);
-        headerHtml += `<span class="column-label">${displayLabel}</span>`;
+        headerHtml += `<span class="column-label ${isRootNode ? 'root-label' : ''}">${displayLabel}</span>`;
         headerHtml += '</th>';
         
         return headerHtml;
-    },    
+    },
 
 
     /**
@@ -3312,7 +3165,99 @@ const PivotTemplateSystem = {
         }).slice(0, 10);
     },
 
+
+    /**
+     * Replace the existing column filtering in all template functions
+     * with this improved version that allows meaningful root nodes
+     */
+    filterColumnsForDisplay: function(columns, allowRootNodes = true) {
+        return columns.filter(col => {
+            // Always exclude these system values
+            if (col._id === 'VALUE' || 
+                col.label === 'VALUE' || 
+                col.label === 'Value' ||
+                col._id === 'default' || 
+                col._id === 'no_columns' ||
+                col.label === 'Measures') {
+                return false;
+            }
+            
+            // Handle ROOT nodes based on allowRootNodes parameter
+            if (col._id === 'ROOT') {
+                if (!allowRootNodes) {
+                    return false;
+                }
+                // Include ROOT nodes that have meaningful data or children
+                return col.hierarchyField && (col.hasChildren || col.children?.length > 0 || col.factId);
+            }
+            
+            // Include other nodes with hierarchy field
+            return col.hierarchyField;
+        });
+    },
+
+
+    /**
+     * Add this method to better handle root node visibility
+     */
+    shouldDisplayRootNode: function(rootNode, pivotTable) {
+        if (!rootNode || rootNode._id !== 'ROOT') {
+            return false;
+        }
+        
+        // Check if root node has meaningful children or data
+        if (rootNode.children && rootNode.children.length > 0) {
+            return true;
+        }
+        
+        // Check if root node has factId (contains actual data)
+        if (rootNode.factId) {
+            return true;
+        }
+        
+        // Check via hierarchy system
+        if (rootNode.hierarchyField && pivotTable?.state?.hierarchies) {
+            const dimName = data.extractDimensionName(rootNode.hierarchyField);
+            const hierarchy = pivotTable.state.hierarchies[dimName];
+            
+            if (hierarchy?.root?.children?.length > 0) {
+                return true;
+            }
+        }
+        
+        return false;
+    },
+
+
+    /**
+     * Enhanced visible column nodes that includes root
+     */
+    getVisibleColumnNodesWithRoot: function(dimensionColumns, field, pivotTable) {
+        // First, check if we have a meaningful root node
+        const rootNode = dimensionColumns.find(col => col._id === 'ROOT');
+        const visibleNodes = [];
+        
+        if (rootNode && this.shouldDisplayRootNode(rootNode, pivotTable)) {
+            // Include the root node if it's meaningful
+            visibleNodes.push(rootNode);
+            console.log(`✅ Including ROOT node for ${field}: ${rootNode.label || 'ROOT'}`);
+        }
+        
+        // Add other visible nodes (non-root)
+        const otherNodes = dimensionColumns.filter(col => {
+            return col._id !== 'ROOT' && 
+                (!this.columnNodeHasExpandableChildren(col, pivotTable) || col.factId);
+        });
+        
+        visibleNodes.push(...otherNodes);
+        
+        console.log(`📊 Total visible nodes for ${field}: ${visibleNodes.length} (${rootNode && this.shouldDisplayRootNode(rootNode, pivotTable) ? 'including' : 'excluding'} root)`);
+        
+        return visibleNodes.slice(0, 15);
+    },
+
 };
+
 
 // Export the template system
 export default PivotTemplateSystem;

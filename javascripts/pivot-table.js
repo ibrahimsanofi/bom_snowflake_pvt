@@ -1,7 +1,7 @@
 // This module centralizes the essential logic of pivot table functionality
 
-import data from './data.js';
 import stateModule from './state.js';
+import data from './data.js';
 import PivotTemplateSystem from './pivot-table-template.js';
 
 
@@ -58,23 +58,6 @@ const nodeHasChildren = function(node, state) {
     return !!(node.children && node.children.length > 0 && 
              node.children.some(childId => hierarchy?.nodesMap?.[childId]));
 };
-
-
-// Universal dimension name extractor
-// const extractDimensionName = function(dimensionField) {
-//     if (!dimensionField) {
-//         return 'unknown'; // Return a safe default
-//     }
-    
-//     // Handle both DIM_ prefixed and direct dimension names
-//     let dimName = dimensionField;
-//     if (dimName.startsWith('DIM_')) {
-//         dimName = dimName.replace(/^DIM_/, '');
-//     }
-    
-//     // Convert to lowercase for consistency
-//     return dimName.toLowerCase();
-// };
 
 
 // Universal expansion state checker
@@ -288,8 +271,8 @@ const pivotTable = {
 
 
     /**
- * Enhanced node children checker with proper hierarchy support
- */
+     * Enhanced node children checker with proper hierarchy support
+     */
     nodeHasChildren: function(node) {
         if (!node || !node.hierarchyField) return false;
         
@@ -1164,7 +1147,6 @@ const pivotTable = {
 
     /**
      * ENHANCED: Updated generatePivotTable to detect stacked columns
-     * Add this logic to your existing generatePivotTable method
      */
     detectAndApplyStackedColumnsMode: function() {
         const columnFields = this.state.columnFields || [];
@@ -1649,11 +1631,6 @@ const pivotTable = {
             const endTime = performance.now();
             const processingTime = endTime - startTime;
             
-            // Only log slow calculations
-            // if (processingTime > 10) {
-            //     console.log(`⏱️ Row ${rowIndex} (${rowDef.label}): ${processingTime.toFixed(2)}ms`);
-            // }
-
             pivotData.data.push(rowData);
         });
 
@@ -1692,10 +1669,6 @@ const pivotTable = {
                 });
             }
         }
-        
-        // For parent nodes, this should not be called in the new approach
-        // but keeping as fallback
-        // console.warn(`⚠️ Filtering parent node ${node._id} - this should use descendant aggregation instead`);
         
         // Dimension-specific filtering (fallback)
         switch (dimName) {
@@ -1792,54 +1765,6 @@ const pivotTable = {
         // console.log(`  No filtering applied for ${dimNode.label}`);
         return records;
     },
-
-
-    /**
-     * Gets the corresponding fact table field name for a dimension
-     * 
-     * @param {string} dimName - Dimension name
-     * @returns {string|null} - Corresponding fact table field name or null if not found
-     */
-    // getFactIdField: function(dimName) {
-    //     // Define mapping between dimension names and fact table field names
-    //     const factIdFieldMap = {
-    //         'le': 'LE',
-    //         'cost_element': 'COST_ELEMENT',
-    //         'root_gmid_display': 'ROOT_GMID',
-    //         'gmid_display': 'COMPONENT_GMID',
-    //         'smartcode': 'ROOT_SMARTCODE',
-    //         'item_cost_type': 'ITEM_COST_TYPE',
-    //         'material_type': 'COMPONENT_MATERIAL_TYPE',
-    //         'year': 'ZYEAR',
-    //         'mc': 'MC'
-    //     };
-        
-    //     return factIdFieldMap[dimName.toLowerCase()] || null;
-    // },
-
-
-    /**
-     * Gets the corresponding fact table field name for a dimension
-     * 
-     * @param {string} dimName - Dimension name
-     * @returns {string|null} - Corresponding dimension table field name or null if not found
-     */
-    // getDimensionIdField: function(dimName) {
-    //     // Define mapping between dimension names and pk field names
-    //     const dimensionIdFieldMap = {
-    //         'le': 'LE',
-    //         'cost_element': 'COST_ELEMENT',
-    //         'root_gmid_display': 'ROOT_GMID',
-    //         'gmid_display': 'COMPONENT_GMID',
-    //         'smartcode': 'SMARTCODE',
-    //         'item_cost_type': 'ITEM_COST_TYPE',
-    //         'material_type': 'MATERIAL_TYPE',
-    //         'year': 'YEAR',
-    //         'mc': 'MC'
-    //     };
-        
-    //     return dimensionIdFieldMap[dimName.toLowerCase()] || null;
-    // },
 
 
     /**
@@ -3180,27 +3105,6 @@ const pivotTable = {
 
 
     // Add this new helper method for display labels
-    // getDisplayLabel: function(node) {
-    //     if (!node) return '';
-        
-    //     // Handle case where hierarchyField might be undefined
-    //     if (!node.hierarchyField) {
-    //         return node.label || node._id || 'Unknown';
-    //     }
-        
-    //     const dimName = extractDimensionName(node.hierarchyField);
-        
-    //     // Try to get enhanced label from data module
-    //     if (typeof data !== 'undefined') {
-    //         if (dimName === 'item_cost_type' && node.factId) {
-    //             return data.getItemCostTypeDesc?.(node.factId) || node.label || node._id;
-    //         } else if (dimName === 'material_type' && node.factId) {
-    //             return data.getMaterialTypeDesc?.(node.factId) || node.label || node._id;
-    //         }
-    //     }
-        
-    //     return node.label || node._id;
-    // },
     getDisplayLabel: function(node) {
         if (!node) return 'Unknown';
         return node.label || node.displayLabel || node.name || node._id || 'Unknown';
@@ -3668,58 +3572,118 @@ const pivotTable = {
 
         console.log("🔄 Starting template-based pivot table generation...");
 
-        // Reset table structure
-        this.resetTableStructure();
+        // Starts animated loading
+        this.showSimpleLoader();
 
-        const elements = {
-            pivotTableHeader: document.getElementById('pivotTableHeader'),
-            pivotTableBody: document.getElementById('pivotTableBody')
-        };
+        // Small delay to let loading animation show
+        setTimeout(() => {
+            try {
+                // Reset table structure
+                // this.resetTableStructure();
 
-        if (!elements.pivotTableHeader || !elements.pivotTableBody) {
-            console.error("Cannot find pivot table DOM elements");
-            return;
-        }
+                const elements = {
+                    pivotTableHeader: document.getElementById('pivotTableHeader'),
+                    pivotTableBody: document.getElementById('pivotTableBody')
+                };
 
-        const rowFields = this.state.rowFields || [];
-        const columnFields = this.state.columnFields || [];
-        const valueFields = this.state.valueFields || ['COST_UNIT'];
-        
-        console.log(`📊 Template-based generation: ${rowFields.length} row fields, ${columnFields.length} column fields, ${valueFields.length} value fields`);
+                if (!elements.pivotTableHeader || !elements.pivotTableBody) {
+                    console.error("Cannot find pivot table DOM elements");
+                    this.hideSimpleLoader();
+                    return;
+                }
 
-        try {
-            // Process pivot data
-            this.processPivotData();
-            
-            // Determine template type
-            const templateType = PivotTemplateSystem.getTemplateType(rowFields, columnFields, valueFields);
-            
-            // Render using appropriate template
-            PivotTemplateSystem.renderTemplate(
-                templateType, 
-                elements, 
-                this.state.pivotData, 
-                rowFields, 
-                columnFields, 
-                valueFields, 
-                this
-            );
+                const rowFields = this.state.rowFields || [];
+                const columnFields = this.state.columnFields || [];
+                const valueFields = this.state.valueFields || ['COST_UNIT'];
+                
+                console.log(`📊 Template-based generation: ${rowFields.length} row fields, ${columnFields.length} column fields, ${valueFields.length} value fields`);
 
-            // ⭐ HIDE ZERO ROWS AND COLUMNS
-            // setTimeout(() => {
-            //     const result = this.hideZeroRowsAndColumns();
-            //     if (result && result.totalHidden > 0) {
-            //         console.log(`🎯 Optimized view: ${result.hiddenRows} rows + ${result.hiddenColumns} columns hidden`);
-            //     }
-            // }, 100); // Small delay to ensure DOM is ready
+                // Process pivot data
+                this.processPivotData();
+                
+                // Determine template type
+                const templateType = PivotTemplateSystem.getTemplateType(rowFields, columnFields, valueFields);
+                
+                // Render using appropriate template
+                PivotTemplateSystem.renderTemplate(
+                    templateType, 
+                    elements, 
+                    this.state.pivotData, 
+                    rowFields, 
+                    columnFields, 
+                    valueFields, 
+                    this
+                );
 
-            console.log(`✅ Template-based pivot table generation complete using ${templateType.toUpperCase()}`);
+                //this.hideZeroRowsAndColumns();
 
-        } catch (error) {
-            console.error("Error in template-based pivot generation:", error);
-            if (elements.pivotTableBody) {
-                elements.pivotTableBody.innerHTML = '<tr><td colspan="100%">Error generating pivot table</td></tr>';
+                console.log(`✅ Template-based pivot table generation complete using ${templateType.toUpperCase()}`);
+
+                // Stops animated loading
+                this.hideSimpleLoader();
+
+            } catch (error) {
+                console.error("Error in template-based pivot generation:", error);
+                if (elements && elements.pivotTableBody) {
+                    elements.pivotTableBody.innerHTML = '<tr><td colspan="100%">Error generating pivot table</td></tr>';
+                }
+                this.hideSimpleLoader();
             }
+        }, 100);
+    },
+
+
+    /**
+     * Show simple loading spinner
+     */
+    showSimpleLoader: function() {
+        // Create loader if it doesn't exist
+        if (!document.getElementById('simpleLoader')) {
+            const loader = document.createElement('div');
+            loader.id = 'simpleLoader';
+            loader.innerHTML = `
+                <div class="simple-loader-backdrop">
+                    <div class="simple-loader-content">
+                        <div class="simple-spinner"></div>
+                        <div class="simple-text">Updating Pivot Table...</div>
+                    </div>
+                </div>
+            `;
+            
+            // Find pivot table container
+            const container = document.getElementById('pivotTableContainer') || 
+                            document.querySelector('.pivot-table-container');
+            
+            if (container) {
+                container.style.position = 'relative';
+                container.appendChild(loader);
+            } else {
+                document.body.appendChild(loader);
+            }
+        }
+        
+        // Show loader
+        const loader = document.getElementById('simpleLoader');
+        if (loader) {
+            loader.style.display = 'block';
+            // Fade in
+            setTimeout(() => {
+                loader.style.opacity = '1';
+            }, 10);
+        }
+    },
+
+
+    /**
+     * Hide simple loading spinner
+     */
+    hideSimpleLoader: function() {
+        const loader = document.getElementById('simpleLoader');
+        if (loader) {
+            loader.style.opacity = '0';
+            setTimeout(() => {
+                loader.style.display = 'none';
+            }, 300);
         }
     },
 
@@ -4073,279 +4037,279 @@ const pivotTable = {
     /**
      * Render Excel-like body with full cross-tabulation
      */
-    renderExcelLikeBody: function(elements, rowCombinations, columnCombinations, rowFields, columnFields, valueFields) {
-        let bodyHtml = '';
+    // renderExcelLikeBody: function(elements, rowCombinations, columnCombinations, rowFields, columnFields, valueFields) {
+    //     let bodyHtml = '';
         
-        console.log(`🏗️ Excel-like body: ${rowCombinations.length} rows × ${columnCombinations.length * valueFields.length} columns`);
+    //     console.log(`🏗️ Excel-like body: ${rowCombinations.length} rows × ${columnCombinations.length * valueFields.length} columns`);
         
-        if (rowCombinations.length === 0) {
-            const totalCols = rowFields.length + (columnCombinations.length * valueFields.length);
-            bodyHtml = `<tr><td colspan="${totalCols}" class="empty-message">No data to display. Try expanding some dimensions.</td></tr>`;
-        } else {
-            rowCombinations.forEach((rowCombo, rowIndex) => {
-                bodyHtml += `<tr class="${rowIndex % 2 === 0 ? 'even' : 'odd'}">`;
+    //     if (rowCombinations.length === 0) {
+    //         const totalCols = rowFields.length + (columnCombinations.length * valueFields.length);
+    //         bodyHtml = `<tr><td colspan="${totalCols}" class="empty-message">No data to display. Try expanding some dimensions.</td></tr>`;
+    //     } else {
+    //         rowCombinations.forEach((rowCombo, rowIndex) => {
+    //             bodyHtml += `<tr class="${rowIndex % 2 === 0 ? 'even' : 'odd'}">`;
                 
-                // Render dimension cells for this row combination
-                rowCombo.nodes.forEach((node, dimIndex) => {
-                    bodyHtml += this.renderExcelLikeDimensionCell(node, rowFields[dimIndex], dimIndex);
-                });
+    //             // Render dimension cells for this row combination
+    //             rowCombo.nodes.forEach((node, dimIndex) => {
+    //                 bodyHtml += this.renderExcelLikeDimensionCell(node, rowFields[dimIndex], dimIndex);
+    //             });
                 
-                // Render cross-tabulated value cells
-                valueFields.forEach(field => {
-                    columnCombinations.forEach(colCombo => {
-                        const value = this.calculateMultiDimensionalValue(
-                            rowCombo.nodes,
-                            colCombo.nodes,
-                            field
-                        );
-                        bodyHtml += this.renderValueCell(value);
-                    });
-                });
+    //             // Render cross-tabulated value cells
+    //             valueFields.forEach(field => {
+    //                 columnCombinations.forEach(colCombo => {
+    //                     const value = this.calculateMultiDimensionalValue(
+    //                         rowCombo.nodes,
+    //                         colCombo.nodes,
+    //                         field
+    //                     );
+    //                     bodyHtml += this.renderValueCell(value);
+    //                 });
+    //             });
                 
-                bodyHtml += '</tr>';
-            });
-        }
+    //             bodyHtml += '</tr>';
+    //         });
+    //     }
         
-        elements.pivotTableBody.innerHTML = bodyHtml;
-        this.attachEventListeners(elements.pivotTableBody, 'body');
+    //     elements.pivotTableBody.innerHTML = bodyHtml;
+    //     this.attachEventListeners(elements.pivotTableBody, 'body');
         
-        console.log(`✅ Excel-like body rendered: ${rowCombinations.length} rows with full cross-tabulation`);
-    },
+    //     console.log(`✅ Excel-like body rendered: ${rowCombinations.length} rows with full cross-tabulation`);
+    // },
 
 
     /**
      * Render Excel-like dimension cell
      */
-    renderExcelLikeDimensionCell: function(node, field, dimIndex) {
-        if (!node) {
-            return `<td class="dimension-cell dimension-${dimIndex} empty">-</td>`;
-        }
+    // renderExcelLikeDimensionCell: function(node, field, dimIndex) {
+    //     if (!node) {
+    //         return `<td class="dimension-cell dimension-${dimIndex} empty">-</td>`;
+    //     }
 
-        const level = node.level || 0;
-        const indentationPx = 4 + (level * 20);
-        const dimName = data.extractDimensionName(field);
+    //     const level = node.level || 0;
+    //     const indentationPx = 4 + (level * 20);
+    //     const dimName = data.extractDimensionName(field);
         
-        let cellHtml = `<td class="dimension-cell dimension-${dimIndex}" data-level="${level}" style="padding-left: ${indentationPx}px !important;">`;
+    //     let cellHtml = `<td class="dimension-cell dimension-${dimIndex}" data-level="${level}" style="padding-left: ${indentationPx}px !important;">`;
         
-        // Add expand/collapse control for nodes with children
-        if (this.nodeHasChildren(node)) {
-            const expandClass = node.expanded ? 'expanded' : 'collapsed';
-            cellHtml += `<span class="expand-collapse ${expandClass}" 
-                data-node-id="${node._id}" 
-                data-hierarchy="${dimName}" 
-                data-zone="row"
-                data-dimension-index="${dimIndex}"
-                onclick="window.handleExpandCollapseClick(event)"
-                title="Expand/collapse ${node.label || node._id}"></span>`;
-        } else {
-            cellHtml += '<span class="leaf-node"></span>';
-        }
+    //     // Add expand/collapse control for nodes with children
+    //     if (this.nodeHasChildren(node)) {
+    //         const expandClass = node.expanded ? 'expanded' : 'collapsed';
+    //         cellHtml += `<span class="expand-collapse ${expandClass}" 
+    //             data-node-id="${node._id}" 
+    //             data-hierarchy="${dimName}" 
+    //             data-zone="row"
+    //             data-dimension-index="${dimIndex}"
+    //             onclick="window.handleExpandCollapseClick(event)"
+    //             title="Expand/collapse ${node.label || node._id}"></span>`;
+    //     } else {
+    //         cellHtml += '<span class="leaf-node"></span>';
+    //     }
         
-        // Display real node name
-        const realNodeName = node.label || node._id;
-        cellHtml += `<span class="dimension-label">${realNodeName}</span>`;
-        cellHtml += '</td>';
+    //     // Display real node name
+    //     const realNodeName = node.label || node._id;
+    //     cellHtml += `<span class="dimension-label">${realNodeName}</span>`;
+    //     cellHtml += '</td>';
         
-        return cellHtml;
-    },
+    //     return cellHtml;
+    // },
 
 
     /**
      * Enhanced multi-row table rendering
      */
-    renderEnhancedMultiRowTable: function(elements, rowFields) {
-        const pivotData = this.state.pivotData;
-        const valueFields = this.state.valueFields || ['COST_UNIT'];
-        const columnFields = this.state.columnFields || [];
+    // renderEnhancedMultiRowTable: function(elements, rowFields) {
+    //     const pivotData = this.state.pivotData;
+    //     const valueFields = this.state.valueFields || ['COST_UNIT'];
+    //     const columnFields = this.state.columnFields || [];
         
-        console.log(`🌟 ENHANCED MULTI-ROW: Rendering ${rowFields.length} row dimensions`);
+    //     console.log(`🌟 ENHANCED MULTI-ROW: Rendering ${rowFields.length} row dimensions`);
         
-        // Apply equal width CSS for row dimensions
-        this.addEnhancedEqualWidthCSS(rowFields);
+    //     // Apply equal width CSS for row dimensions
+    //     this.addEnhancedEqualWidthCSS(rowFields);
         
-        // Check if we have column dimensions
-        const hasColumnDimensions = columnFields.length > 0;
-        let visibleColumns = [];
+    //     // Check if we have column dimensions
+    //     const hasColumnDimensions = columnFields.length > 0;
+    //     let visibleColumns = [];
         
-        if (hasColumnDimensions) {
-            // Get all visible column combinations
-            visibleColumns = this.generateColumnCombinations(columnFields);
-            console.log(`📊 Generated ${visibleColumns.length} column combinations`);
-        }
+    //     if (hasColumnDimensions) {
+    //         // Get all visible column combinations
+    //         visibleColumns = this.generateColumnCombinations(columnFields);
+    //         console.log(`📊 Generated ${visibleColumns.length} column combinations`);
+    //     }
         
-        // Generate row combinations using enhanced cartesian product
-        const rowCombinations = this.generateEnhancedRowCombinations(rowFields);
-        console.log(`📊 Generated ${rowCombinations.length} row combinations`);
+    //     // Generate row combinations using enhanced cartesian product
+    //     const rowCombinations = this.generateEnhancedRowCombinations(rowFields);
+    //     console.log(`📊 Generated ${rowCombinations.length} row combinations`);
         
-        // Render appropriate header
-        if (hasColumnDimensions && columnFields.length >= 2) {
-            this.renderMultiRowMultiColumnHeader(elements, rowFields, columnFields, valueFields, visibleColumns);
-        } else if (hasColumnDimensions) {
-            this.renderMultiRowSingleColumnHeader(elements, rowFields, columnFields, valueFields, visibleColumns);
-        } else {
-            this.renderMultiRowHeader(elements, rowFields, valueFields);
-        }
+    //     // Render appropriate header
+    //     if (hasColumnDimensions && columnFields.length >= 2) {
+    //         this.renderMultiRowMultiColumnHeader(elements, rowFields, columnFields, valueFields, visibleColumns);
+    //     } else if (hasColumnDimensions) {
+    //         this.renderMultiRowSingleColumnHeader(elements, rowFields, columnFields, valueFields, visibleColumns);
+    //     } else {
+    //         this.renderMultiRowHeader(elements, rowFields, valueFields);
+    //     }
         
-        // Render body with enhanced combinations
-        this.renderEnhancedMultiRowBody(elements, rowCombinations, rowFields, valueFields, visibleColumns, hasColumnDimensions);
-    },
+    //     // Render body with enhanced combinations
+    //     this.renderEnhancedMultiRowBody(elements, rowCombinations, rowFields, valueFields, visibleColumns, hasColumnDimensions);
+    // },
 
 
     /**
      * Render header for multi-row + single column layout
      * Add this method to your pivotTable object in pivot-table.js
      */
-    renderMultiRowSingleColumnHeader: function(elements, rowFields, columnFields, valueFields, visibleColumns) {
-        let headerHtml = '';
+    // renderMultiRowSingleColumnHeader: function(elements, rowFields, columnFields, valueFields, visibleColumns) {
+    //     let headerHtml = '';
         
-        const totalValueCells = visibleColumns.length * valueFields.length;
+    //     const totalValueCells = visibleColumns.length * valueFields.length;
         
-        // Row 1: REAL row dimension headers + Measures header
-        headerHtml += '<tr>';
-        rowFields.forEach((field, index) => {
-            const realDimName = this.getRealDimensionName(field);
-            headerHtml += `<th class="row-header dimension-column dimension-header-${index}" rowspan="3">${realDimName}</th>`;
-        });
-        headerHtml += `<th class="value-header measures-header" colspan="${totalValueCells}">MEASURES</th>`;
-        headerHtml += '</tr>';
+    //     // Row 1: REAL row dimension headers + Measures header
+    //     headerHtml += '<tr>';
+    //     rowFields.forEach((field, index) => {
+    //         const realDimName = this.getRealDimensionName(field);
+    //         headerHtml += `<th class="row-header dimension-column dimension-header-${index}" rowspan="3">${realDimName}</th>`;
+    //     });
+    //     headerHtml += `<th class="value-header measures-header" colspan="${totalValueCells}">MEASURES</th>`;
+    //     headerHtml += '</tr>';
         
-        // Row 2: REAL value field headers
-        headerHtml += '<tr>';
-        valueFields.forEach((field) => {
-            const realMeasureName = this.getRealMeasureName(field);
-            headerHtml += `<th class="value-header measure-header" colspan="${visibleColumns.length}">${realMeasureName}</th>`;
-        });
-        headerHtml += '</tr>';
+    //     // Row 2: REAL value field headers
+    //     headerHtml += '<tr>';
+    //     valueFields.forEach((field) => {
+    //         const realMeasureName = this.getRealMeasureName(field);
+    //         headerHtml += `<th class="value-header measure-header" colspan="${visibleColumns.length}">${realMeasureName}</th>`;
+    //     });
+    //     headerHtml += '</tr>';
         
-        // Row 3: Single column dimension with REAL names and expand/collapse
-        headerHtml += '<tr>';
-        if (columnFields.length >= 1) {
-            valueFields.forEach(() => {
-                visibleColumns.forEach(column => {
-                    const realNodeName = column.label || column._id;
+    //     // Row 3: Single column dimension with REAL names and expand/collapse
+    //     headerHtml += '<tr>';
+    //     if (columnFields.length >= 1) {
+    //         valueFields.forEach(() => {
+    //             visibleColumns.forEach(column => {
+    //                 const realNodeName = column.label || column._id;
                     
-                    let headerContent = '';
-                    if (this.nodeHasChildren(column)) {
-                        const expandClass = column.expanded ? 'expanded' : 'collapsed';
-                        const dimName = data.extractDimensionName(columnFields[0]);
-                        headerContent += `<span class="expand-collapse ${expandClass}" 
-                            data-node-id="${column._id}" 
-                            data-hierarchy="${dimName}" 
-                            data-zone="column"
-                            onclick="window.handleExpandCollapseClick(event)"
-                            title="Expand/collapse ${realNodeName}"></span>`;
-                    }
-                    headerContent += `<span class="column-label">${realNodeName}</span>`;
+    //                 let headerContent = '';
+    //                 if (this.nodeHasChildren(column)) {
+    //                     const expandClass = column.expanded ? 'expanded' : 'collapsed';
+    //                     const dimName = data.extractDimensionName(columnFields[0]);
+    //                     headerContent += `<span class="expand-collapse ${expandClass}" 
+    //                         data-node-id="${column._id}" 
+    //                         data-hierarchy="${dimName}" 
+    //                         data-zone="column"
+    //                         onclick="window.handleExpandCollapseClick(event)"
+    //                         title="Expand/collapse ${realNodeName}"></span>`;
+    //                 }
+    //                 headerContent += `<span class="column-label">${realNodeName}</span>`;
                     
-                    headerHtml += `<th class="column-header dimension-level-0">${headerContent}</th>`;
-                });
-            });
-        } else {
-            // No column dimensions - just show measure labels
-            valueFields.forEach((field) => {
-                const realMeasureName = this.getRealMeasureName(field);
-                headerHtml += `<th class="value-header">${realMeasureName}</th>`;
-            });
-        }
-        headerHtml += '</tr>';
+    //                 headerHtml += `<th class="column-header dimension-level-0">${headerContent}</th>`;
+    //             });
+    //         });
+    //     } else {
+    //         // No column dimensions - just show measure labels
+    //         valueFields.forEach((field) => {
+    //             const realMeasureName = this.getRealMeasureName(field);
+    //             headerHtml += `<th class="value-header">${realMeasureName}</th>`;
+    //         });
+    //     }
+    //     headerHtml += '</tr>';
         
-        elements.pivotTableHeader.innerHTML = headerHtml;
-        console.log(`✅ Rendered multi-row single-column header with real names`);
-    },
+    //     elements.pivotTableHeader.innerHTML = headerHtml;
+    //     console.log(`✅ Rendered multi-row single-column header with real names`);
+    // },
 
 
     /**
      * Enhanced equal width CSS for multiple dimensions
      */
-    addEnhancedEqualWidthCSS: function(rowFields) {
-        const dimensionCount = rowFields.length;
-        if (dimensionCount < 2) return;
+    // addEnhancedEqualWidthCSS: function(rowFields) {
+    //     const dimensionCount = rowFields.length;
+    //     if (dimensionCount < 2) return;
         
-        let styleElement = document.getElementById('pivot-enhanced-equal-widths');
-        if (!styleElement) {
-            styleElement = document.createElement('style');
-            styleElement.id = 'pivot-enhanced-equal-widths';
-            document.head.appendChild(styleElement);
-        }
+    //     let styleElement = document.getElementById('pivot-enhanced-equal-widths');
+    //     if (!styleElement) {
+    //         styleElement = document.createElement('style');
+    //         styleElement.id = 'pivot-enhanced-equal-widths';
+    //         document.head.appendChild(styleElement);
+    //     }
         
-        const equalWidth = Math.floor(100 / dimensionCount);
+    //     const equalWidth = Math.floor(100 / dimensionCount);
         
-        const css = `
-            .pivot-table-container table {
-                table-layout: auto !important;
-                width: 100% !important;
-                border-collapse: collapse !important;
-            }
+    //     const css = `
+    //         .pivot-table-container table {
+    //             table-layout: auto !important;
+    //             width: 100% !important;
+    //             border-collapse: collapse !important;
+    //         }
             
-            .dimension-column {
-                width: ${equalWidth}% !important;
-                min-width: 150px !important;
-                max-width: 250px !important;
-                box-sizing: border-box !important;
-                text-align: center !important;
-                font-weight: 700 !important;
-                background: linear-gradient(135deg, #e6f0ff 0%, #cce7ff 100%) !important;
-                border: 1px solid #b3d9ff !important;
-                color: #0066cc !important;
-            }
+    //         .dimension-column {
+    //             width: ${equalWidth}% !important;
+    //             min-width: 150px !important;
+    //             max-width: 250px !important;
+    //             box-sizing: border-box !important;
+    //             text-align: center !important;
+    //             font-weight: 700 !important;
+    //             background: linear-gradient(135deg, #e6f0ff 0%, #cce7ff 100%) !important;
+    //             border: 1px solid #b3d9ff !important;
+    //             color: #0066cc !important;
+    //         }
             
-            .dimension-cell {
-                width: ${equalWidth}% !important;
-                min-width: 150px !important;
-                max-width: 250px !important;
-                box-sizing: border-box !important;
-                word-wrap: break-word !important;
-                overflow-wrap: break-word !important;
-                white-space: normal !important;
-                vertical-align: top !important;
-                padding: 8px 12px !important;
-            }
+    //         .dimension-cell {
+    //             width: ${equalWidth}% !important;
+    //             min-width: 150px !important;
+    //             max-width: 250px !important;
+    //             box-sizing: border-box !important;
+    //             word-wrap: break-word !important;
+    //             overflow-wrap: break-word !important;
+    //             white-space: normal !important;
+    //             vertical-align: top !important;
+    //             padding: 8px 12px !important;
+    //         }
             
-            .value-cell {
-                min-width: 100px !important;
-                text-align: right !important;
-                padding: 8px 12px !important;
-                background: white !important;
-            }
+    //         .value-cell {
+    //             min-width: 100px !important;
+    //             text-align: right !important;
+    //             padding: 8px 12px !important;
+    //             background: white !important;
+    //         }
             
-            .measures-header {
-                background: linear-gradient(135deg, #f0e6ff 0%, #e6ccff 100%) !important;
-                border: 2px solid #cc99ff !important;
-                color: #6600cc !important;
-                font-weight: 700 !important;
-                text-align: center !important;
-                text-transform: uppercase !important;
-                letter-spacing: 1px !important;
-            }
+    //         .measures-header {
+    //             background: linear-gradient(135deg, #f0e6ff 0%, #e6ccff 100%) !important;
+    //             border: 2px solid #cc99ff !important;
+    //             color: #6600cc !important;
+    //             font-weight: 700 !important;
+    //             text-align: center !important;
+    //             text-transform: uppercase !important;
+    //             letter-spacing: 1px !important;
+    //         }
             
-            .measure-header {
-                background: linear-gradient(135deg, #fff0e6 0%, #ffddcc 100%) !important;
-                border: 1px solid #ff9966 !important;
-                color: #cc4400 !important;
-                font-weight: 600 !important;
-                text-align: center !important;
-            }
+    //         .measure-header {
+    //             background: linear-gradient(135deg, #fff0e6 0%, #ffddcc 100%) !important;
+    //             border: 1px solid #ff9966 !important;
+    //             color: #cc4400 !important;
+    //             font-weight: 600 !important;
+    //             text-align: center !important;
+    //         }
             
-            .dimension-level-0 {
-                background: linear-gradient(135deg, #e6f7ff 0%, #ccf0ff 100%) !important;
-                border: 1px solid #66ccff !important;
-                color: #0099cc !important;
-                font-weight: 600 !important;
-                text-align: center !important;
-            }
+    //         .dimension-level-0 {
+    //             background: linear-gradient(135deg, #e6f7ff 0%, #ccf0ff 100%) !important;
+    //             border: 1px solid #66ccff !important;
+    //             color: #0099cc !important;
+    //             font-weight: 600 !important;
+    //             text-align: center !important;
+    //         }
             
-            .dimension-level-1 {
-                background: linear-gradient(135deg, #f0fff0 0%, #e6ffe6 100%) !important;
-                border: 1px solid #66cc66 !important;
-                color: #006600 !important;
-                font-weight: 600 !important;
-                text-align: center !important;
-            }
-        `;
+    //         .dimension-level-1 {
+    //             background: linear-gradient(135deg, #f0fff0 0%, #e6ffe6 100%) !important;
+    //             border: 1px solid #66cc66 !important;
+    //             color: #006600 !important;
+    //             font-weight: 600 !important;
+    //             text-align: center !important;
+    //         }
+    //     `;
         
-        styleElement.textContent = css;
-        console.log(`📐 Applied enhanced equal width for ${dimensionCount} dimensions`);
-    },
+    //     styleElement.textContent = css;
+    //     console.log(`📐 Applied enhanced equal width for ${dimensionCount} dimensions`);
+    // },
 
 
     /**
@@ -4376,96 +4340,96 @@ const pivotTable = {
     /**
      * Hybrid header for multi-row + multi-column
      */
-    renderHybridMultiRowHeader: function(elements, rowFields, columnFields, valueFields, visibleColumns) {
-        this.addEqualWidthCSS(rowFields);
+    // renderHybridMultiRowHeader: function(elements, rowFields, columnFields, valueFields, visibleColumns) {
+    //     this.addEqualWidthCSS(rowFields);
         
-        let headerHtml = '';
+    //     let headerHtml = '';
         
-        // Row 1: Row dimension headers + Measures header
-        headerHtml += '<tr>';
-        rowFields.forEach((field, index) => {
-            const dimName = this.getDimensionDisplayName(field);
-            headerHtml += `<th class="row-header dimension-column dimension-header-${index}" rowspan="3">${dimName}</th>`;
-        });
+    //     // Row 1: Row dimension headers + Measures header
+    //     headerHtml += '<tr>';
+    //     rowFields.forEach((field, index) => {
+    //         const dimName = this.getDimensionDisplayName(field);
+    //         headerHtml += `<th class="row-header dimension-column dimension-header-${index}" rowspan="3">${dimName}</th>`;
+    //     });
         
-        const totalValueCells = visibleColumns.length * valueFields.length;
-        headerHtml += `<th class="value-header measures-header" colspan="${totalValueCells}">Measures</th>`;
-        headerHtml += '</tr>';
+    //     const totalValueCells = visibleColumns.length * valueFields.length;
+    //     headerHtml += `<th class="value-header measures-header" colspan="${totalValueCells}">Measures</th>`;
+    //     headerHtml += '</tr>';
         
-        // Row 2: Value field headers
-        headerHtml += '<tr>';
-        valueFields.forEach(field => {
-            const fieldLabel = this.getFieldLabel(field);
-            headerHtml += `<th class="value-header" colspan="${visibleColumns.length}">${fieldLabel}</th>`;
-        });
-        headerHtml += '</tr>';
+    //     // Row 2: Value field headers
+    //     headerHtml += '<tr>';
+    //     valueFields.forEach(field => {
+    //         const fieldLabel = this.getFieldLabel(field);
+    //         headerHtml += `<th class="value-header" colspan="${visibleColumns.length}">${fieldLabel}</th>`;
+    //     });
+    //     headerHtml += '</tr>';
         
-        // Row 3: Column dimension headers
-        headerHtml += '<tr>';
-        valueFields.forEach(() => {
-            visibleColumns.forEach(col => {
-                const displayLabel = this.getDisplayLabel(col);
-                headerHtml += `<th class="column-header">${displayLabel}</th>`;
-            });
-        });
-        headerHtml += '</tr>';
+    //     // Row 3: Column dimension headers
+    //     headerHtml += '<tr>';
+    //     valueFields.forEach(() => {
+    //         visibleColumns.forEach(col => {
+    //             const displayLabel = this.getDisplayLabel(col);
+    //             headerHtml += `<th class="column-header">${displayLabel}</th>`;
+    //         });
+    //     });
+    //     headerHtml += '</tr>';
         
-        elements.pivotTableHeader.innerHTML = headerHtml;
-    },
+    //     elements.pivotTableHeader.innerHTML = headerHtml;
+    // },
 
 
     /**
      * Enhanced multi-row body rendering
      */
-    renderEnhancedMultiRowBody: function(elements, rowCombinations, rowFields, valueFields, visibleColumns, hasColumnDimensions) {
-        let bodyHtml = '';
+    // renderEnhancedMultiRowBody: function(elements, rowCombinations, rowFields, valueFields, visibleColumns, hasColumnDimensions) {
+    //     let bodyHtml = '';
         
-        console.log(`🏗️ Rendering ${rowCombinations.length} row combinations`);
+    //     console.log(`🏗️ Rendering ${rowCombinations.length} row combinations`);
         
-        if (rowCombinations.length === 0) {
-            // Show a message when no combinations are available
-            const totalCols = rowFields.length + (hasColumnDimensions ? 
-                visibleColumns.length * valueFields.length : valueFields.length);
-            bodyHtml = `<tr><td colspan="${totalCols}" class="empty-message">No data to display. Try expanding some dimensions.</td></tr>`;
-        } else {
-            rowCombinations.forEach((combination, rowIndex) => {
-                bodyHtml += `<tr class="${rowIndex % 2 === 0 ? 'even' : 'odd'}">`;
+    //     if (rowCombinations.length === 0) {
+    //         // Show a message when no combinations are available
+    //         const totalCols = rowFields.length + (hasColumnDimensions ? 
+    //             visibleColumns.length * valueFields.length : valueFields.length);
+    //         bodyHtml = `<tr><td colspan="${totalCols}" class="empty-message">No data to display. Try expanding some dimensions.</td></tr>`;
+    //     } else {
+    //         rowCombinations.forEach((combination, rowIndex) => {
+    //             bodyHtml += `<tr class="${rowIndex % 2 === 0 ? 'even' : 'odd'}">`;
                 
-                // Render dimension cells
-                combination.nodes.forEach((node, dimIndex) => {
-                    bodyHtml += this.renderEnhancedDimensionCell(node, rowFields[dimIndex], dimIndex);
-                });
+    //             // Render dimension cells
+    //             combination.nodes.forEach((node, dimIndex) => {
+    //                 bodyHtml += this.renderEnhancedDimensionCell(node, rowFields[dimIndex], dimIndex);
+    //             });
                 
-                // Render value cells
-                if (hasColumnDimensions) {
-                    // Cross-tabulate with columns
-                    valueFields.forEach(field => {
-                        visibleColumns.forEach(colCombo => {
-                            const value = this.calculateMultiDimensionalValue(
-                                combination.nodes, 
-                                colCombo.nodes, 
-                                field
-                            );
-                            bodyHtml += this.renderValueCell(value);
-                        });
-                    });
-                } else {
-                    // Direct value calculation
-                    valueFields.forEach(field => {
-                        const value = this.calculateMultiRowValue(combination.nodes, field);
-                        bodyHtml += this.renderValueCell(value);
-                    });
-                }
+    //             // Render value cells
+    //             if (hasColumnDimensions) {
+    //                 // Cross-tabulate with columns
+    //                 valueFields.forEach(field => {
+    //                     visibleColumns.forEach(colCombo => {
+    //                         const value = this.calculateMultiDimensionalValue(
+    //                             combination.nodes, 
+    //                             colCombo.nodes, 
+    //                             field
+    //                         );
+    //                         bodyHtml += this.renderValueCell(value);
+    //                     });
+    //                 });
+    //             } else {
+    //                 // Direct value calculation
+    //                 valueFields.forEach(field => {
+    //                     const value = this.calculateMultiRowValue(combination.nodes, field);
+    //                     bodyHtml += this.renderValueCell(value);
+    //                 });
+    //             }
                 
-                bodyHtml += '</tr>';
-            });
-        }
+    //             bodyHtml += '</tr>';
+    //         });
+    //     }
         
-        elements.pivotTableBody.innerHTML = bodyHtml;
-        this.attachEventListeners(elements.pivotTableBody, 'body');
+    //     elements.pivotTableBody.innerHTML = bodyHtml;
+    //     this.attachEventListeners(elements.pivotTableBody, 'body');
         
-        console.log(`✅ Rendered ${rowCombinations.length} enhanced multi-dimensional combinations`);
-    },
+    //     console.log(`✅ Rendered ${rowCombinations.length} enhanced multi-dimensional combinations`);
+    // },
 
 
     /**
@@ -4902,38 +4866,38 @@ const pivotTable = {
     /**
      * ENHANCEMENT: Reset table structure completely
      */
-    resetTableStructure: function() {
-        const container = document.querySelector('.pivot-table-container');
-        if (container) {
-            // Remove all dynamic classes
-            container.classList.remove(
-                'vertical-view', 
-                'stacked-columns', 
-                'equal-width-dimensions',
-                'dimensions-2', 
-                'dimensions-3', 
-                'dimensions-4',
-                'multi-dimension',
-                'two-dimensions',
-                'three-dimensions'
-            );
-        }
+    // resetTableStructure: function() {
+    //     const container = document.querySelector('.pivot-table-container');
+    //     if (container) {
+    //         // Remove all dynamic classes
+    //         container.classList.remove(
+    //             'vertical-view', 
+    //             'stacked-columns', 
+    //             'equal-width-dimensions',
+    //             'dimensions-2', 
+    //             'dimensions-3', 
+    //             'dimensions-4',
+    //             'multi-dimension',
+    //             'two-dimensions',
+    //             'three-dimensions'
+    //         );
+    //     }
         
-        // Clear existing content
-        const header = document.getElementById('pivotTableHeader');
-        const body = document.getElementById('pivotTableBody');
+    //     // Clear existing content
+    //     const header = document.getElementById('pivotTableHeader');
+    //     const body = document.getElementById('pivotTableBody');
         
-        if (header) header.innerHTML = '';
-        if (body) body.innerHTML = '';
+    //     if (header) header.innerHTML = '';
+    //     if (body) body.innerHTML = '';
         
-        // Remove any dynamic styles
-        ['pivot-equal-widths', 'pivot-enhanced-equal-widths'].forEach(id => {
-            const styleElement = document.getElementById(id);
-            if (styleElement) styleElement.remove();
-        });
+    //     // Remove any dynamic styles
+    //     ['pivot-equal-widths', 'pivot-enhanced-equal-widths'].forEach(id => {
+    //         const styleElement = document.getElementById(id);
+    //         if (styleElement) styleElement.remove();
+    //     });
         
-        console.log("🔄 Excel-like table structure reset complete");
-    },
+    //     console.log("🔄 Excel-like table structure reset complete");
+    // },
 
 
     renderHybridMultiDimensionBody: function(elements, visiblePrimaryRows, rowFields, valueFields, visibleColumns, pivotData) {
@@ -5023,59 +4987,59 @@ const pivotTable = {
     },
 
 
-    renderMultiDimensionTable: function(elements, rowFields) {
-        const pivotData = this.state.pivotData;
-        const valueFields = this.state.valueFields || ['COST_UNIT'];
+    // renderMultiDimensionTable: function(elements, rowFields) {
+    //     const pivotData = this.state.pivotData;
+    //     const valueFields = this.state.valueFields || ['COST_UNIT'];
         
-        // console.log(`🌟 MULTI-DIM: Rendering ${rowFields.length} dimensions`);
+    //     // console.log(`🌟 MULTI-DIM: Rendering ${rowFields.length} dimensions`);
         
-        // Apply equal width CSS
-        this.addEqualWidthCSS(rowFields);
+    //     // Apply equal width CSS
+    //     this.addEqualWidthCSS(rowFields);
         
-        // Get the primary dimension for driving the row structure
-        const primaryDimension = rowFields[0];
-        const primaryDimName = extractDimensionName(primaryDimension);
-        const primaryRows = pivotData.rows.filter(row => {
-            const rowDimName = extractDimensionName(row.hierarchyField || '');
-            return rowDimName === primaryDimName;
-        });
+    //     // Get the primary dimension for driving the row structure
+    //     const primaryDimension = rowFields[0];
+    //     const primaryDimName = extractDimensionName(primaryDimension);
+    //     const primaryRows = pivotData.rows.filter(row => {
+    //         const rowDimName = extractDimensionName(row.hierarchyField || '');
+    //         return rowDimName === primaryDimName;
+    //     });
         
-        // Get only visible rows from primary dimension
-        const visiblePrimaryRows = this.getVisibleRows(primaryRows);
+    //     // Get only visible rows from primary dimension
+    //     const visiblePrimaryRows = this.getVisibleRows(primaryRows);
         
-        // Render header
-        this.renderMultiDimensionHeader(elements, rowFields, valueFields);
+    //     // Render header
+    //     this.renderMultiDimensionHeader(elements, rowFields, valueFields);
         
-        // Render body
-        this.renderMultiDimensionBody(elements, visiblePrimaryRows, rowFields, valueFields, pivotData);
-    },
+    //     // Render body
+    //     this.renderMultiDimensionBody(elements, visiblePrimaryRows, rowFields, valueFields, pivotData);
+    // },
 
 
     // Add this to your renderMultiDimensionHeader method for debugging
-    renderMultiDimensionHeader: function(elements, rowFields, valueFields) {
-        // console.log(`🔍 HEADER: ${rowFields.length} dimension columns + ${valueFields.length} value columns`);
+    // renderMultiDimensionHeader: function(elements, rowFields, valueFields) {
+    //     // console.log(`🔍 HEADER: ${rowFields.length} dimension columns + ${valueFields.length} value columns`);
         
-        let headerHtml = '<tr>';
+    //     let headerHtml = '<tr>';
         
-        // Dimension headers
-        rowFields.forEach(field => {
-            const dimName = this.getDimensionDisplayName(field);
-            headerHtml += `<th class="dimension-header">${dimName}</th>`;
-            // console.log(`📊 Dimension column: ${dimName}`);
-        });
+    //     // Dimension headers
+    //     rowFields.forEach(field => {
+    //         const dimName = this.getDimensionDisplayName(field);
+    //         headerHtml += `<th class="dimension-header">${dimName}</th>`;
+    //         // console.log(`📊 Dimension column: ${dimName}`);
+    //     });
         
-        // Value headers  
-        valueFields.forEach(field => {
-            const fieldLabel = this.getFieldLabel(field);
-            headerHtml += `<th class="value-header">${fieldLabel}</th>`;
-            // console.log(`💰 Value column: ${fieldLabel}`);
-        });
+    //     // Value headers  
+    //     valueFields.forEach(field => {
+    //         const fieldLabel = this.getFieldLabel(field);
+    //         headerHtml += `<th class="value-header">${fieldLabel}</th>`;
+    //         // console.log(`💰 Value column: ${fieldLabel}`);
+    //     });
         
-        headerHtml += '</tr>';
-        elements.pivotTableHeader.innerHTML = headerHtml;
+    //     headerHtml += '</tr>';
+    //     elements.pivotTableHeader.innerHTML = headerHtml;
         
-        // console.log(`✅ Total columns: ${rowFields.length + valueFields.length}`);
-    },
+    //     // console.log(`✅ Total columns: ${rowFields.length + valueFields.length}`);
+    // },
 
 
     generateMultiDimensionMatrix: function(rowFields) {
@@ -5181,36 +5145,36 @@ const pivotTable = {
     },
 
 
-    renderMultiDimensionCell: function(node, field, dimIndex) {
-        if (!node) {
-            return `<td class="dimension-cell dimension-${dimIndex} error" data-level="0" style="padding-left: 4px !important;">Missing Node</td>`;
-        }
+    // renderMultiDimensionCell: function(node, field, dimIndex) {
+    //     if (!node) {
+    //         return `<td class="dimension-cell dimension-${dimIndex} error" data-level="0" style="padding-left: 4px !important;">Missing Node</td>`;
+    //     }
 
-        const level = node.level || 0;
-        const indentationPx = 4 + (level * 30); // Enhanced to 30px per level
-        const dimName = extractDimensionName(field);
+    //     const level = node.level || 0;
+    //     const indentationPx = 4 + (level * 30); // Enhanced to 30px per level
+    //     const dimName = extractDimensionName(field);
         
-        let cellHtml = `<td class="dimension-cell dimension-${dimIndex}" data-level="${level}" style="padding-left: ${indentationPx}px !important;">`;
+    //     let cellHtml = `<td class="dimension-cell dimension-${dimIndex}" data-level="${level}" style="padding-left: ${indentationPx}px !important;">`;
         
-        if (node.hasChildren) {
-            const expandClass = node.expanded ? 'expanded' : 'collapsed';
-            cellHtml += `<span class="expand-collapse ${expandClass}" 
-                data-node-id="${node._id}" 
-                data-hierarchy="${dimName}" 
-                data-zone="row"
-                data-dimension-index="${dimIndex}"
-                onclick="window.handleExpandCollapseClick(event)"
-                style="cursor: pointer; display: inline-block; width: 16px; height: 16px; margin-right: 8px; text-align: center; border: 1px solid #6c757d; border-radius: 2px; background: white; line-height: 14px; font-size: 12px;"
-                title="Expand/collapse ${node.label}"></span>`;
-        } else {
-            cellHtml += '<span class="leaf-node" style="display: inline-block; width: 16px; height: 16px; margin-right: 8px; text-align: center; line-height: 14px; color: #6c757d;">•</span>';
-        }
+    //     if (node.hasChildren) {
+    //         const expandClass = node.expanded ? 'expanded' : 'collapsed';
+    //         cellHtml += `<span class="expand-collapse ${expandClass}" 
+    //             data-node-id="${node._id}" 
+    //             data-hierarchy="${dimName}" 
+    //             data-zone="row"
+    //             data-dimension-index="${dimIndex}"
+    //             onclick="window.handleExpandCollapseClick(event)"
+    //             style="cursor: pointer; display: inline-block; width: 16px; height: 16px; margin-right: 8px; text-align: center; border: 1px solid #6c757d; border-radius: 2px; background: white; line-height: 14px; font-size: 12px;"
+    //             title="Expand/collapse ${node.label}"></span>`;
+    //     } else {
+    //         cellHtml += '<span class="leaf-node" style="display: inline-block; width: 16px; height: 16px; margin-right: 8px; text-align: center; line-height: 14px; color: #6c757d;">•</span>';
+    //     }
         
-        cellHtml += `<span class="dimension-label">${node.label || node._id || 'Unknown'}</span>`;
-        cellHtml += '</td>';
+    //     cellHtml += `<span class="dimension-label">${node.label || node._id || 'Unknown'}</span>`;
+    //     cellHtml += '</td>';
         
-        return cellHtml;
-    },
+    //     return cellHtml;
+    // },
 
 
     calculateGrandTotals: function(valueFields) {
@@ -5235,26 +5199,26 @@ const pivotTable = {
     /**
      * Render header with separate column for each dimension
      */
-    renderMultiRowHeader: function(elements, rowFields, valueFields) {
-        this.addEqualWidthCSS(rowFields);
+    // renderMultiRowHeader: function(elements, rowFields, valueFields) {
+    //     this.addEqualWidthCSS(rowFields);
         
-        let headerHtml = '<tr>';
+    //     let headerHtml = '<tr>';
         
-        // REAL dimension headers - one for each row field
-        rowFields.forEach((field, index) => {
-            const realDimName = this.getRealDimensionName(field);
-            headerHtml += `<th class="row-header dimension-column dimension-header-${index}">${realDimName}</th>`;
-        });
+    //     // REAL dimension headers - one for each row field
+    //     rowFields.forEach((field, index) => {
+    //         const realDimName = this.getRealDimensionName(field);
+    //         headerHtml += `<th class="row-header dimension-column dimension-header-${index}">${realDimName}</th>`;
+    //     });
         
-        // REAL value headers
-        valueFields.forEach(field => {
-            const realMeasureName = this.getRealMeasureName(field);
-            headerHtml += `<th class="value-header">${realMeasureName}</th>`;
-        });
+    //     // REAL value headers
+    //     valueFields.forEach(field => {
+    //         const realMeasureName = this.getRealMeasureName(field);
+    //         headerHtml += `<th class="value-header">${realMeasureName}</th>`;
+    //     });
         
-        headerHtml += '</tr>';
-        elements.pivotTableHeader.innerHTML = headerHtml;
-    },
+    //     headerHtml += '</tr>';
+    //     elements.pivotTableHeader.innerHTML = headerHtml;
+    // },
 
 
     /**
@@ -5285,54 +5249,54 @@ const pivotTable = {
     /**
      * Render body with content in respective columns
      */
-    renderMultiRowBody: function(elements, pivotData, rowFields, valueFields) {
-        // Group rows by dimension
-        const rowsByDimension = this.groupRowsByDimension(pivotData.rows, rowFields);
+    // renderMultiRowBody: function(elements, pivotData, rowFields, valueFields) {
+    //     // Group rows by dimension
+    //     const rowsByDimension = this.groupRowsByDimension(pivotData.rows, rowFields);
         
-        // Get the maximum number of rows across all dimensions
-        const maxRows = Math.max(...Object.values(rowsByDimension).map(rows => rows.length));
+    //     // Get the maximum number of rows across all dimensions
+    //     const maxRows = Math.max(...Object.values(rowsByDimension).map(rows => rows.length));
         
-        let bodyHtml = '';
+    //     let bodyHtml = '';
         
-        // Create rows with content in respective columns
-        for (let i = 0; i < maxRows; i++) {
-            bodyHtml += `<tr class="${i % 2 === 0 ? 'even' : 'odd'}">`;
+    //     // Create rows with content in respective columns
+    //     for (let i = 0; i < maxRows; i++) {
+    //         bodyHtml += `<tr class="${i % 2 === 0 ? 'even' : 'odd'}">`;
             
-            // Step 3: Render content in respective columns
-            rowFields.forEach(field => {
-                const dimRows = rowsByDimension[field] || [];
-                const row = dimRows[i]; // May be undefined if this dimension has fewer rows
+    //         // Step 3: Render content in respective columns
+    //         rowFields.forEach(field => {
+    //             const dimRows = rowsByDimension[field] || [];
+    //             const row = dimRows[i]; // May be undefined if this dimension has fewer rows
                 
-                if (row) {
-                    bodyHtml += this.renderDimensionCell(row, field);
-                } else {
-                    bodyHtml += '<td class="dimension-cell empty"></td>';
-                }
-            });
+    //             if (row) {
+    //                 bodyHtml += this.renderDimensionCell(row, field);
+    //             } else {
+    //                 bodyHtml += '<td class="dimension-cell empty"></td>';
+    //             }
+    //         });
             
-            // Add value cells (using first available row for now)
-            const firstAvailableRow = rowFields
-                .map(field => rowsByDimension[field]?.[i])
-                .find(row => row);
+    //         // Add value cells (using first available row for now)
+    //         const firstAvailableRow = rowFields
+    //             .map(field => rowsByDimension[field]?.[i])
+    //             .find(row => row);
             
-            if (firstAvailableRow) {
-                const rowData = pivotData.data.find(d => d._id === firstAvailableRow._id) || {};
-                valueFields.forEach(field => {
-                    const value = rowData[field] || 0;
-                    bodyHtml += this.renderValueCell(value);
-                });
-            } else {
-                // Empty value cells
-                valueFields.forEach(() => {
-                    bodyHtml += '<td class="value-cell empty">-</td>';
-                });
-            }
+    //         if (firstAvailableRow) {
+    //             const rowData = pivotData.data.find(d => d._id === firstAvailableRow._id) || {};
+    //             valueFields.forEach(field => {
+    //                 const value = rowData[field] || 0;
+    //                 bodyHtml += this.renderValueCell(value);
+    //             });
+    //         } else {
+    //             // Empty value cells
+    //             valueFields.forEach(() => {
+    //                 bodyHtml += '<td class="value-cell empty">-</td>';
+    //             });
+    //         }
             
-            bodyHtml += '</tr>';
-        }
+    //         bodyHtml += '</tr>';
+    //     }
         
-        elements.pivotTableBody.innerHTML = bodyHtml;
-    },
+    //     elements.pivotTableBody.innerHTML = bodyHtml;
+    // },
 
 
     /**
@@ -5361,29 +5325,29 @@ const pivotTable = {
     /**
      * Render a single dimension cell
      */
-    renderDimensionCell: function(row, field) {
-        const indentation = (row.level || 0) * 15;
-        const dimName = extractDimensionName(field);
+    // renderDimensionCell: function(row, field) {
+    //     const indentation = (row.level || 0) * 15;
+    //     const dimName = extractDimensionName(field);
         
-        let cellHtml = `<td class="dimension-cell" style="padding-left: ${indentation}px;">`;
+    //     let cellHtml = `<td class="dimension-cell" style="padding-left: ${indentation}px;">`;
         
-        // Add expand/collapse if has children
-        if (row.hasChildren) {
-            const expandClass = row.expanded ? 'expanded' : 'collapsed';
-            cellHtml += `<span class="expand-collapse ${expandClass}" 
-                data-node-id="${row._id}" 
-                data-hierarchy="${dimName}" 
-                data-zone="row"
-                onclick="handleExpandCollapseClick(event)"></span>`;
-        } else {
-            cellHtml += '<span class="leaf-node"></span>';
-        }
+    //     // Add expand/collapse if has children
+    //     if (row.hasChildren) {
+    //         const expandClass = row.expanded ? 'expanded' : 'collapsed';
+    //         cellHtml += `<span class="expand-collapse ${expandClass}" 
+    //             data-node-id="${row._id}" 
+    //             data-hierarchy="${dimName}" 
+    //             data-zone="row"
+    //             onclick="handleExpandCollapseClick(event)"></span>`;
+    //     } else {
+    //         cellHtml += '<span class="leaf-node"></span>';
+    //     }
         
-        cellHtml += `<span class="dimension-label">${row.label || row._id}</span>`;
-        cellHtml += '</td>';
+    //     cellHtml += `<span class="dimension-label">${row.label || row._id}</span>`;
+    //     cellHtml += '</td>';
         
-        return cellHtml;
-    },
+    //     return cellHtml;
+    // },
 
 
     // This function is used initialize collapsed state
@@ -5438,66 +5402,66 @@ const pivotTable = {
 
 
     // Update your renderMultiRowColumns method to include the equal width styling:
-    renderMultiRowColumns: function(elements, rowFields) {
-        const pivotData = this.state.pivotData;
-        const valueFields = this.state.valueFields || ['COST_UNIT'];
+    // renderMultiRowColumns: function(elements, rowFields) {
+    //     const pivotData = this.state.pivotData;
+    //     const valueFields = this.state.valueFields || ['COST_UNIT'];
         
-        // Apply equal width styling
-        this.applyEqualWidthStyling(elements, rowFields);
+    //     // Apply equal width styling
+    //     this.applyEqualWidthStyling(elements, rowFields);
         
-        // Render header and body as before
-        this.renderMultiRowHeader(elements, rowFields, valueFields);
-        this.renderMultiRowBody(elements, pivotData, rowFields, valueFields);
-    },
+    //     // Render header and body as before
+    //     this.renderMultiRowHeader(elements, rowFields, valueFields);
+    //     this.renderMultiRowBody(elements, pivotData, rowFields, valueFields);
+    // },
 
 
     // Option 1: CSS Classes
-    renderMultiRowColumns: function(elements, rowFields) {
-        const pivotData = this.state.pivotData;
-        const valueFields = this.state.valueFields || ['COST_UNIT'];
+    // renderMultiRowColumns: function(elements, rowFields) {
+    //     const pivotData = this.state.pivotData;
+    //     const valueFields = this.state.valueFields || ['COST_UNIT'];
         
-        // console.log(`🔧 PROPER MULTI-ROW: Rendering ${rowFields.length} dimensions`);
+    //     // console.log(`🔧 PROPER MULTI-ROW: Rendering ${rowFields.length} dimensions`);
         
-        // Get the primary dimension data (usually the first dimension)
-        const primaryDimension = rowFields[0];
-        const primaryDimName = extractDimensionName(primaryDimension);
-        const primaryRows = pivotData.rows.filter(row => {
-            const rowDimName = extractDimensionName(row.hierarchyField || '');
-            return rowDimName === primaryDimName;
-        });
+    //     // Get the primary dimension data (usually the first dimension)
+    //     const primaryDimension = rowFields[0];
+    //     const primaryDimName = extractDimensionName(primaryDimension);
+    //     const primaryRows = pivotData.rows.filter(row => {
+    //         const rowDimName = extractDimensionName(row.hierarchyField || '');
+    //         return rowDimName === primaryDimName;
+    //     });
         
-        const visiblePrimaryRows = this.getVisibleRows(primaryRows);
-        // console.log(`🔧 PROPER: Found ${visiblePrimaryRows.length} visible primary rows`);
+    //     const visiblePrimaryRows = this.getVisibleRows(primaryRows);
+    //     // console.log(`🔧 PROPER: Found ${visiblePrimaryRows.length} visible primary rows`);
         
-        // Render header
-        this.renderProperMultiRowHeader(elements, rowFields, valueFields);
+    //     // Render header
+    //     this.renderProperMultiRowHeader(elements, rowFields, valueFields);
         
-        // Render body with proper cross-tabulation
-        this.renderProperMultiRowBody(elements, visiblePrimaryRows, rowFields, valueFields, pivotData);
-    },
+    //     // Render body with proper cross-tabulation
+    //     this.renderProperMultiRowBody(elements, visiblePrimaryRows, rowFields, valueFields, pivotData);
+    // },
 
 
     /**
      * Enhanced multi-dimension rendering with full hierarchy support
      */
-    renderEnhancedMultiDimensions: function(elements, rowFields) {
-        const pivotData = this.state.pivotData;
-        const valueFields = this.state.valueFields || ['COST_UNIT'];
+    // renderEnhancedMultiDimensions: function(elements, rowFields) {
+    //     const pivotData = this.state.pivotData;
+    //     const valueFields = this.state.valueFields || ['COST_UNIT'];
         
-        // console.log(`🌟 ENHANCED: Rendering ${rowFields.length} dimensions with hierarchy`);
+    //     // console.log(`🌟 ENHANCED: Rendering ${rowFields.length} dimensions with hierarchy`);
         
-        // Apply equal width CSS
-        this.addEqualWidthCSS(rowFields);
+    //     // Apply equal width CSS
+    //     this.addEqualWidthCSS(rowFields);
         
-        // Generate matrix of visible rows for each dimension
-        const dimensionMatrix = this.generateDimensionMatrix(rowFields, pivotData.rows);
+    //     // Generate matrix of visible rows for each dimension
+    //     const dimensionMatrix = this.generateDimensionMatrix(rowFields, pivotData.rows);
         
-        // Render header
-        this.renderEnhancedMultiHeader(elements, rowFields, valueFields);
+    //     // Render header
+    //     this.renderEnhancedMultiHeader(elements, rowFields, valueFields);
         
-        // Render body with proper value calculation
-        this.renderEnhancedMultiBodyWithProperValues(elements, dimensionMatrix, rowFields, valueFields, pivotData);
-    },
+    //     // Render body with proper value calculation
+    //     this.renderEnhancedMultiBodyWithProperValues(elements, dimensionMatrix, rowFields, valueFields, pivotData);
+    // },
 
 
     /**
@@ -5541,46 +5505,46 @@ const pivotTable = {
     /**
      * Render enhanced body with full hierarchy support
      */
-    renderEnhancedMultiBody: function(elements, dimensionMatrix, rowFields, valueFields, pivotData) {
-        let bodyHtml = '';
-        const maxRows = dimensionMatrix.maxRows;
+    // renderEnhancedMultiBody: function(elements, dimensionMatrix, rowFields, valueFields, pivotData) {
+    //     let bodyHtml = '';
+    //     const maxRows = dimensionMatrix.maxRows;
         
-        for (let rowIndex = 0; rowIndex < maxRows; rowIndex++) {
-            bodyHtml += `<tr class="${rowIndex % 2 === 0 ? 'even' : 'odd'}">`;
+    //     for (let rowIndex = 0; rowIndex < maxRows; rowIndex++) {
+    //         bodyHtml += `<tr class="${rowIndex % 2 === 0 ? 'even' : 'odd'}">`;
             
-            // Render each dimension column
-            rowFields.forEach((field, dimIndex) => {
-                const dimensionRows = dimensionMatrix[field];
-                const row = dimensionRows[rowIndex];
+    //         // Render each dimension column
+    //         rowFields.forEach((field, dimIndex) => {
+    //             const dimensionRows = dimensionMatrix[field];
+    //             const row = dimensionRows[rowIndex];
                 
-                if (row) {
-                    bodyHtml += this.renderHierarchicalDimensionCell(row, field, dimIndex);
-                } else {
-                    bodyHtml += `<td class="dimension-cell dimension-${dimIndex} empty"></td>`;
-                }
-            });
+    //             if (row) {
+    //                 bodyHtml += this.renderHierarchicalDimensionCell(row, field, dimIndex);
+    //             } else {
+    //                 bodyHtml += `<td class="dimension-cell dimension-${dimIndex} empty"></td>`;
+    //             }
+    //         });
             
-            // Render value cells - use the first available row's data
-            const primaryRow = this.findPrimaryRowForIndex(dimensionMatrix, rowFields, rowIndex);
-            if (primaryRow) {
-                const rowData = pivotData.data.find(d => d._id === primaryRow._id) || {};
-                valueFields.forEach(field => {
-                    const value = rowData[field] || 0;
-                    bodyHtml += this.renderValueCell(value);
-                });
-            } else {
-                // Empty value cells
-                valueFields.forEach(() => {
-                    bodyHtml += '<td class="value-cell empty">-</td>';
-                });
-            }
+    //         // Render value cells - use the first available row's data
+    //         const primaryRow = this.findPrimaryRowForIndex(dimensionMatrix, rowFields, rowIndex);
+    //         if (primaryRow) {
+    //             const rowData = pivotData.data.find(d => d._id === primaryRow._id) || {};
+    //             valueFields.forEach(field => {
+    //                 const value = rowData[field] || 0;
+    //                 bodyHtml += this.renderValueCell(value);
+    //             });
+    //         } else {
+    //             // Empty value cells
+    //             valueFields.forEach(() => {
+    //                 bodyHtml += '<td class="value-cell empty">-</td>';
+    //             });
+    //         }
             
-            bodyHtml += '</tr>';
-        }
+    //         bodyHtml += '</tr>';
+    //     }
         
-        elements.pivotTableBody.innerHTML = bodyHtml;
-        this.attachEventListeners(elements.pivotTableBody, 'body');
-    },
+    //     elements.pivotTableBody.innerHTML = bodyHtml;
+    //     this.attachEventListeners(elements.pivotTableBody, 'body');
+    // },
 
 
     /**
@@ -5597,30 +5561,30 @@ const pivotTable = {
     /**
      * Render hierarchical dimension cell with expand/collapse
      */
-    renderHierarchicalDimensionCell: function(row, field, dimIndex) {
-        const indentation = (row.level || 0) * 15;
-        const dimName = extractDimensionName(field);
+    // renderHierarchicalDimensionCell: function(row, field, dimIndex) {
+    //     const indentation = (row.level || 0) * 15;
+    //     const dimName = extractDimensionName(field);
         
-        let cellHtml = `<td class="dimension-cell dimension-${dimIndex}" style="padding-left: ${indentation}px;">`;
+    //     let cellHtml = `<td class="dimension-cell dimension-${dimIndex}" style="padding-left: ${indentation}px;">`;
         
-        // Add expand/collapse control if has children
-        if (row.hasChildren) {
-            const expandClass = row.expanded ? 'expanded' : 'collapsed';
-            cellHtml += `<span class="expand-collapse ${expandClass}" 
-                data-node-id="${row._id}" 
-                data-hierarchy="${dimName}" 
-                data-zone="row"
-                onclick="handleExpandCollapseClick(event)"
-                title="Expand/collapse ${row.label}"></span>`;
-        } else {
-            cellHtml += '<span class="leaf-node"></span>';
-        }
+    //     // Add expand/collapse control if has children
+    //     if (row.hasChildren) {
+    //         const expandClass = row.expanded ? 'expanded' : 'collapsed';
+    //         cellHtml += `<span class="expand-collapse ${expandClass}" 
+    //             data-node-id="${row._id}" 
+    //             data-hierarchy="${dimName}" 
+    //             data-zone="row"
+    //             onclick="handleExpandCollapseClick(event)"
+    //             title="Expand/collapse ${row.label}"></span>`;
+    //     } else {
+    //         cellHtml += '<span class="leaf-node"></span>';
+    //     }
         
-        cellHtml += `<span class="dimension-label">${row.label || row._id}</span>`;
-        cellHtml += '</td>';
+    //     cellHtml += `<span class="dimension-label">${row.label || row._id}</span>`;
+    //     cellHtml += '</td>';
         
-        return cellHtml;
-    },
+    //     return cellHtml;
+    // },
 
 
     /**
@@ -5646,63 +5610,63 @@ const pivotTable = {
     },
     
 
-    renderMultiDimensionBody: function(elements, visiblePrimaryRows, rowFields, valueFields, pivotData) {
-        if (!elements || !elements.pivotTableBody) {
-            console.error("No valid elements provided to renderMultiDimensionBody");
-            return;
-        }
+    // renderMultiDimensionBody: function(elements, visiblePrimaryRows, rowFields, valueFields, pivotData) {
+    //     if (!elements || !elements.pivotTableBody) {
+    //         console.error("No valid elements provided to renderMultiDimensionBody");
+    //         return;
+    //     }
 
-        let bodyHtml = '';
+    //     let bodyHtml = '';
         
-        // Generate TRULY independent matrices for each dimension
-        const dimensionMatrices = {};
+    //     // Generate TRULY independent matrices for each dimension
+    //     const dimensionMatrices = {};
         
-        rowFields.forEach(field => {
-            const dimName = extractDimensionName(field);
+    //     rowFields.forEach(field => {
+    //         const dimName = extractDimensionName(field);
             
-            // Get all rows for this dimension
-            const allDimensionRows = this.state.pivotData.rows.filter(row => {
-                if (!row || !row.hierarchyField) return false;
-                const rowDimName = extractDimensionName(row.hierarchyField);
-                return rowDimName === dimName;
-            });
+    //         // Get all rows for this dimension
+    //         const allDimensionRows = this.state.pivotData.rows.filter(row => {
+    //             if (!row || !row.hierarchyField) return false;
+    //             const rowDimName = extractDimensionName(row.hierarchyField);
+    //             return rowDimName === dimName;
+    //         });
             
-            // Get visible rows for this dimension INDEPENDENTLY
-            const visibleRows = this.getVisibleRowsForSpecificDimension(allDimensionRows, dimName);
-            dimensionMatrices[field] = visibleRows;
+    //         // Get visible rows for this dimension INDEPENDENTLY
+    //         const visibleRows = this.getVisibleRowsForSpecificDimension(allDimensionRows, dimName);
+    //         dimensionMatrices[field] = visibleRows;
             
-            // console.log(`📊 Independent dimension ${dimName}: ${visibleRows.length} visible rows`);
-            visibleRows.forEach((row, idx) => {
-                // console.log(`  Row ${idx}: ${row.label} (level: ${row.level})`);
-            });
-        });
+    //         // console.log(`📊 Independent dimension ${dimName}: ${visibleRows.length} visible rows`);
+    //         visibleRows.forEach((row, idx) => {
+    //             // console.log(`  Row ${idx}: ${row.label} (level: ${row.level})`);
+    //         });
+    //     });
         
-        // Generate all possible row combinations using cartesian product
-        const rowCombinations = this.generateIndependentRowCombinations(dimensionMatrices, rowFields);
+    //     // Generate all possible row combinations using cartesian product
+    //     const rowCombinations = this.generateIndependentRowCombinations(dimensionMatrices, rowFields);
         
-        console.log(`📊 Generated ${rowCombinations.length} row combinations`);
+    //     console.log(`📊 Generated ${rowCombinations.length} row combinations`);
         
-        // Render each row combination
-        rowCombinations.forEach((combination, rowIndex) => {
-            bodyHtml += `<tr class="${rowIndex % 2 === 0 ? 'even' : 'odd'}">`;
+    //     // Render each row combination
+    //     rowCombinations.forEach((combination, rowIndex) => {
+    //         bodyHtml += `<tr class="${rowIndex % 2 === 0 ? 'even' : 'odd'}">`;
             
-            // Render dimension cells
-            combination.nodes.forEach((node, dimIndex) => {
-                bodyHtml += this.renderIndependentDimensionCell(node, rowFields[dimIndex], dimIndex);
-            });
+    //         // Render dimension cells
+    //         combination.nodes.forEach((node, dimIndex) => {
+    //             bodyHtml += this.renderIndependentDimensionCell(node, rowFields[dimIndex], dimIndex);
+    //         });
             
-            // Calculate cross-dimensional values for this specific combination
-            valueFields.forEach(field => {
-                const value = this.calculateIndependentCrossDimensionalValue(combination.nodes, field);
-                bodyHtml += this.renderValueCell(value);
-            });
+    //         // Calculate cross-dimensional values for this specific combination
+    //         valueFields.forEach(field => {
+    //             const value = this.calculateIndependentCrossDimensionalValue(combination.nodes, field);
+    //             bodyHtml += this.renderValueCell(value);
+    //         });
             
-            bodyHtml += '</tr>';
-        });
+    //         bodyHtml += '</tr>';
+    //     });
         
-        elements.pivotTableBody.innerHTML = bodyHtml;
-        this.attachEventListeners(elements.pivotTableBody, 'body');
-    },
+    //     elements.pivotTableBody.innerHTML = bodyHtml;
+    //     this.attachEventListeners(elements.pivotTableBody, 'body');
+    // },
 
 
     // Function to remove duplicate rows from a single dimension
@@ -6228,24 +6192,24 @@ const pivotTable = {
     /**
      * Render enhanced header with dimension columns
      */
-    renderEnhancedMultiHeader: function(elements, rowFields, valueFields) {
-        let headerHtml = '<tr>';
+    // renderEnhancedMultiHeader: function(elements, rowFields, valueFields) {
+    //     let headerHtml = '<tr>';
         
-        // Dimension headers
-        rowFields.forEach((field, index) => {
-            const dimName = this.getDimensionDisplayName(field);
-            headerHtml += `<th class="row-header dimension-column dimension-header-${index}">${dimName}</th>`;
-        });
+    //     // Dimension headers
+    //     rowFields.forEach((field, index) => {
+    //         const dimName = this.getDimensionDisplayName(field);
+    //         headerHtml += `<th class="row-header dimension-column dimension-header-${index}">${dimName}</th>`;
+    //     });
         
-        // Value headers
-        valueFields.forEach(field => {
-            const fieldLabel = this.getFieldLabel(field);
-            headerHtml += `<th class="value-header">${fieldLabel}</th>`;
-        });
+    //     // Value headers
+    //     valueFields.forEach(field => {
+    //         const fieldLabel = this.getFieldLabel(field);
+    //         headerHtml += `<th class="value-header">${fieldLabel}</th>`;
+    //     });
         
-        headerHtml += '</tr>';
-        elements.pivotTableHeader.innerHTML = headerHtml;
-    },
+    //     headerHtml += '</tr>';
+    //     elements.pivotTableHeader.innerHTML = headerHtml;
+    // },
 
 
     /**
@@ -6368,6 +6332,7 @@ const pivotTable = {
         return rootRow || targetDimensionRows[0] || { _id: 'unknown', label: 'Unknown' };
     },
 
+    
 
     // x
 };

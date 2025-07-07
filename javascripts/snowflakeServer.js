@@ -63,6 +63,7 @@ async function getTableSchema(tableName) {
     }
 }
 
+
 /**
  * SMART: Validate and filter requested fields against actual table schema
  */
@@ -91,6 +92,7 @@ async function validateAndFilterFields(tableName, requestedFields) {
         availableColumns
     };
 }
+
 
 /**
  * ENHANCED: Smart dimension fields endpoint with automatic fallback
@@ -222,6 +224,7 @@ app.post('/api/dimension-fields/:table', async (req, res) => {
     }
 });
 
+
 /**
  * OPTIMIZED: Generic data endpoint with smart column selection
  * Usage: GET /api/data/:table?fields=FIELD1,FIELD2&limit=1000&distinct=true
@@ -320,6 +323,7 @@ app.get('/api/data/:table', async (req, res) => {
     }
 });
 
+
 /**
  * NEW: Batch field validation endpoint
  * Usage: POST /api/validate-fields
@@ -366,6 +370,7 @@ app.post('/api/validate-fields', async (req, res) => {
     }
 });
 
+
 /**
  * NEW: Clear schema cache endpoint
  */
@@ -379,6 +384,7 @@ app.post('/api/clear-cache', (req, res) => {
         timestamp: new Date().toISOString()
     });
 });
+
 
 // Keep all your existing endpoints...
 app.get('/api/get_fact_names', async (req, res) => {
@@ -407,6 +413,7 @@ app.get('/api/get_fact_names', async (req, res) => {
         res.status(500).json({ error: 'Error fetching fact table names' });
     }
 });
+
 
 app.get('/api/get_bom_dim', async (req, res) => {
     try {
@@ -441,82 +448,6 @@ app.get('/api/get_bom_dim', async (req, res) => {
  * Returns a small sample of records to initialize the dimension
  * Usage: GET /api/data/DIM_GMID_DISPLAY/placeholder?limit=10
  */
-// app.get('/api/data/DIM_GMID_DISPLAY/placeholder', async (req, res) => {
-//     try {
-//         console.log('📦 DIM_GMID_DISPLAY placeholder request...');
-        
-//         const limit = Math.min(parseInt(req.query.limit) || 10, 50); // Max 50 for safety
-        
-//         // Get a diverse sample of ROOT_GMIDs with their hierarchies
-//         const sql = `
-//             WITH SampleRootGmids AS (
-//                 SELECT DISTINCT ROOT_GMID
-//                 FROM ONEMNS_PROD.DMT_BOM.DIM_GMID_DISPLAY 
-//                 WHERE ROOT_GMID IS NOT NULL 
-//                 AND PATH_GMID IS NOT NULL
-//                 ORDER BY ROOT_GMID
-//                 LIMIT 3
-//             )
-//             SELECT DISTINCT
-//                 g.COMPONENT_GMID,
-//                 g.ROOT_GMID,
-//                 g.PATH_GMID,
-//                 g.DISPLAY
-//             FROM ONEMNS_PROD.DMT_BOM.DIM_GMID_DISPLAY g
-//             INNER JOIN SampleRootGmids s ON g.ROOT_GMID = s.ROOT_GMID
-//             WHERE g.PATH_GMID IS NOT NULL
-//             AND g.DISPLAY IS NOT NULL
-//             ORDER BY g.ROOT_GMID, g.PATH_GMID
-//             LIMIT ${limit}
-//         `.trim();
-        
-//         console.log(`📊 Fetching ${limit} placeholder GMID records`);
-        
-//         const conn = await connectToSnowflake();
-//         const stream = conn.execute({
-//             sqlText: sql,
-//             streamResult: true
-//         }).streamRows();
-        
-//         res.setHeader('Content-Type', 'application/x-ndjson');
-//         res.setHeader('Cache-Control', 'no-cache');
-//         res.setHeader('Access-Control-Allow-Origin', '*');
-//         res.setHeader('X-Placeholder-Limit', limit.toString());
-//         res.setHeader('X-Data-Type', 'placeholder');
-        
-//         let rowCount = 0;
-//         const rootGmidCounts = {};
-        
-//         stream.on('data', row => {
-//             res.write(JSON.stringify(row) + '\n');
-//             rowCount++;
-            
-//             // Track ROOT_GMID distribution
-//             if (row.ROOT_GMID) {
-//                 rootGmidCounts[row.ROOT_GMID] = (rootGmidCounts[row.ROOT_GMID] || 0) + 1;
-//             }
-//         });
-        
-//         stream.on('end', () => {
-//             console.log(`✅ Placeholder GMID data: ${rowCount} records`);
-//             console.log(`📊 ROOT_GMID distribution:`, rootGmidCounts);
-//             res.end();
-//         });
-        
-//         stream.on('error', err => {
-//             console.error('❌ Error in GMID placeholder:', err);
-//             if (!res.headersSent) {
-//                 res.status(500).json({ error: err.message });
-//             } else {
-//                 res.end();
-//             }
-//         });
-        
-//     } catch (error) {
-//         console.error('❌ Error in GMID placeholder endpoint:', error);
-//         res.status(500).json({ error: error.message });
-//     }
-// });
 app.get('/api/data/DIM_GMID_DISPLAY/placeholder', async (req, res) => {
     try {
         console.log('📦 DIM_GMID_DISPLAY placeholder request...');
@@ -663,100 +594,6 @@ app.get('/api/data/DIM_ROOT_GMID_DISPLAY/sample', async (req, res) => {
  * SPECIFIC: Optimized endpoint for DIM_GMID_DISPLAY filtering
  * Usage: GET /api/data/DIM_GMID_DISPLAY/filtered?ROOT_GMID=value1,value2
  */
-// app.get('/api/data/DIM_GMID_DISPLAY/filtered', async (req, res) => {
-//     try {
-//         console.log('🔍 DIM_GMID_DISPLAY filtered request:', req.query);
-        
-//         const { ROOT_GMID } = req.query;
-        
-//         if (!ROOT_GMID || !ROOT_GMID.trim()) {
-//             return res.status(400).json({ 
-//                 error: 'ROOT_GMID parameter is required',
-//                 example: '/api/data/DIM_GMID_DISPLAY/filtered?ROOT_GMID=MGM#071542,MGM#071543'
-//             });
-//         }
-        
-//         // Parse ROOT_GMID values
-//         const rootGmidArray = ROOT_GMID.split(',').map(v => v.trim()).filter(v => v);
-        
-//         if (rootGmidArray.length === 0) {
-//             return res.status(400).json({ error: 'No valid ROOT_GMID values provided' });
-//         }
-        
-//         if (rootGmidArray.length > 10) {
-//             return res.status(400).json({ 
-//                 error: `Too many ROOT_GMID values (${rootGmidArray.length}). Maximum 10 allowed for performance.`
-//             });
-//         }
-        
-//         // Build optimized SQL query for GMID_DISPLAY
-//         const placeholders = rootGmidArray.map(() => '?').join(',');
-//         const sql = `
-//             SELECT 
-//                 COMPONENT_GMID,
-//                 ROOT_GMID,
-//                 PATH_GMID,
-//                 DISPLAY
-//             FROM ONEMNS_PROD.DMT_BOM.DIM_GMID_DISPLAY 
-//             WHERE ROOT_GMID IN (${placeholders})
-//             AND PATH_GMID IS NOT NULL
-//             AND DISPLAY IS NOT NULL
-//             ORDER BY ROOT_GMID, PATH_GMID
-//         `.trim();
-        
-//         console.log(`📊 Executing optimized DIM_GMID_DISPLAY SQL for ${rootGmidArray.length} ROOT_GMIDs`);
-//         console.log(`📊 ROOT_GMID values:`, rootGmidArray);
-        
-//         const conn = await connectToSnowflake();
-//         const stream = conn.execute({
-//             sqlText: sql,
-//             binds: rootGmidArray,
-//             streamResult: true
-//         }).streamRows();
-        
-//         res.setHeader('Content-Type', 'application/x-ndjson');
-//         res.setHeader('Cache-Control', 'no-cache');
-//         res.setHeader('Access-Control-Allow-Origin', '*');
-//         res.setHeader('X-Root-GMID-Count', rootGmidArray.length.toString());
-//         res.setHeader('X-Root-GMID-Values', rootGmidArray.join(','));
-        
-//         let rowCount = 0;
-//         let rootGmidCounts = {};
-        
-//         stream.on('data', row => {
-//             res.write(JSON.stringify(row) + '\n');
-//             rowCount++;
-            
-//             // Track counts per ROOT_GMID for logging
-//             if (row.ROOT_GMID) {
-//                 rootGmidCounts[row.ROOT_GMID] = (rootGmidCounts[row.ROOT_GMID] || 0) + 1;
-//             }
-            
-//             if (rowCount % 1000 === 0) {
-//                 console.log(`📊 Streamed ${rowCount} GMID_DISPLAY rows...`);
-//             }
-//         });
-        
-//         stream.on('end', () => {
-//             console.log(`✅ Completed streaming ${rowCount} GMID_DISPLAY rows`);
-//             console.log(`📊 Breakdown by ROOT_GMID:`, rootGmidCounts);
-//             res.end();
-//         });
-        
-//         stream.on('error', err => {
-//             console.error('❌ Stream error in DIM_GMID_DISPLAY:', err);
-//             if (!res.headersSent) {
-//                 res.status(500).json({ error: err.message });
-//             } else {
-//                 res.end();
-//             }
-//         });
-        
-//     } catch (error) {
-//         console.error('❌ Error in DIM_GMID_DISPLAY filtered endpoint:', error);
-//         res.status(500).json({ error: error.message });
-//     }
-// });
 app.get('/api/data/DIM_GMID_DISPLAY/filtered', async (req, res) => {
     try {
         console.log('🔍 DIM_GMID_DISPLAY filtered request:', req.query);
@@ -853,160 +690,6 @@ app.get('/api/data/DIM_GMID_DISPLAY/filtered', async (req, res) => {
 });
 
 
-// app.get('/api/data/FACT_BOM/filtered', async (req, res) => {
-//     try {
-//         console.log('🔍 FACT_BOM filtered request:', req.query);
-        
-//         // Check if any filter parameters were provided
-//         const hasFilters = Object.keys(req.query).length > 0;
-        
-//         if (!hasFilters) {
-//             return res.status(400).json({ 
-//                 error: 'No filter parameters provided',
-//                 message: 'At least one filter parameter is required for FACT_BOM queries',
-//                 example: '/api/data/FACT_BOM/filtered?ROOT_SMARTCODE=CLEAVE',
-//                 availableFilters: [
-//                     'LE', 'COST_ELEMENT', 'COMPONENT_GMID', 'ROOT_GMID', 
-//                     'ROOT_SMARTCODE', 'ITEM_COST_TYPE', 'COMPONENT_MATERIAL_TYPE', 
-//                     'MC', 'ZYEAR'
-//                 ]
-//             });
-//         }
-        
-//         const whereConditions = [];
-//         const params = [];
-        
-//         // Validate and build WHERE conditions
-//         Object.entries(req.query).forEach(([field, values]) => {
-//             if (values && values.trim()) {
-//                 // Validate field name against known FACT_BOM columns
-//                 const validFields = [
-//                     'LE', 'COST_ELEMENT', 'COMPONENT_GMID', 'ROOT_GMID', 
-//                     'ROOT_SMARTCODE', 'ITEM_COST_TYPE', 'COMPONENT_MATERIAL_TYPE', 
-//                     'MC', 'ZYEAR'
-//                 ];
-                
-//                 const upperField = field.toUpperCase();
-//                 if (!validFields.includes(upperField)) {
-//                     throw new Error(`Invalid field '${field}'. Valid fields: ${validFields.join(', ')}`);
-//                 }
-                
-//                 const valueArray = values.split(',').map(v => v.trim()).filter(v => v);
-//                 if (valueArray.length > 0) {
-//                     if (valueArray.length > 50) {
-//                         throw new Error(`Too many values for field '${field}' (${valueArray.length}). Maximum 50 values allowed.`);
-//                     }
-                    
-//                     const placeholders = valueArray.map(() => '?').join(',');
-//                     whereConditions.push(`${upperField} IN (${placeholders})`);
-//                     params.push(...valueArray);
-//                 }
-//             }
-//         });
-        
-//         if (whereConditions.length === 0) {
-//             return res.status(400).json({ 
-//                 error: 'No valid filter values provided',
-//                 message: 'Filter parameters cannot be empty'
-//             });
-//         }
-        
-//         // Build optimized SQL query with essential FACT_BOM columns
-//         let sql = `
-//             SELECT 
-//                 LE, 
-//                 COST_ELEMENT, 
-//                 COMPONENT_GMID, 
-//                 ROOT_GMID,
-//                 ROOT_SMARTCODE, 
-//                 ITEM_COST_TYPE, 
-//                 COMPONENT_MATERIAL_TYPE, 
-//                 MC, 
-//                 ZYEAR,
-//                 COST_UNIT, 
-//                 QTY_UNIT
-//             FROM ONEMNS_PROD.DMT_BOM.FACT_BOM
-//             WHERE ${whereConditions.join(' AND ')}
-//         `.trim();
-        
-//         // Add data quality filter to exclude records with no meaningful data
-//         // sql += ` AND ((COST_UNIT IS NOT NULL AND COST_UNIT != 0) OR (QTY_UNIT IS NOT NULL AND QTY_UNIT != 0))`;
-        
-//         // Add ordering for consistency
-//         sql += ` ORDER BY LE, ROOT_SMARTCODE, COMPONENT_GMID`;
-        
-//         console.log(`📊 Executing FACT_BOM SQL with ${whereConditions.length} filters:`);
-//         console.log(`📊 SQL: ${sql}`);
-//         console.log(`📊 Parameters (${params.length}):`, params.slice(0, 10), params.length > 10 ? `... +${params.length - 10} more` : '');
-        
-//         const conn = await connectToSnowflake();
-//         const stream = conn.execute({
-//             sqlText: sql,
-//             binds: params,
-//             streamResult: true
-//         }).streamRows();
-        
-//         // Set response headers
-//         res.setHeader('Content-Type', 'application/x-ndjson');
-//         res.setHeader('Cache-Control', 'no-cache');
-//         res.setHeader('Access-Control-Allow-Origin', '*');
-//         res.setHeader('X-Filter-Count', whereConditions.length.toString());
-//         res.setHeader('X-Parameter-Count', params.length.toString());
-        
-//         let rowCount = 0;
-//         let startTime = Date.now();
-        
-//         stream.on('data', row => {
-//             res.write(JSON.stringify(row) + '\n');
-//             rowCount++;
-            
-//             if (rowCount % 5000 === 0) {
-//                 const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-//                 console.log(`📊 Streamed ${rowCount} FACT_BOM rows (${elapsed}s)...`);
-//             }
-//         });
-        
-//         stream.on('end', () => {
-//             const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-//             console.log(`✅ Completed FACT_BOM query: ${rowCount} rows in ${elapsed}s`);
-//             console.log(`📊 Query performance: ${Math.round(rowCount / elapsed)} rows/second`);
-//             res.end();
-//         });
-        
-//         stream.on('error', err => {
-//             console.error('❌ Stream error in FACT_BOM query:', err);
-//             if (!res.headersSent) {
-//                 res.status(500).json({ 
-//                     error: 'Database query failed',
-//                     message: err.message,
-//                     suggestion: 'Check your filter values and try again'
-//                 });
-//             } else {
-//                 res.end();
-//             }
-//         });
-        
-//     } catch (error) {
-//         console.error('❌ Error in FACT_BOM filtered endpoint:', error);
-        
-//         if (error.message.includes('Invalid field') || error.message.includes('Too many values')) {
-//             res.status(400).json({ 
-//                 error: 'Invalid request parameters',
-//                 message: error.message 
-//             });
-//         } else if (error.message.includes('connection') || error.message.includes('timeout')) {
-//             res.status(503).json({ 
-//                 error: 'Database connection issue',
-//                 message: 'Please try again in a moment'
-//             });
-//         } else {
-//             res.status(500).json({ 
-//                 error: 'Internal server error',
-//                 message: error.message 
-//             });
-//         }
-//     }
-// });
 app.get('/api/data/FACT_BOM/filtered', async (req, res) => {
     try {
         console.log('🔍 FACT_BOM filtered request:', req.query);
@@ -1159,6 +842,7 @@ app.get('/api/data/FACT_BOM/filtered', async (req, res) => {
     }
 });
 
+
 /**
  * GENERIC: Fallback filtered endpoint for other dimension tables
  * Usage: GET /api/data/:table/filtered?FIELD1=value1,value2&FIELD2=value3
@@ -1308,6 +992,7 @@ app.get('/api/health', async (req, res) => {
     }
 });
 
+
 app.get('/api/dimension-schema/:table', async (req, res) => {
     const rawTable = req.params.table;
     const tableName = rawTable.toUpperCase();
@@ -1335,6 +1020,7 @@ app.get('/api/dimension-schema/:table', async (req, res) => {
     }
 });
 
+
 /**
  * Error handling middleware
  */
@@ -1342,6 +1028,7 @@ app.use((err, req, res, next) => {
     console.error('❌ Unhandled error:', err);
     res.status(500).json({ error: 'Internal server error' });
 });
+
 
 /**
  * 404 handler
@@ -1365,6 +1052,7 @@ app.use((req, res) => {
     });
 });
 
+
 // Graceful shutdown
 process.on('SIGINT', () => {
     console.log('🔄 Shutting down server gracefully...');
@@ -1372,11 +1060,13 @@ process.on('SIGINT', () => {
     process.exit(0);
 });
 
+
 process.on('SIGTERM', () => {
     console.log('🔄 Shutting down server gracefully...');
     closeSnowflakeConnection();
     process.exit(0);
 });
+
 
 app.listen(PORT, () => {
     console.log(`✅ Optimized Snowflake database server listening on http://localhost:${PORT}`);

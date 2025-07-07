@@ -35,40 +35,40 @@ const state = {
     // UI expansion state for hierarchical dimensions
     expandedNodes: {
         le: {
-            row: { 'ROOT': true },
-            column: { 'ROOT': true }
+            row: { 'ROOT': false },
+            column: { 'ROOT': false }
         },
         cost_element: {
-            row: { 'ROOT': true },
-            column: { 'ROOT': true }
+            row: { 'ROOT': false },
+            column: { 'ROOT': false }
         },
         gmid_display: {
-            row: { 'ROOT': true },
-            column: { 'ROOT': true }
+            row: { 'ROOT': false },
+            column: { 'ROOT': false }
         },
         root_gmid_display: {
-            row: { 'ROOT': true },
-            column: { 'ROOT': true }
+            row: { 'ROOT': false },
+            column: { 'ROOT': false }
         },
         smartcode: {
-            row: { 'ROOT': true },
-            column: { 'ROOT': true }
+            row: { 'ROOT': false },
+            column: { 'ROOT': false }
         },
         mc: {
-            row: { 'ROOT': true },
-            column: { 'ROOT': true }
+            row: { 'ROOT': false },
+            column: { 'ROOT': false }
         },
         year: {
-            row: { 'ROOT': true },
-            column: { 'ROOT': true }
+            row: { 'ROOT': false },
+            column: { 'ROOT': false }
         },
         item_cost_type: {
-            row: { 'ROOT': true },
-            column: { 'ROOT': true }
+            row: { 'ROOT': false },
+            column: { 'ROOT': false }
         },
         material_type: {
-            row: { 'ROOT': true },
-            column: { 'ROOT': true }
+            row: { 'ROOT': false },
+            column: { 'ROOT': false }
         }
         
     },
