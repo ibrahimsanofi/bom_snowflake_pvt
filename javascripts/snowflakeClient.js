@@ -2,51 +2,50 @@
 
 const snowflake = require('snowflake-sdk');
 
-// Snowflake connection configuration
-const snowflakeConfig = {
-    account: process.env.ACCOUNT,
-    username: process.env.USER,
-    role: process.env.ROLE,
-    authenticator: 'externalbrowser',
-    warehouse: process.env.WAREHOUSE,
-    database: process.env.DATABASE,
-    schema: process.env.SCHEMA
-};
+// Classic Snowflake connection config from .env (automatic, legacy mode)
+function getSnowflakeConfig() {
+    return {
+        account: process.env.ACCOUNT,
+        username: process.env.USER,
+        role: process.env.ROLE,
+        authenticator: 'externalbrowser',
+        warehouse: process.env.WAREHOUSE,
+        database: process.env.DATABASE,
+        schema: process.env.SCHEMA
+    };
+}
 
 // Connection pool
 let snowflakeConnection = null;
 let cachedConnection = null;
 
 /**
- * Initialize Snowflake connection
+ * Initialize Snowflake connection with SSO (externalbrowser)
+ * Accepts user credentials from parameters (not .env)
+ * @param {Object} userConfig - { account, username, role, warehouse, database, schema }
  */
 async function connectToSnowflake() {
     if (cachedConnection) {
-      // Return existing connection
-      return Promise.resolve(cachedConnection); 
+        return Promise.resolve(cachedConnection);
     }
-
     if (snowflakeConnection) {
-      // Use ongoing connection promise
-      return snowflakeConnection;
+        return snowflakeConnection;
     }
-
+    const snowflakeConfig = getSnowflakeConfig();
     snowflakeConnection = new Promise((resolve, reject) => {
         const connection = snowflake.createConnection(snowflakeConfig);
-        
         connection.connectAsync()
-          .then(conn => {
-            console.log('✅ Connected to Snowflake successfully via SSO (async)');
-            cachedConnection = conn;
-            snowflakeConnection = null;
-            resolve(conn);
-          })
-          .catch(err => {
-            snowflakeConnection = null;
-            reject(new Error('❌ Snowflake connection failed: ' + err.message));
-          });
+            .then(conn => {
+                console.log('✅ Connected to Snowflake successfully via SSO (async)');
+                cachedConnection = conn;
+                snowflakeConnection = null;
+                resolve(conn);
+            })
+            .catch(err => {
+                snowflakeConnection = null;
+                reject(new Error('❌ Snowflake connection failed: ' + err.message));
+            });
     });
-
     return snowflakeConnection;
 }
 
@@ -59,11 +58,8 @@ async function connectToSnowflake() {
 async function executeSnowflakeQuery(sql, params = []) {
     console.log('⏳ Executing Snowflake Query:', sql);
     console.log('📊 Parameters:', params);
-    
     try {
-        // FIXED: Use connectToSnowflake() instead of initializeSnowflakeConnection()
         const connection = await connectToSnowflake();
-        
         return new Promise((resolve, reject) => {
             const statement = connection.execute({
                 sqlText: sql,
@@ -79,7 +75,6 @@ async function executeSnowflakeQuery(sql, params = []) {
                 }
             });
         });
-        
     } catch (error) {
         console.error('❌ Error executing Snowflake query:', error);
         throw error;
