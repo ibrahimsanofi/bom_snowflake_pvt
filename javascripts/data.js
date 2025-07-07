@@ -10,6 +10,7 @@ import pivotTable from './pivot-table.js';
 // Get reference to application state
 const state = stateModule.state;
 
+
 /**
  * API Constants - Endpoints for data retrieval
  */
@@ -48,7 +49,7 @@ const DIMENSION_FIELD_CONFIG = {
         filterField: 'ROOT_SMARTCODE'
     },
     'DIM_GMID_DISPLAY': {
-        fields: ['PATH_GMID', 'COMPONENT_GMID', 'ROOT_GMID', 'DISPLAY'], 
+        fields: ['PATH_GMID', 'ROOT_GMID', 'DISPLAY'], 
         valueField: 'PATH_GMID', 
         displayField: 'DISPLAY',
         filterField: 'PATH_GMID'
@@ -84,6 +85,7 @@ const DIMENSION_FIELD_CONFIG = {
         filterField: 'ZYEAR'
     }
 };
+
 
 /**
  * ENHANCED: Fetch specific fields from a dimension table
@@ -1120,7 +1122,6 @@ async function ingestDimensionData(elements, selectedFact = 'FACT_BOM') {
 }
 
 
-
 /**
  * Replace GMID placeholder with real filtered data
  * @param {Array} selectedRootGmids - Array of selected ROOT_GMID values
@@ -1474,7 +1475,7 @@ async function ingestFactData(elements, selectedFact = 'FACT_BOM') {
 
 
 /**
- * PHASE 1 NEW FUNCTION: Initialize basic mappings without fact data
+ * Initialize basic mappings without fact data
  */
 function initializeBasicMappings() {
     console.log("⏳ Status: Starting basic dimension mappings initialization");
@@ -1576,11 +1577,8 @@ function processHierarchicalFields(fieldIds, axisType) {
             return;
         }
         
-        // Get dimension name (lowercase without DIM_ prefix)
         const dimName = field.id.replace('DIM_', '').toLowerCase();
-        console.log(`Processing dimension: ${dimName}`);
         
-        // Check if hierarchy exists
         if (!state.hierarchies || !state.hierarchies[dimName]) {
             console.error(`No hierarchy found for ${dimName}`);
             return;
@@ -1592,14 +1590,13 @@ function processHierarchicalFields(fieldIds, axisType) {
             return;
         }
         
-        // CRITICAL FIX: Ensure root node always has ID 'ROOT'
+        // Ensure root node always has ID 'ROOT'
         if (hierarchy.root.id !== 'ROOT') {
             console.warn(`Fixing root node ID from ${hierarchy.root.id} to ROOT for ${dimName}`);
             const oldId = hierarchy.root.id;
             hierarchy.root.id = 'ROOT';
             hierarchy.root.path = ['ROOT'];
             
-            // Update nodesMap
             if (hierarchy.nodesMap) {
                 hierarchy.nodesMap['ROOT'] = hierarchy.root;
                 if (oldId !== 'ROOT') {
@@ -1607,14 +1604,11 @@ function processHierarchicalFields(fieldIds, axisType) {
                 }
             }
         }
-                
-        // Store the field for reference
+        
         result.hierarchyFields.push(field);
         
-        // Get zone-specific expanded nodes - CRITICAL: Use axisType parameter
         const zone = axisType;
         
-        // Ensure expandedNodes is initialized
         if (!state.expandedNodes[dimName]) {
             state.expandedNodes[dimName] = { row: {}, column: {} };
         }
@@ -1622,26 +1616,46 @@ function processHierarchicalFields(fieldIds, axisType) {
             state.expandedNodes[dimName][zone] = {};
         }
         
-        // CRITICAL FIX: Don't auto-expand ROOT - respect current state
-        const rootId = 'ROOT';  // Always use 'ROOT'
-        if (state.expandedNodes[dimName][zone][rootId] === undefined) {
-            // Only set to collapsed if not yet defined
-            state.expandedNodes[dimName][zone][rootId] = false;
+        const rootId = 'ROOT';
+        
+        // CRITICAL FIX: Different expansion logic for column vs row
+        if (axisType === 'column') {
+            // COLUMN ZONE: Auto-expand root to show children, but INCLUDE root in output
+            console.log(`🏛️ Column zone processing for ${dimName}: Auto-expanding root "${hierarchy.root.label}"`);
+            
+            // Force root to be expanded so children are visible
+            state.expandedNodes[dimName][zone][rootId] = true;
+            hierarchy.root.expanded = true;
+            
+            // Apply expansion state to all nodes
+            applyExpansionState(hierarchy.root, state.expandedNodes[dimName][zone]);
+            
+        } else {
+            // ROW ZONE: Keep existing behavior
+            if (state.expandedNodes[dimName][zone][rootId] === undefined) {
+                state.expandedNodes[dimName][zone][rootId] = false;
+            }
+            
+            applyExpansionState(hierarchy.root, state.expandedNodes[dimName][zone]);
         }
         
-        // Apply expansion state to nodes
-        applyExpansionState(hierarchy.root, state.expandedNodes[dimName][zone]);
-        
-        // Flatten the hierarchy - CRITICAL: Only show visible nodes
+        // CRITICAL FIX: Always flatten hierarchy INCLUDING root node
         let flattenedNodes = [];
         try {
             flattenedNodes = flattenHierarchyRespectingState(hierarchy.root, state.expandedNodes[dimName][zone]);
+            
+            // DEBUGGING: Log what nodes we got
+            console.log(`📊 ${axisType} zone ${dimName}: Flattened ${flattenedNodes.length} nodes:`);
+            flattenedNodes.forEach((node, index) => {
+                console.log(`  ${index}: ${node.id} - "${node.label}" (level: ${node.level}, isLeaf: ${node.isLeaf})`);
+            });
+            
         } catch (error) {
             console.error(`Error flattening ${dimName} hierarchy:`, error);
             flattenedNodes = [hierarchy.root]; // At least include the root
         }
         
-        // Process flattened nodes
+        // Process all flattened nodes
         flattenedNodes.forEach(node => {
             const factId = node.factId !== undefined ? node.factId : null;
             
@@ -1669,9 +1683,19 @@ function processHierarchicalFields(fieldIds, axisType) {
         });
     });
     
-    console.log(`Processed ${fieldIds.length} fields. Result contains ${result.flatRows.length} rows.`);
+    console.log(`✅ Processed ${fieldIds.length} fields for ${axisType}. Total nodes: ${result.flatRows.length}`);
+    
+    // DEBUGGING: Log final result for column zone
+    if (axisType === 'column') {
+        console.log(`🏛️ Final column result:`);
+        result.flatRows.forEach((row, index) => {
+            console.log(`  Column ${index}: ${row._id} - "${row.label}" (level: ${row.level})`);
+        });
+    }
+    
     return result;
 }
+
 
 
 /**
@@ -1740,18 +1764,28 @@ function applyExpansionState(node, expansionState) {
 function flattenHierarchyRespectingState(node, expansionState) {
     if (!node) return [];
     
+    // CRITICAL: Always start with the current node (including root)
     const result = [node];
+    
+    console.log(`🔍 Flattening node: ${node.id} - "${node.label}" (expanded: ${node.expanded}, hasChildren: ${node.hasChildren})`);
     
     // Only process children if this node is expanded AND has children
     if (node.expanded && node.children && node.children.length > 0) {
+        console.log(`  📁 Processing ${node.children.length} children of ${node.id}`);
+        
         node.children.forEach(childId => {
             const childNode = typeof childId === 'string' ? findNodeById(childId) : childId;
             if (childNode) {
                 // Apply expansion state to child
                 childNode.expanded = expansionState[childNode.id] === true;
                 
+                console.log(`    🔍 Child: ${childNode.id} - "${childNode.label}" (expanded: ${childNode.expanded})`);
+                
                 // Recursively flatten child
-                result.push(...flattenHierarchyRespectingState(childNode, expansionState));
+                const childResults = flattenHierarchyRespectingState(childNode, expansionState);
+                result.push(...childResults);
+            } else {
+                console.warn(`    ⚠️ Child node not found: ${childId}`);
             }
         });
     }
@@ -2341,85 +2375,289 @@ function initializeMappings() {
  * This helps diagnose mapping issues
  */
 function verifyFactDimensionMappings() {
-    if (!state.factData || state.factData.length === 0) {
-        console.warn("No fact data available for mapping verification");
+    console.log("⏳ Status: Starting fact dimension mapping verification...");
+    
+    // Enhanced safety checks for state and factData
+    if (!state) {
+        console.warn("⚠️ Warning: Application state not available for mapping verification");
+        return;
+    }
+    
+    if (!state.factData || !Array.isArray(state.factData) || state.factData.length === 0) {
+        console.warn("⚠️ Warning: No fact data available for mapping verification");
         return;
     }
     
     const sampleSize = Math.min(10, state.factData.length);
     const sampleRecords = state.factData.slice(0, sampleSize);
     
-    // Check legal entity mapping
-    if (state.mappings.legalEntity) {
-        const leMatches = sampleRecords.filter(record => 
-            record.LE && state.mappings.legalEntity.leToDetails[record.LE]
-        ).length;
-        
-        console.log(`✅ Status: Legal Entity mapping: ${leMatches}/${sampleSize} records have matching LE codes`);
+    console.log(`📊 Verifying mappings with ${sampleSize} sample records...`);
+    
+    // Check legal entity mapping with enhanced safety
+    if (state.mappings && state.mappings.legalEntity && state.mappings.legalEntity.leToDetails) {
+        try {
+            let leMatches = 0;
+            sampleRecords.forEach((record, index) => {
+                if (record && typeof record === 'object' && record.LE) {
+                    try {
+                        if (state.mappings.legalEntity.leToDetails[record.LE]) {
+                            leMatches++;
+                        }
+                    } catch (accessError) {
+                        console.warn(`⚠️ Warning: Error accessing LE mapping for record ${index}:`, accessError);
+                    }
+                }
+            });
+            
+            console.log(`✅ Status: Legal Entity mapping: ${leMatches}/${sampleSize} records have matching LE codes`);
+        } catch (error) {
+            console.error("❌ Error verifying Legal Entity mapping:", error);
+        }
+    } else {
+        console.log("ℹ️ Info: Legal Entity mapping not available for verification");
     }
     
-    // Check cost element mapping
-    if (state.mappings.costElement) {
-        const ceMatches = sampleRecords.filter(record => 
-            record.COST_ELEMENT && state.mappings.costElement.costElementToDetails[record.COST_ELEMENT]
-        ).length;
-        
-        console.log(`✅ Status: Cost Element mapping: ${ceMatches}/${sampleSize} records have matching COST_ELEMENT`);
+    // Check cost element mapping with enhanced safety
+    if (state.mappings && state.mappings.costElement && state.mappings.costElement.costElementToDetails) {
+        try {
+            let ceMatches = 0;
+            sampleRecords.forEach((record, index) => {
+                if (record && typeof record === 'object' && record.COST_ELEMENT) {
+                    try {
+                        if (state.mappings.costElement.costElementToDetails[record.COST_ELEMENT]) {
+                            ceMatches++;
+                        }
+                    } catch (accessError) {
+                        console.warn(`⚠️ Warning: Error accessing Cost Element mapping for record ${index}:`, accessError);
+                    }
+                }
+            });
+            
+            console.log(`✅ Status: Cost Element mapping: ${ceMatches}/${sampleSize} records have matching COST_ELEMENT`);
+        } catch (error) {
+            console.error("❌ Error verifying Cost Element mapping:", error);
+        }
+    } else {
+        console.log("ℹ️ Info: Cost Element mapping not available for verification");
     }
     
-    // Check smart code mapping - FIXED to correctly check ROOT_SMARTCODE
-    if (state.mappings.smartCode) {
-        const scMatches = sampleRecords.filter(record => 
-            record.ROOT_SMARTCODE && state.mappings.smartCode.smartCodeToDetails[record.ROOT_SMARTCODE]
-        ).length;
-        
-        console.log(`✅ Status: Smart Code mapping: ${scMatches}/${sampleSize} records have matching ROOT_SMARTCODE`);
+    // Check smart code mapping with enhanced safety
+    if (state.mappings && state.mappings.smartCode && state.mappings.smartCode.smartCodeToDetails) {
+        try {
+            let scMatches = 0;
+            sampleRecords.forEach((record, index) => {
+                if (record && typeof record === 'object' && record.ROOT_SMARTCODE) {
+                    try {
+                        if (state.mappings.smartCode.smartCodeToDetails[record.ROOT_SMARTCODE]) {
+                            scMatches++;
+                        }
+                    } catch (accessError) {
+                        console.warn(`⚠️ Warning: Error accessing Smart Code mapping for record ${index}:`, accessError);
+                    }
+                }
+            });
+            
+            console.log(`✅ Status: Smart Code mapping: ${scMatches}/${sampleSize} records have matching ROOT_SMARTCODE`);
+        } catch (error) {
+            console.error("❌ Error verifying Smart Code mapping:", error);
+        }
+    } else {
+        console.log("ℹ️ Info: Smart Code mapping not available for verification");
     }
     
-    // Check GMID mapping - FIXED to correctly check PATH_GMID
-    if (state.mappings.gmidDisplay) {
-        const gmidMatches = sampleRecords.filter(record => 
-            record.PATH_GMID && state.mappings.gmidDisplay.gmidToDisplay[record.PATH_GMID]
-        ).length;
+    // FIXED: Check GMID mapping using PATH_GMID ONLY with comprehensive safety
+    if (state.mappings && state.mappings.gmidDisplay && state.mappings.gmidDisplay.pathGmidToDisplay) {
+        try {
+            let gmidMatches = 0;
+            let problemRecords = [];
+            
+            sampleRecords.forEach((record, index) => {
+                // Enhanced safety checks for each record
+                if (!record || typeof record !== 'object') {
+                    console.warn(`⚠️ Warning: Invalid record at index ${index}:`, record);
+                    return;
+                }
+                
+                const pathGmid = record.PATH_GMID;
+                
+                // Check if PATH_GMID exists and is valid
+                if (!pathGmid || typeof pathGmid !== 'string' || pathGmid.trim() === '') {
+                    console.warn(`⚠️ Warning: Record ${index} has invalid PATH_GMID:`, pathGmid);
+                    return;
+                }
+                
+                try {
+                    // Safely access the mapping object
+                    const mappingObj = state.mappings.gmidDisplay.pathGmidToDisplay;
+                    
+                    // Check if the mapping object exists and has the property
+                    if (mappingObj && typeof mappingObj === 'object' && mappingObj.hasOwnProperty(pathGmid)) {
+                        const mapping = mappingObj[pathGmid];
+                        if (mapping && typeof mapping === 'object') {
+                            gmidMatches++;
+                        } else {
+                            console.warn(`⚠️ Warning: Mapping for PATH_GMID "${pathGmid}" exists but is invalid:`, mapping);
+                        }
+                    } else {
+                        problemRecords.push({
+                            index: index,
+                            pathGmid: pathGmid,
+                            reason: 'No mapping found'
+                        });
+                    }
+                } catch (accessError) {
+                    console.error(`❌ Error accessing GMID mapping for record ${index} with PATH_GMID "${pathGmid}":`, accessError);
+                    problemRecords.push({
+                        index: index,
+                        pathGmid: pathGmid,
+                        reason: 'Access error',
+                        error: accessError.message
+                    });
+                }
+            });
+            
+            console.log(`✅ Status: GMID mapping: ${gmidMatches}/${sampleSize} records have matching PATH_GMID`);
+            
+            // Log problem records if any
+            if (problemRecords.length > 0) {
+                console.warn(`⚠️ Warning: ${problemRecords.length} records had GMID mapping issues:`);
+                problemRecords.slice(0, 3).forEach(prob => {
+                    console.warn(`  Record ${prob.index}: PATH_GMID="${prob.pathGmid}" - ${prob.reason}`);
+                });
+            }
+            
+            // Log sample successful mappings
+            console.log("📋 Sample PATH_GMID mappings (successful):");
+            let successCount = 0;
+            sampleRecords.forEach((record, index) => {
+                if (successCount >= 3) return; // Only show first 3 successful ones
+                
+                if (record && record.PATH_GMID && 
+                    state.mappings.gmidDisplay.pathGmidToDisplay[record.PATH_GMID]) {
+                    
+                    const mapping = state.mappings.gmidDisplay.pathGmidToDisplay[record.PATH_GMID];
+                    console.log(`  Record ${index + 1}: PATH_GMID="${record.PATH_GMID}" -> Display="${mapping.display || 'N/A'}"`);
+                    successCount++;
+                }
+            });
+            
+        } catch (error) {
+            console.error("❌ Error verifying GMID mapping:", error);
+            
+            // Detailed debugging for GMID mapping structure
+            console.log("🔍 Debug: GMID mapping structure analysis:");
+            try {
+                const gmidMapping = state.mappings.gmidDisplay;
+                console.log("  - gmidDisplay object exists:", !!gmidMapping);
+                
+                if (gmidMapping) {
+                    console.log("  - pathGmidToDisplay exists:", !!gmidMapping.pathGmidToDisplay);
+                    console.log("  - pathGmidToDisplay type:", typeof gmidMapping.pathGmidToDisplay);
+                    
+                    if (gmidMapping.pathGmidToDisplay) {
+                        const keys = Object.keys(gmidMapping.pathGmidToDisplay);
+                        console.log("  - Number of mappings:", keys.length);
+                        console.log("  - Sample keys:", keys.slice(0, 3));
+                    }
+                }
+            } catch (debugError) {
+                console.error("❌ Error in debug analysis:", debugError);
+            }
+        }
+    } else {
+        console.log("ℹ️ Info: GMID Display mapping not available for verification");
         
-        console.log(`✅ Status: GMID mapping: ${gmidMatches}/${sampleSize} records have matching PATH_GMID`);
+        // Check what's actually available
+        console.log("🔍 Debug: Available mappings:");
+        if (state.mappings) {
+            console.log("  Available mapping types:", Object.keys(state.mappings));
+            if (state.mappings.gmidDisplay) {
+                console.log("  GMID Display mapping keys:", Object.keys(state.mappings.gmidDisplay));
+            }
+        } else {
+            console.log("  No mappings object found in state");
+        }
     }
+    
+    // Continue with other mappings...
     
     // Check item cost type mapping
-    if (state.mappings.itemCostType) {
-        const ictMatches = sampleRecords.filter(record => 
-            record.ITEM_COST_TYPE && state.mappings.itemCostType.costTypeToDetails[record.ITEM_COST_TYPE]
-        ).length;
-        
-        console.log(`✅ Status: Item Cost Type mapping: ${ictMatches}/${sampleSize} records have matching ITEM_COST_TYPE`);
+    if (state.mappings && state.mappings.itemCostType && state.mappings.itemCostType.costTypeToDetails) {
+        try {
+            let ictMatches = 0;
+            sampleRecords.forEach((record) => {
+                if (record && record.ITEM_COST_TYPE && 
+                    state.mappings.itemCostType.costTypeToDetails[record.ITEM_COST_TYPE]) {
+                    ictMatches++;
+                }
+            });
+            
+            console.log(`✅ Status: Item Cost Type mapping: ${ictMatches}/${sampleSize} records have matching ITEM_COST_TYPE`);
+        } catch (error) {
+            console.error("❌ Error verifying Item Cost Type mapping:", error);
+        }
+    } else {
+        console.log("ℹ️ Info: Item Cost Type mapping not available for verification");
     }
     
     // Check material type mapping
-    if (state.mappings.materialType) {
-        const mtMatches = sampleRecords.filter(record => 
-            record.COMPONENT_MATERIAL_TYPE && state.mappings.materialType.materialTypeToDetails[record.COMPONENT_MATERIAL_TYPE]
-        ).length;
-        
-        console.log(`✅ Status: Material Type mapping: ${mtMatches}/${sampleSize} records have matching COMPONENT_MATERIAL_TYPE`);
+    if (state.mappings && state.mappings.materialType && state.mappings.materialType.materialTypeToDetails) {
+        try {
+            let mtMatches = 0;
+            sampleRecords.forEach((record) => {
+                if (record && record.COMPONENT_MATERIAL_TYPE && 
+                    state.mappings.materialType.materialTypeToDetails[record.COMPONENT_MATERIAL_TYPE]) {
+                    mtMatches++;
+                }
+            });
+            
+            console.log(`✅ Status: Material Type mapping: ${mtMatches}/${sampleSize} records have matching COMPONENT_MATERIAL_TYPE`);
+        } catch (error) {
+            console.error("❌ Error verifying Material Type mapping:", error);
+        }
+    } else {
+        console.log("ℹ️ Info: Material Type mapping not available for verification");
     }
 
     // Check mc mapping
-    if (state.mappings.managementCentre) {
-        const mcMatches = sampleRecords.filter(record => 
-            record.MC && state.mappings.managementCentre.mcToDetails[record.MC]
-        ).length;
-        
-        console.log(`✅ Status: MC mapping: ${mcMatches}/${sampleSize} records have matching MC`);
+    if (state.mappings && state.mappings.managementCentre && state.mappings.managementCentre.mcToDetails) {
+        try {
+            let mcMatches = 0;
+            sampleRecords.forEach((record) => {
+                if (record && record.MC && 
+                    state.mappings.managementCentre.mcToDetails[record.MC]) {
+                    mcMatches++;
+                }
+            });
+            
+            console.log(`✅ Status: MC mapping: ${mcMatches}/${sampleSize} records have matching MC`);
+        } catch (error) {
+            console.error("❌ Error verifying MC mapping:", error);
+        }
+    } else {
+        console.log("ℹ️ Info: MC mapping not available for verification");
     }
 
     // Check year mapping
-    if (state.mappings.year) {
-        const yrMatches = sampleRecords.filter(record => 
-            record.ZYEAR && state.mappings.year.yearToDetails[record.ZYEAR]
-        ).length;
-        
-        console.log(`✅ Status: ZYEAR mapping: ${yrMatches}/${sampleSize} records have matching ZYEAR`);
+    if (state.mappings && state.mappings.year && state.mappings.year.yearToDetails) {
+        try {
+            let yrMatches = 0;
+            sampleRecords.forEach((record) => {
+                if (record && record.ZYEAR && 
+                    state.mappings.year.yearToDetails[record.ZYEAR]) {
+                    yrMatches++;
+                }
+            });
+            
+            console.log(`✅ Status: ZYEAR mapping: ${yrMatches}/${sampleSize} records have matching ZYEAR`);
+        } catch (error) {
+            console.error("❌ Error verifying Year mapping:", error);
+        }
+    } else {
+        console.log("ℹ️ Info: Year mapping not available for verification");
     }
+    
+    console.log("✅ Status: Fact dimension mapping verification completed");
 }
 
 
@@ -2478,7 +2716,8 @@ function enhancedFilterByMultipleDimensions(data, rowDef) {
  */
 function createPathSegmentLabelConfig({
   pathField = 'PATH',
-  idField = 'ID',
+  idField = 'ID', 
+  displayField = null,
   pathSeparator = '//',
   data = null
 } = {}) {
@@ -2486,12 +2725,12 @@ function createPathSegmentLabelConfig({
   if (!pathField) throw new Error('pathField is required');
   if (!idField) throw new Error('idField is required');
   
-  // Determine multi-root status if data is provided
-  let forceSeparateRoots = true;
+  // Determine hierarchy type and root label if data is provided
   let isFlat = false;
+  let dynamicRootLabel = null;
   
   if (data && Array.isArray(data) && data.length > 0) {
-    // Find all unique first level segments to determine multi-root status
+    // Find all unique first level segments
     const firstLevelSegments = new Set();
     let hasValidPaths = false;
     
@@ -2512,10 +2751,19 @@ function createPathSegmentLabelConfig({
     // If no valid paths found, treat as flat data
     isFlat = !hasValidPaths;
     
-    // Only force separate roots if we have multiple first segments
-    forceSeparateRoots = firstLevelSegments.size > 1;
+    // Determine dynamic root label from data
+    if (firstLevelSegments.size === 1) {
+      // Single hierarchical root - use the segment name
+      dynamicRootLabel = Array.from(firstLevelSegments)[0];
+    } else if (isFlat) {
+      // Flat data - determine label from dimension type
+      dynamicRootLabel = determineFlatRootLabel(data, idField, displayField);
+    } else {
+      // Multiple hierarchical roots - use first one or create generic
+      dynamicRootLabel = Array.from(firstLevelSegments)[0] || determineFlatRootLabel(data, idField, displayField);
+    }
     
-    console.log(`Path analysis: isFlat=${isFlat}, uniqueFirstSegments=${firstLevelSegments.size}, forceSeparateRoots=${forceSeparateRoots}`);
+    console.log(`Path analysis: isFlat=${isFlat}, uniqueFirstSegments=${firstLevelSegments.size}, dynamicRootLabel="${dynamicRootLabel}"`);
   }
   
   return {
@@ -2525,9 +2773,8 @@ function createPathSegmentLabelConfig({
     // Function to get the leaf node ID 
     getLeafId: item => item[idField],
     
-    // Use the same path segment label for leaf nodes too
-    // This ensures consistency across all node types
-    getLeafLabel: null,  // Don't override the segment labels
+    // Use displayField for leaf labels when provided
+    getLeafLabel: displayField ? (item => item[displayField] || item[idField]) : null,
     
     // Function to determine if a node is a leaf
     isLeafNode: (item, level, totalLevels) => level === totalLevels - 1,
@@ -2536,11 +2783,14 @@ function createPathSegmentLabelConfig({
     pathSeparator: pathSeparator,
     
     // Flags
-    forceSeparateRoots: forceSeparateRoots,
     isFlat: isFlat,
     
-    // Always use path segments for labels
-    usePathSegmentsForLabels: true
+    // Use path segments for labels (but override for leaves if displayField provided)
+    usePathSegmentsForLabels: true,
+    
+    // Store the display field and dynamic root label
+    displayField: displayField,
+    dynamicRootLabel: dynamicRootLabel
   };
 }
 
@@ -2565,7 +2815,7 @@ function buildPathHierarchyWithSegmentLabels(data, config) {
         };
     }
     
-    console.log(`⏳ Status: Processing ${data.length} rows of data...`);
+    console.log(`⏳ Status: Processing ${data.length} rows of data with alphabetical sorting...`);
     
     // Merge with default config
     const defaultConfig = {
@@ -2578,9 +2828,9 @@ function buildPathHierarchyWithSegmentLabels(data, config) {
     };
     const finalConfig = { ...defaultConfig, ...config };
     
-    // Handle flat data with special function
+    // Handle flat data with dynamic labeling
     if (finalConfig.isFlat) {
-        return buildFlatDataHierarchy(data, finalConfig);
+        return buildFlatDataHierarchyWithSorting(data, finalConfig);
     }
     
     // Find all unique first level segments
@@ -2599,7 +2849,6 @@ function buildPathHierarchyWithSegmentLabels(data, config) {
         }
     });
     
-    // If no segments found, return empty hierarchy
     if (firstLevelSegments.size === 0) {
         console.warn("No valid path segments found in data");
         return { 
@@ -2614,9 +2863,10 @@ function buildPathHierarchyWithSegmentLabels(data, config) {
     const nodesMap = {};
     let rootNode;
     let skipFirstSegment = false;
+    const nodesByPathKey = new Map();
 
     if (firstLevelSegments.size === 1) {
-        // Use the unique segment as the root node (X)
+        // Single hierarchical root - use the actual segment name from data
         const onlySegment = Array.from(firstLevelSegments)[0];
         rootNode = {
             id: 'ROOT',
@@ -2631,9 +2881,11 @@ function buildPathHierarchyWithSegmentLabels(data, config) {
         nodesMap['ROOT'] = rootNode;
         skipFirstSegment = true;
     } else {
+        // Multiple hierarchical roots or no clear hierarchy - use dynamic label
+        const rootLabel = finalConfig.dynamicRootLabel || 'All Items';
         rootNode = {
             id: 'ROOT',
-            label: (config && config.rootLabel) ? config.rootLabel : 'All',
+            label: rootLabel,
             children: [],
             level: 0,
             path: ['ROOT'],
@@ -2644,9 +2896,6 @@ function buildPathHierarchyWithSegmentLabels(data, config) {
         nodesMap['ROOT'] = rootNode;
     }
 
-    // Map to track nodes by path
-    const nodesByPathKey = new Map();
-
     // Process each data item
     data.forEach(item => {
         try {
@@ -2655,32 +2904,37 @@ function buildPathHierarchyWithSegmentLabels(data, config) {
             const pathString = finalConfig.getPath(item);
             if (!pathString) return;
 
-            // Split path into segments
             const pathSegments = pathString.split(finalConfig.pathSeparator)
                 .filter(segment => segment.trim() !== '');
 
             if (pathSegments.length === 0) return;
 
-            // Start with root node
             let currentNode = rootNode;
             let currentPath = [...rootNode.path];
 
-            // Si on doit sauter le premier segment (cas racine unique)
             let startIdx = skipFirstSegment ? 1 : 0;
 
             for (let i = startIdx; i < pathSegments.length; i++) {
                 const segment = pathSegments[i];
                 if (!segment || segment === "") continue;
 
-                // Build a unique key for this node under its parent
                 const pathKey = `${currentNode.id}_${segment}`;
                 const nodeId = `SEGMENT_${pathKey.replace(/[^a-zA-Z0-9_]/g, '_')}`;
 
                 if (!nodesByPathKey.has(pathKey)) {
                     const isLeafNode = (i === pathSegments.length - 1);
+                    
+                    // Use proper label for leaf nodes
+                    let nodeLabel;
+                    if (isLeafNode && finalConfig.getLeafLabel) {
+                        nodeLabel = finalConfig.getLeafLabel(item);
+                    } else {
+                        nodeLabel = segment;
+                    }
+                    
                     const newNode = {
                         id: nodeId,
-                        label: segment,
+                        label: nodeLabel,
                         children: [],
                         level: currentNode.level + 1,
                         path: [...currentPath, nodeId],
@@ -2689,15 +2943,18 @@ function buildPathHierarchyWithSegmentLabels(data, config) {
                         hasChildren: !isLeafNode,
                         factId: isLeafNode ? finalConfig.getLeafId(item) : null
                     };
+                    
                     nodesMap[nodeId] = newNode;
                     nodesByPathKey.set(pathKey, nodeId);
                     currentNode.children.push(newNode);
                     currentNode.isLeaf = false;
                     currentNode.hasChildren = true;
+                    
                     if (isLeafNode) {
                         newNode.data = { ...item };
                     }
                 }
+                
                 const existingNodeId = nodesByPathKey.get(pathKey);
                 currentNode = nodesMap[existingNodeId];
                 if (!currentNode) break;
@@ -2708,7 +2965,9 @@ function buildPathHierarchyWithSegmentLabels(data, config) {
         }
     });
     
-    // Create result object with single root
+    // CRITICAL ADDITION: Sort all hierarchy nodes alphabetically
+    sortHierarchyNodesRecursively(rootNode, nodesMap);
+    
     const result = {
         root: rootNode,
         roots: [rootNode],
@@ -2717,9 +2976,58 @@ function buildPathHierarchyWithSegmentLabels(data, config) {
         isEmpty: false
     };
     
-    console.log(`✅ Status: Built hierarchy with root node "${rootNode.label}" and ${Object.keys(nodesMap).length} total nodes`);
+    console.log(`✅ Status: Built sorted hierarchy with root "${rootNode.label}" and ${Object.keys(nodesMap).length} total nodes`);
     
     return result;
+}
+
+
+/**
+ * Recursively sorts all nodes in a hierarchy alphabetically by label
+ * 
+ * @param {Object} node - The node to sort (and its children recursively)
+ * @param {Object} nodesMap - Map of all nodes for resolving child references
+ */
+function sortHierarchyNodesRecursively(node, nodesMap) {
+    if (!node || !node.children || !Array.isArray(node.children) || node.children.length === 0) {
+        return;
+    }
+    
+    try {
+        // Convert children array to objects if they're still IDs
+        const childrenObjects = node.children.map(child => {
+            if (typeof child === 'string') {
+                return nodesMap[child] || { id: child, label: child };
+            }
+            return child;
+        });
+        
+        // Sort children alphabetically by label (case-insensitive)
+        childrenObjects.sort((a, b) => {
+            const labelA = (a.label || a.id || '').toString().toLowerCase();
+            const labelB = (b.label || b.id || '').toString().toLowerCase();
+            return labelA.localeCompare(labelB);
+        });
+        
+        // Update the children array with sorted objects or IDs
+        if (typeof node.children[0] === 'string') {
+            // If original was array of IDs, keep it as array of IDs
+            node.children = childrenObjects.map(child => child.id);
+        } else {
+            // If original was array of objects, keep it as array of objects
+            node.children = childrenObjects;
+        }
+        
+        // Recursively sort children's children
+        childrenObjects.forEach(childNode => {
+            if (childNode && typeof childNode === 'object') {
+                sortHierarchyNodesRecursively(childNode, nodesMap);
+            }
+        });
+        
+    } catch (error) {
+        console.warn(`Error sorting children for node ${node.id}:`, error);
+    }
 }
 
 
@@ -2857,19 +3165,19 @@ function buildStandaloneFlatHierarchy(data, dimensionName, idField, labelField) 
 function buildLegalEntityHierarchy(data) {
     console.log(`⏳ Status: Building Legal Entity hierarchy from ${data?.length || 0} records...`);
     
-    // Create config for path segment labels
+    // Use dynamic root label detection
     const config = createPathSegmentLabelConfig({
         pathField: 'PATH',
         idField: 'LE',
         pathSeparator: '//',
         data: data
     });
-    config.rootLabel = 'All Legal Entities'; // Ajouté
-    // Build hierarchy with segment labels
+    // Don't set rootLabel - let it be determined from the data
+    
+    // Build hierarchy with dynamic labels
     const hierarchy = buildPathHierarchyWithSegmentLabels(data, config);
     
-    // The buildPathHierarchyWithSegmentLabels now ensures ROOT ID consistency
-    console.log(`✅ Status: Legal Entity hierarchy built with ROOT node`);
+    console.log(`✅ Status: Legal Entity hierarchy built with dynamic root label: "${hierarchy.root?.label}"`);
     return hierarchy;
 }
 
@@ -2882,19 +3190,19 @@ function buildLegalEntityHierarchy(data) {
 function buildSmartCodeHierarchy(data) {
     console.log(`⏳ Status: Building SmartCode hierarchy from ${data?.length || 0} records...`);
     
-    // Create config for path segment labels
+    // Use dynamic root label detection
     const config = createPathSegmentLabelConfig({
         pathField: 'PATH',
         idField: 'SMARTCODE',
         pathSeparator: '//',
         data: data
     });
+    // Don't set rootLabel - let it be determined from the data
     
-    // Build hierarchy with segment labels
+    // Build hierarchy with dynamic labels
     const hierarchy = buildPathHierarchyWithSegmentLabels(data, config);
     
-    // The buildPathHierarchyWithSegmentLabels now ensures ROOT ID consistency
-    console.log(`✅ Status: SmartCode hierarchy built with ROOT node`);
+    console.log(`✅ Status: SmartCode hierarchy built with dynamic root label: "${hierarchy.root?.label}"`);
     return hierarchy;
 }
 
@@ -2907,32 +3215,18 @@ function buildSmartCodeHierarchy(data) {
 function buildManagementCentreHierarchy(data) {
     console.log(`⏳ Status: Building Management Centre hierarchy from ${data?.length || 0} records...`);
     
-    // Check if data has PATH structure
-    const hasPathData = data && Array.isArray(data) && 
-                         data.some(item => item && item.PATH && 
-                                  typeof item.PATH === 'string' && 
-                                  item.PATH.includes('//'));
-    
-    if (!hasPathData) {
-        console.log("MC data appears to be flat. Using flat hierarchy builder.");
-        const hierarchy = buildStandaloneFlatHierarchy(data, 'MC', 'MC', 'DIM_MC');
-        // The buildStandaloneFlatHierarchy now ensures ROOT ID consistency
-        return hierarchy;
-    }
-    
-    // Create config for path segment labels
+    // Use dynamic root label detection for hierarchical MC data
     const config = createPathSegmentLabelConfig({
         pathField: 'PATH',
         idField: 'MC',
         pathSeparator: '//',
         data: data
     });
-
-    // Build hierarchy with segment labels
+    
+    // Build hierarchy with dynamic labels
     const hierarchy = buildPathHierarchyWithSegmentLabels(data, config);
     
-    // The buildPathHierarchyWithSegmentLabels now ensures ROOT ID consistency
-    console.log(`✅ Status: Management Centre hierarchy built with ROOT node`);
+    console.log(`✅ Status: Management Centre hierarchy built with dynamic root label: "${hierarchy.root?.label}"`);
     return hierarchy;
 }
 
@@ -2945,20 +3239,19 @@ function buildManagementCentreHierarchy(data) {
 function buildCostElementHierarchy(data) {
     console.log(`⏳ Status: Building COST_ELEMENT hierarchy from ${data?.length || 0} records...`);
     
-    // Create config for path segment labels
+    // Use dynamic root label detection
     const config = createPathSegmentLabelConfig({
         pathField: 'PATH',
         idField: 'COST_ELEMENT',
         pathSeparator: '//',
         data: data
     });
+    // Don't set rootLabel - let it be determined from the data
     
-    // Build hierarchy with segment labels
+    // Build hierarchy with dynamic labels
     const hierarchy = buildPathHierarchyWithSegmentLabels(data, config);
     
-    // The buildPathHierarchyWithSegmentLabels now ensures ROOT ID consistency
-    console.log(`✅ Status: COST_ELEMENT hierarchy built with ROOT node`);
-
+    console.log(`✅ Status: COST_ELEMENT hierarchy built with dynamic root label: "${hierarchy.root?.label}"`);
     return hierarchy;
 }
 
@@ -2971,18 +3264,19 @@ function buildCostElementHierarchy(data) {
 function buildGmidDisplayHierarchy(data) {
     console.log(`⏳ Status: Building GMID Display hierarchy from ${data?.length || 0} records...`);
     
+    // Use dynamic root label detection
     const config = createPathSegmentLabelConfig({
         pathField: 'DISPLAY',
         idField: 'PATH_GMID',
         pathSeparator: '//',
         data: data
     });
+    // Don't set rootLabel - let it be determined from the data
     
-    // Build hierarchy with segment labels
+    // Build hierarchy with dynamic labels
     const hierarchy = buildPathHierarchyWithSegmentLabels(data, config);
     
-    // The buildPathHierarchyWithSegmentLabels now ensures ROOT ID consistency
-    console.log(`✅ Status: GMID Display hierarchy built with ROOT node`);
+    console.log(`✅ Status: GMID Display hierarchy built with dynamic root label: "${hierarchy.root?.label}"`);
     return hierarchy;
 }
 
@@ -2990,19 +3284,20 @@ function buildGmidDisplayHierarchy(data) {
 function buildItemCostTypeHierarchy(data) {
     console.log(`⏳ Status: Building ITEM_COST_TYPE hierarchy from ${data?.length || 0} records...`);
     
-    // Create config for path segment labels
+    // Use dynamic root label detection
     const config = createPathSegmentLabelConfig({
         pathField: 'PATH',
         idField: 'ITEM_COST_TYPE',
+        displayField: 'ITEM_COST_TYPE_DESC',
         pathSeparator: '//',
         data: data
     });
+    // Don't set rootLabel - let it be determined dynamically
     
-    // Build hierarchy with segment labels
+    // Build hierarchy with dynamic labels
     const hierarchy = buildPathHierarchyWithSegmentLabels(data, config);
     
-    // The buildPathHierarchyWithSegmentLabels now ensures ROOT ID consistency
-    console.log(`✅ Status: ITEM_COST_TYPE hierarchy built with ROOT node`);
+    console.log(`✅ Status: ITEM_COST_TYPE hierarchy built with dynamic root label: "${hierarchy.root?.label}"`);
     return hierarchy;
 }
 
@@ -3010,19 +3305,20 @@ function buildItemCostTypeHierarchy(data) {
 function buildMaterialTypeHierarchy(data) {
     console.log(`⏳ Status: Building MATERIAL_TYPE hierarchy from ${data?.length || 0} records...`);
     
-    // Create config for path segment labels
+    // Use dynamic root label detection
     const config = createPathSegmentLabelConfig({
         pathField: 'PATH',
         idField: 'MATERIAL_TYPE',
+        displayField: 'MATERIAL_TYPE_DESC',
         pathSeparator: '//',
         data: data
     });
+    // Don't set rootLabel - let it be determined dynamically
     
-    // Build hierarchy with segment labels
+    // Build hierarchy with dynamic labels
     const hierarchy = buildPathHierarchyWithSegmentLabels(data, config);
     
-    // The buildPathHierarchyWithSegmentLabels now ensures ROOT ID consistency
-    console.log(`✅ Status: MATERIAL_TYPE hierarchy built with ROOT node`);
+    console.log(`✅ Status: MATERIAL_TYPE hierarchy built with dynamic root label: "${hierarchy.root?.label}"`);
     return hierarchy;
 }
 
@@ -3047,47 +3343,35 @@ function sortHierarchyNodes(node) {
         return;
     }
     
-    try {
-        // Check if children array exists and has items
-        if (node.children && Array.isArray(node.children) && node.children.length > 0) {
-            // First, ensure all children are objects, not just IDs
-            // This handles both cases: array of objects and array of IDs
-            const childrenObjects = node.children.map(child => {
-                // If child is a string (ID), convert to the actual node
-                if (typeof child === 'string') {
-                    // If we can't find the node, create a placeholder
-                    return findNodeById(child) || { 
-                        id: child,
-                        label: child,
-                        children: []
-                    };
-                }
-                return child;
-            });
-            
-            // Sort children by label alphabetically
-            childrenObjects.sort((a, b) => {
-                const labelA = (a.label || '').toString().toLowerCase();
-                const labelB = (b.label || '').toString().toLowerCase();
-                return labelA.localeCompare(labelB);
-            });
-            
-            // Update node's children with sorted array
-            // If node.children was array of IDs, convert back to IDs
-            if (typeof node.children[0] === 'string') {
-                node.children = childrenObjects.map(child => child.id);
-            } else {
-                node.children = childrenObjects;
-            }
-            
-            // Recursively sort children's children
-            childrenObjects.forEach(child => {
-                sortHierarchyNodes(child);
-            });
-        }
-    } catch (error) {
-        console.warn("Error sorting children for node:", node?.id, error);
+    // Use the new recursive sorting function
+    sortHierarchyNodesRecursively(node, { [node.id]: node });
+}
+
+
+/**
+ * Sort all hierarchies in the state alphabetically
+ */
+function sortAllHierarchiesAlphabetically() {
+    if (!state.hierarchies) {
+        console.warn("No hierarchies found in state");
+        return;
     }
+    
+    console.log("⏳ Status: Sorting all hierarchies alphabetically...");
+    
+    Object.keys(state.hierarchies).forEach(hierarchyName => {
+        const hierarchy = state.hierarchies[hierarchyName];
+        if (hierarchy && hierarchy.root && hierarchy.nodesMap) {
+            try {
+                sortHierarchyNodesRecursively(hierarchy.root, hierarchy.nodesMap);
+                console.log(`✅ Status: Sorted hierarchy: ${hierarchyName}`);
+            } catch (error) {
+                console.warn(`Error sorting hierarchy ${hierarchyName}:`, error);
+            }
+        }
+    });
+    
+    console.log("✅ Status: All hierarchies sorted alphabetically");
 }
 
 
@@ -3580,15 +3864,12 @@ function filterRecordsByLeHierarchy(records, leCode) {
 
 
 function buildGmidDisplayMapping(gmidDisplayData, bomData) {
-    console.log("⏳ Status: Building GMID Display mapping with PATH_GMID as primary foreign key");
+    console.log("⏳ Status: Building GMID Display mapping with PATH_GMID as the ONLY primary key");
     
-    // Create mapping object
+    // Create mapping object - REMOVED all COMPONENT_GMID references
     const mapping = {
-        // Maps PATH_GMID to display information (primary mapping)
+        // Maps PATH_GMID to display information (PRIMARY and ONLY mapping)
         pathGmidToDisplay: {},
-        
-        // Maps COMPONENT_GMID to PATH_GMID for backward compatibility
-        componentGmidToPathGmid: {},
         
         // Maps any path segment to its display value
         pathSegmentToDisplay: {},
@@ -3612,27 +3893,47 @@ function buildGmidDisplayMapping(gmidDisplayData, bomData) {
         rootGmidToPathGmids: {}
     };
     
-    // First pass: Load all PATH_GMIDs from BOM data to ensure we catch all needed GMIDs
+    // Add safety checks for input data
+    if (!Array.isArray(bomData)) {
+        console.warn("⚠️ Warning: bomData is not an array, initializing as empty");
+        bomData = [];
+    }
+    
+    if (!Array.isArray(gmidDisplayData)) {
+        console.warn("⚠️ Warning: gmidDisplayData is not an array, initializing as empty");
+        gmidDisplayData = [];
+    }
+    
+    // First pass: Load all PATH_GMIDs from BOM data
     if (bomData && bomData.length > 0) {
-        bomData.forEach(row => {
-            if (row.PATH_GMID) {
-                mapping.usedPathGmids.add(row.PATH_GMID);
+        bomData.forEach((row, index) => {
+            if (!row || typeof row !== 'object') {
+                console.warn(`⚠️ Warning: Invalid row at index ${index}:`, row);
+                return;
+            }
+            
+            // ONLY use PATH_GMID - no COMPONENT_GMID references
+            const pathGmid = row.PATH_GMID;
+            if (pathGmid && typeof pathGmid === 'string' && pathGmid.trim() !== '') {
+                mapping.usedPathGmids.add(pathGmid);
                 
-                // Pre-populate the display mapping with at least the PATH_GMID itself
-                if (!mapping.pathGmidToDisplay[row.PATH_GMID]) {
-                    mapping.pathGmidToDisplay[row.PATH_GMID] = {
-                        display: row.PATH_GMID,
-                        fullPath: row.PATH_GMID,
-                        level: 0 // Will be updated later
+                // Pre-populate the display mapping with PATH_GMID
+                if (!mapping.pathGmidToDisplay[pathGmid]) {
+                    mapping.pathGmidToDisplay[pathGmid] = {
+                        display: pathGmid,
+                        fullPath: pathGmid,
+                        level: 0,
+                        isFromFactData: true // Flag to indicate this came from fact data
                     };
                 }
                 
                 // Build ROOT_GMID to PATH_GMID mapping
-                if (row.ROOT_GMID) {
-                    if (!mapping.rootGmidToPathGmids[row.ROOT_GMID]) {
-                        mapping.rootGmidToPathGmids[row.ROOT_GMID] = new Set();
+                const rootGmid = row.ROOT_GMID;
+                if (rootGmid && typeof rootGmid === 'string' && rootGmid.trim() !== '') {
+                    if (!mapping.rootGmidToPathGmids[rootGmid]) {
+                        mapping.rootGmidToPathGmids[rootGmid] = new Set();
                     }
-                    mapping.rootGmidToPathGmids[row.ROOT_GMID].add(row.PATH_GMID);
+                    mapping.rootGmidToPathGmids[rootGmid].add(pathGmid);
                 }
             }
         });
@@ -3644,52 +3945,78 @@ function buildGmidDisplayMapping(gmidDisplayData, bomData) {
     if (gmidDisplayData && gmidDisplayData.length > 0) {
         console.log(`⏳ Status: Processing ${gmidDisplayData.length} rows of GMID Display data...`);
         
-        gmidDisplayData.forEach(row => {
+        gmidDisplayData.forEach((row, index) => {
+            if (!row || typeof row !== 'object') {
+                console.warn(`⚠️ Warning: Invalid GMID display row at index ${index}:`, row);
+                return;
+            }
+            
             const pathGmid = row.PATH_GMID;
-            const componentGmid = row.COMPONENT_GMID;
             const displayValue = row.DISPLAY;
             
             // Skip if no PATH_GMID
-            if (!pathGmid) return;
+            if (!pathGmid || typeof pathGmid !== 'string' || pathGmid.trim() === '') {
+                console.warn(`⚠️ Warning: Missing or invalid PATH_GMID at index ${index}`);
+                return;
+            }
             
-            // Calculate hierarchy level based on path structure
-            const pathSegments = pathGmid.split('/').filter(s => s.trim() !== '');
+            // Calculate hierarchy level from PATH_GMID structure
+            let pathSegments = [];
+            try {
+                pathSegments = pathGmid.split('/').filter(s => s && s.trim() !== '');
+            } catch (error) {
+                console.warn(`⚠️ Warning: Error splitting PATH_GMID "${pathGmid}":`, error);
+                pathSegments = [pathGmid];
+            }
+            
             const level = pathSegments.length;
             
             // Store PATH_GMID level
             mapping.pathGmidLevels[pathGmid] = level;
             
             // Create or update the PATH_GMID display mapping
+            const existingMapping = mapping.pathGmidToDisplay[pathGmid];
             mapping.pathGmidToDisplay[pathGmid] = {
-                display: displayValue || pathGmid,
-                fullPath: displayValue || pathGmid,
+                display: (displayValue && typeof displayValue === 'string') ? displayValue : pathGmid,
+                fullPath: (displayValue && typeof displayValue === 'string') ? displayValue : pathGmid,
                 level: level,
                 pathSegments: pathSegments,
-                componentGmid: componentGmid // Keep reference for backward compatibility
+                isFromFactData: existingMapping ? existingMapping.isFromFactData : false,
+                isFromDimensionData: true
             };
             
-            // Map COMPONENT_GMID to PATH_GMID for backward compatibility
-            if (componentGmid) {
-                mapping.componentGmidToPathGmid[componentGmid] = pathGmid;
-            }
-            
             // Process display path to build hierarchy mappings
-            if (displayValue) {
-                const displaySegments = displayValue.split('//').filter(s => s.trim() !== '');
+            if (displayValue && typeof displayValue === 'string' && displayValue.trim() !== '') {
+                let displaySegments = [];
+                try {
+                    displaySegments = displayValue.split('//').filter(s => s && s.trim() !== '');
+                } catch (error) {
+                    console.warn(`⚠️ Warning: Error splitting DISPLAY "${displayValue}":`, error);
+                    displaySegments = [displayValue];
+                }
                 
                 // Map each path segment to its display segment
                 for (let i = 0; i < pathSegments.length; i++) {
                     const pathSegment = pathSegments[i];
                     const displaySegment = (i < displaySegments.length) ? displaySegments[i] : pathSegment;
                     
+                    if (!pathSegment || typeof pathSegment !== 'string') continue;
+                    
                     // Store segment to display mapping
                     mapping.pathSegmentToDisplay[pathSegment] = displaySegment;
                     
                     // Generate node ID for this segment
-                    const safeId = pathSegment.replace(/[^a-zA-Z0-9_]/g, '_');
+                    let safeId;
+                    try {
+                        safeId = pathSegment.replace(/[^a-zA-Z0-9_]/g, '_');
+                    } catch (error) {
+                        console.warn(`⚠️ Warning: Error creating safe ID for "${pathSegment}":`, error);
+                        safeId = `SEGMENT_${i}_${Math.random().toString(36).substr(2, 9)}`;
+                    }
+                    
                     const nodeId = `SEGMENT_LEVEL_${i+1}_${safeId}`;
                     
-                    // Initialize this node's children and descendants if not already done
+                    // Initialize this node's collections
                     if (!mapping.nodeToChildPathGmids[nodeId]) {
                         mapping.nodeToChildPathGmids[nodeId] = new Set();
                         mapping.nodeToDescendantPathGmids[nodeId] = new Set();
@@ -3705,47 +4032,78 @@ function buildGmidDisplayMapping(gmidDisplayData, bomData) {
                     
                     // Set up parent-child relationship with next segment
                     if (i < pathSegments.length - 1) {
-                        const childPathSegment = pathSegments[i + 1];
-                        const childSafeId = childPathSegment.replace(/[^a-zA-Z0-9_]/g, '_');
-                        const childNodeId = `SEGMENT_LEVEL_${i+2}_${childSafeId}`;
-                        
-                        mapping.nodeToChildPathGmids[nodeId].add(childNodeId);
-                        mapping.nodeToParent[childNodeId] = nodeId;
+                        const nextSegment = pathSegments[i + 1];
+                        if (nextSegment && typeof nextSegment === 'string') {
+                            let childSafeId;
+                            try {
+                                childSafeId = nextSegment.replace(/[^a-zA-Z0-9_]/g, '_');
+                            } catch (error) {
+                                childSafeId = `SEGMENT_${i+1}_${Math.random().toString(36).substr(2, 9)}`;
+                            }
+                            
+                            const childNodeId = `SEGMENT_LEVEL_${i+2}_${childSafeId}`;
+                            
+                            mapping.nodeToChildPathGmids[nodeId].add(childNodeId);
+                            mapping.nodeToParent[childNodeId] = nodeId;
+                        }
                     }
                 }
             }
         });
     }
     
-    // Third pass: Handle unmapped PATH_GMIDs from FACT_BOM
-    const unmappedPathGmids = Array.from(mapping.usedPathGmids).filter(pathGmid => 
-        !mapping.pathGmidToDisplay[pathGmid] || 
-        !mapping.pathGmidToDisplay[pathGmid].display ||
-        mapping.pathGmidToDisplay[pathGmid].display === pathGmid
-    );
+    // Third pass: Handle PATH_GMIDs that are in fact data but not in dimension data
+    const factOnlyPathGmids = Array.from(mapping.usedPathGmids).filter(pathGmid => {
+        const mapping_entry = mapping.pathGmidToDisplay[pathGmid];
+        return !mapping_entry || 
+               !mapping_entry.isFromDimensionData ||
+               mapping_entry.display === pathGmid;
+    });
     
-    if (unmappedPathGmids.length > 0) {
-        console.warn(`Found ${unmappedPathGmids.length} unmapped PATH_GMIDs in fact data`);
-        console.warn("Sample unmapped PATH_GMIDs:", unmappedPathGmids.slice(0, 5));
+    if (factOnlyPathGmids.length > 0) {
+        console.warn(`Found ${factOnlyPathGmids.length} PATH_GMIDs in fact data but not in dimension data`);
+        console.warn("Sample fact-only PATH_GMIDs:", factOnlyPathGmids.slice(0, 5));
         
-        // Create basic mappings for unmapped PATH_GMIDs
-        unmappedPathGmids.forEach(pathGmid => {
-            const pathSegments = pathGmid.split('/').filter(s => s.trim() !== '');
+        // Create basic mappings for fact-only PATH_GMIDs
+        factOnlyPathGmids.forEach(pathGmid => {
+            if (!pathGmid || typeof pathGmid !== 'string') {
+                console.warn(`⚠️ Warning: Invalid fact-only PATH_GMID:`, pathGmid);
+                return;
+            }
+            
+            let pathSegments = [];
+            try {
+                pathSegments = pathGmid.split('/').filter(s => s && s.trim() !== '');
+            } catch (error) {
+                console.warn(`⚠️ Warning: Error processing fact-only PATH_GMID "${pathGmid}":`, error);
+                pathSegments = [pathGmid];
+            }
+            
             const level = pathSegments.length;
             
+            // Update existing mapping or create new one
+            const existingMapping = mapping.pathGmidToDisplay[pathGmid];
             mapping.pathGmidToDisplay[pathGmid] = {
-                display: pathGmid,
+                display: pathGmid, // Use PATH_GMID as display when no dimension data
                 fullPath: pathGmid,
                 level: level,
                 pathSegments: pathSegments,
+                isFromFactData: true,
+                isFromDimensionData: false,
                 isFallback: true
             };
             
             mapping.pathGmidLevels[pathGmid] = level;
             
             // Create a node for this PATH_GMID
-            const lastSegment = pathSegments[pathSegments.length - 1] || pathGmid;
-            const safeId = lastSegment.replace(/[^a-zA-Z0-9_]/g, '_');
+            const lastSegment = pathSegments.length > 0 ? pathSegments[pathSegments.length - 1] : pathGmid;
+            let safeId;
+            try {
+                safeId = lastSegment.replace(/[^a-zA-Z0-9_]/g, '_');
+            } catch (error) {
+                safeId = `FALLBACK_${Math.random().toString(36).substr(2, 9)}`;
+            }
+            
             const nodeId = `SEGMENT_LEVEL_${level}_${safeId}`;
             
             if (!mapping.nodeToChildPathGmids[nodeId]) {
@@ -3759,33 +4117,47 @@ function buildGmidDisplayMapping(gmidDisplayData, bomData) {
     }
     
     // Convert Sets to Arrays for easier consumption
-    for (const key in mapping.nodeToChildPathGmids) {
-        mapping.nodeToChildPathGmids[key] = Array.from(mapping.nodeToChildPathGmids[key]);
+    try {
+        for (const key in mapping.nodeToChildPathGmids) {
+            if (mapping.nodeToChildPathGmids[key] instanceof Set) {
+                mapping.nodeToChildPathGmids[key] = Array.from(mapping.nodeToChildPathGmids[key]);
+            }
+        }
+        
+        for (const key in mapping.nodeToDescendantPathGmids) {
+            if (mapping.nodeToDescendantPathGmids[key] instanceof Set) {
+                mapping.nodeToDescendantPathGmids[key] = Array.from(mapping.nodeToDescendantPathGmids[key]);
+            }
+        }
+        
+        // Convert ROOT_GMID mappings to arrays
+        for (const rootGmid in mapping.rootGmidToPathGmids) {
+            if (mapping.rootGmidToPathGmids[rootGmid] instanceof Set) {
+                mapping.rootGmidToPathGmids[rootGmid] = Array.from(mapping.rootGmidToPathGmids[rootGmid]);
+            }
+        }
+        
+        if (mapping.usedPathGmids instanceof Set) {
+            mapping.usedPathGmids = Array.from(mapping.usedPathGmids);
+        }
+    } catch (error) {
+        console.error("❌ Error converting Sets to Arrays:", error);
     }
-    
-    for (const key in mapping.nodeToDescendantPathGmids) {
-        mapping.nodeToDescendantPathGmids[key] = Array.from(mapping.nodeToDescendantPathGmids[key]);
-    }
-    
-    // Convert ROOT_GMID mappings to arrays
-    for (const rootGmid in mapping.rootGmidToPathGmids) {
-        mapping.rootGmidToPathGmids[rootGmid] = Array.from(mapping.rootGmidToPathGmids[rootGmid]);
-    }
-    
-    mapping.usedPathGmids = Array.from(mapping.usedPathGmids);
     
     // Calculate statistics
-    const mappedPathGmids = Object.keys(mapping.pathGmidToDisplay).length;
-    const pathMappings = Object.keys(mapping.pathSegmentToDisplay).length;
-    const rootGmids = Object.keys(mapping.nodeToChildPathGmids).filter(id => !mapping.nodeToParent[id]).length;
-    const fallbackMappings = Object.values(mapping.pathGmidToDisplay).filter(m => m.isFallback).length;
+    const mappedPathGmids = Object.keys(mapping.pathGmidToDisplay || {}).length;
+    const pathMappings = Object.keys(mapping.pathSegmentToDisplay || {}).length;
+    const rootGmids = Object.keys(mapping.nodeToChildPathGmids || {}).filter(id => !mapping.nodeToParent[id]).length;
+    const fallbackMappings = Object.values(mapping.pathGmidToDisplay || {}).filter(m => m && m.isFallback).length;
+    const dimensionDataMappings = Object.values(mapping.pathGmidToDisplay || {}).filter(m => m && m.isFromDimensionData).length;
     
-    console.log(`✅ Status: GMID mapping complete:`);
-    console.log(`   - ${mappedPathGmids} PATH_GMIDs mapped`);
+    console.log(`✅ Status: PATH_GMID-only mapping complete:`);
+    console.log(`   - ${mappedPathGmids} PATH_GMIDs mapped (PRIMARY KEY)`);
+    console.log(`   - ${dimensionDataMappings} from dimension data`);
+    console.log(`   - ${fallbackMappings} fallback mappings from fact data only`);
     console.log(`   - ${pathMappings} path segments mapped`);
     console.log(`   - ${rootGmids} root nodes identified`);
-    console.log(`   - ${fallbackMappings} fallback mappings created`);
-    console.log(`   - ${Object.keys(mapping.rootGmidToPathGmids).length} ROOT_GMIDs with descendant PATH_GMIDs`);
+    console.log(`   - ${Object.keys(mapping.rootGmidToPathGmids || {}).length} ROOT_GMIDs with descendant PATH_GMIDs`);
     
     return mapping;
 }
@@ -4914,8 +5286,6 @@ export default {
     getDimensionFilterOptions,
     getAllDimensionFilterOptions,
     fetchDimensionFields,
-
-    // PHASE 1 NEW EXPORTS
     ingestDimensionData,
     ingestFactData,
     initializeBasicMappings,
@@ -4970,7 +5340,6 @@ export default {
     getVisibleLeafNodes,
     regenerateColumnHierarchies,
     filterRecordsByLeHierarchy,
-    processHierarchicalFields,
     preFilterData,
     
     // root gmid filter

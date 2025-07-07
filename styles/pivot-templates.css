@@ -1,13 +1,54 @@
-/* ===========================================
-   PIVOT TABLE TEMPLATE-SPECIFIC CSS
-   Separate styles for each template to avoid conflicts
-   =========================================== */
 
-/* ---------- TEMPLATE 1: 1 row + 0 column + values ---------- */
+/* ===========================================
+   SHARED COLOR VARIABLES - Template 1 Theme
+   =========================================== */
+:root {
+    /* Primary blue palette from Template 1 */
+    --primary-bg-light: #e6f3ff;
+    --primary-bg-medium: #cce7ff;
+    --primary-border: #66b3ff;
+    --primary-text: #0066cc;
+    --primary-text-dark: #004499;
+    
+    /* Secondary gray palette */
+    --secondary-bg-light: #f1f5f9;
+    --secondary-bg-medium: #e2e8f0;
+    --secondary-border: #cbd5e1;
+    --secondary-text: #334155;
+    --secondary-text-dark: #1e293b;
+    
+    /* Neutral colors */
+    --white: #ffffff;
+    --border-light: #e5e7eb;
+    --border-medium: #6c757d;
+    --text-muted: #6c757d;
+    
+    /* Value cell colors using blue theme */
+    --value-bg-zero: #ffffff;
+    --value-bg-positive: #f0f8ff;
+    --value-bg-positive-border: #cce7ff;
+    --value-text-positive: #0066cc;
+    --value-bg-negative: #fef2f2;
+    --value-border-negative: #fee2e2;
+    --value-text-negative: #dc2626;
+    --value-bg-large: #e6f3ff;
+    --value-text-large: #004499;
+    
+    /* Root node styling using blue theme */
+    --root-bg-light: #e6f3ff;
+    --root-bg-medium: #cce7ff;
+    --root-border: #66b3ff;
+    --root-text: #0066cc;
+    --root-text-dark: #004499;
+}
+
+/* ===========================================
+   TEMPLATE 1: 1 row + 0 column + values
+   =========================================== */
 .template1 .t1-row-header {
-    background: linear-gradient(135deg, #e6f3ff 0%, #cce7ff 100%) !important;
-    border: 1px solid #66b3ff !important;
-    color: #0066cc !important;
+    background: linear-gradient(135deg, var(--primary-bg-light) 0%, var(--primary-bg-medium) 100%) !important;
+    border: 1px solid var(--primary-border) !important;
+    color: var(--primary-text) !important;
     font-weight: 700 !important;
     text-align: center !important;
     text-transform: uppercase !important;
@@ -15,9 +56,9 @@
 }
 
 .template1 .t1-value-header {
-    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
-    border: 1px solid #cbd5e1 !important;
-    color: #334155 !important;
+    background: linear-gradient(135deg, var(--secondary-bg-light) 0%, var(--secondary-bg-medium) 100%) !important;
+    border: 1px solid var(--secondary-border) !important;
+    color: var(--secondary-text) !important;
     font-weight: 600 !important;
     text-align: center !important;
     text-transform: uppercase !important;
@@ -27,8 +68,8 @@
     position: sticky !important;
     left: 0 !important;
     z-index: 20 !important;
-    background: white !important;
-    border-right: 2px solid #66b3ff !important;
+    background: var(--white) !important;
+    border-right: 2px solid var(--primary-border) !important;
     min-width: 200px !important;
     max-width: 400px !important;
 }
@@ -38,18 +79,17 @@
     width: 16px !important;
     height: 16px !important;
     margin-right: 8px !important;
-    border: 1px solid #6c757d !important;
+    border: 1px solid var(--border-medium) !important;
     border-radius: 2px !important;
-    background: white !important;
+    background: var(--white) !important;
     vertical-align: middle !important;
 }
 
 /* ===========================================
-   TEMPLATE 2 FULL WIDTH CSS - 50:50 SPLIT
-   2+ rows + 0 column + values with optimal space usage
+   TEMPLATE 2: 2+ rows + 0 column + values
    =========================================== */
 
-/* ---------- TEMPLATE 2 CONTAINER AND TABLE LAYOUT ---------- */
+/* Container and table layout */
 .template2 {
     width: 100% !important;
     overflow-x: auto !important;
@@ -57,13 +97,12 @@
 
 .template2 table {
     width: 100% !important;
-    table-layout: fixed !important; /* Fixed layout for precise width control */
+    table-layout: fixed !important;
     border-collapse: collapse !important;
     border-spacing: 0 !important;
 }
 
-/* ---------- DYNAMIC WIDTH CALCULATION FOR ROW DIMENSIONS ---------- */
-/* Calculate equal width for each row dimension within 50% allocation */
+/* Dynamic width calculation for row dimensions */
 .template2.row-dimensions-1 .t2-row-header,
 .template2.row-dimensions-1 .t2-dimension-cell {
     width: 50% !important;
@@ -73,34 +112,33 @@
 
 .template2.row-dimensions-2 .t2-row-header,
 .template2.row-dimensions-2 .t2-dimension-cell {
-    width: 25% !important; /* 50% / 2 dimensions */
+    width: 25% !important;
     min-width: 25% !important;
     max-width: 25% !important;
 }
 
 .template2.row-dimensions-3 .t2-row-header,
 .template2.row-dimensions-3 .t2-dimension-cell {
-    width: 16.666% !important; /* 50% / 3 dimensions */
+    width: 16.666% !important;
     min-width: 16.666% !important;
     max-width: 16.666% !important;
 }
 
 .template2.row-dimensions-4 .t2-row-header,
 .template2.row-dimensions-4 .t2-dimension-cell {
-    width: 12.5% !important; /* 50% / 4 dimensions */
+    width: 12.5% !important;
     min-width: 12.5% !important;
     max-width: 12.5% !important;
 }
 
 .template2.row-dimensions-5 .t2-row-header,
 .template2.row-dimensions-5 .t2-dimension-cell {
-    width: 10% !important; /* 50% / 5 dimensions */
+    width: 10% !important;
     min-width: 10% !important;
     max-width: 10% !important;
 }
 
-/* ---------- DYNAMIC WIDTH CALCULATION FOR VALUE FIELDS ---------- */
-/* Calculate equal width for each value field within 50% allocation */
+/* Dynamic width calculation for value fields */
 .template2.value-fields-1 .t2-value-header,
 .template2.value-fields-1 .value-cell {
     width: 50% !important;
@@ -110,37 +148,37 @@
 
 .template2.value-fields-2 .t2-value-header,
 .template2.value-fields-2 .value-cell {
-    width: 25% !important; /* 50% / 2 fields */
+    width: 25% !important;
     min-width: 25% !important;
     max-width: 25% !important;
 }
 
 .template2.value-fields-3 .t2-value-header,
-.template2.value-fields-3 .value-cell {
-    width: 16.666% !important; /* 50% / 3 fields */
+.template2.value-fields-3 .t2-dimension-cell {
+    width: 16.666% !important;
     min-width: 16.666% !important;
     max-width: 16.666% !important;
 }
 
 .template2.value-fields-4 .t2-value-header,
 .template2.value-fields-4 .value-cell {
-    width: 12.5% !important; /* 50% / 4 fields */
+    width: 12.5% !important;
     min-width: 12.5% !important;
     max-width: 12.5% !important;
 }
 
 .template2.value-fields-5 .t2-value-header,
 .template2.value-fields-5 .value-cell {
-    width: 10% !important; /* 50% / 5 fields */
+    width: 10% !important;
     min-width: 10% !important;
     max-width: 10% !important;
 }
 
-/* ---------- ENHANCED HEADER STYLING ---------- */
+/* Header styling using Template 1 colors */
 .template2 .t2-row-header {
-    background: linear-gradient(135deg, #e6ffe6 0%, #ccffcc 100%) !important;
-    border: 1px solid #66cc66 !important;
-    color: #006600 !important;
+    background: linear-gradient(135deg, var(--primary-bg-light) 0%, var(--primary-bg-medium) 100%) !important;
+    border: 1px solid var(--primary-border) !important;
+    color: var(--primary-text) !important;
     font-weight: 700 !important;
     text-align: center !important;
     text-transform: uppercase !important;
@@ -153,9 +191,9 @@
 }
 
 .template2 .t2-value-header {
-    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
-    border: 1px solid #cbd5e1 !important;
-    color: #334155 !important;
+    background: linear-gradient(135deg, var(--secondary-bg-light) 0%, var(--secondary-bg-medium) 100%) !important;
+    border: 1px solid var(--secondary-border) !important;
+    color: var(--secondary-text) !important;
     font-weight: 600 !important;
     text-align: center !important;
     text-transform: uppercase !important;
@@ -166,10 +204,10 @@
     hyphens: auto !important;
 }
 
-/* ---------- BODY CELL STYLING ---------- */
+/* Body cell styling */
 .template2 .t2-dimension-cell {
-    background: white !important;
-    border: 1px solid #e5e7eb !important;
+    background: var(--white) !important;
+    border: 1px solid var(--border-light) !important;
     padding: 8px 12px !important;
     box-sizing: border-box !important;
     word-wrap: break-word !important;
@@ -180,8 +218,8 @@
 }
 
 .template2 .value-cell {
-    background: white !important;
-    border: 1px solid #e5e7eb !important;
+    background: var(--white) !important;
+    border: 1px solid var(--border-light) !important;
     text-align: right !important;
     padding: 8px 12px !important;
     font-variant-numeric: tabular-nums !important;
@@ -190,7 +228,7 @@
     vertical-align: middle !important;
 }
 
-/* ---------- STICKY POSITIONING ---------- */
+/* Sticky positioning */
 .template2 thead th {
     position: sticky !important;
     top: 0 !important;
@@ -198,13 +236,12 @@
     background-clip: padding-box !important;
 }
 
-/* Make first column of each row sticky */
 .template2 .t2-dimension-cell:first-child {
     position: sticky !important;
     left: 0 !important;
     z-index: 20 !important;
-    background: white !important;
-    border-right: 2px solid #66cc66 !important;
+    background: var(--white) !important;
+    border-right: 2px solid var(--primary-border) !important;
 }
 
 .template2 .t2-row-header:first-child {
@@ -212,90 +249,14 @@
     left: 0 !important;
     top: 0 !important;
     z-index: 50 !important;
-    border-right: 2px solid #66cc66 !important;
+    border-right: 2px solid var(--primary-border) !important;
 }
 
-/* ---------- RESPONSIVE ADJUSTMENTS ---------- */
-@media (max-width: 1200px) {
-    .template2 .t2-row-header,
-    .template2 .t2-value-header {
-        padding: 8px 6px !important;
-        font-size: 0.8rem !important;
-        letter-spacing: 0.5px !important;
-    }
-    
-    .template2 .t2-dimension-cell,
-    .template2 .value-cell {
-        padding: 6px 8px !important;
-        font-size: 0.8rem !important;
-    }
-}
-
-@media (max-width: 768px) {
-    .template2 .t2-row-header,
-    .template2 .t2-value-header {
-        padding: 6px 4px !important;
-        font-size: 0.75rem !important;
-        letter-spacing: 0px !important;
-    }
-    
-    .template2 .t2-dimension-cell,
-    .template2 .value-cell {
-        padding: 4px 6px !important;
-        font-size: 0.75rem !important;
-    }
-}
-
-/* ---------- HIERARCHY STYLING WITH OPTIMAL SPACE USAGE ---------- */
-.template2 .expand-collapse {
-    display: inline-flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-    width: 14px !important;
-    height: 14px !important;
-    margin-right: 6px !important;
-    vertical-align: middle !important;
-    border: 1px solid #6c757d !important;
-    border-radius: 2px !important;
-    background: white !important;
-    cursor: pointer !important;
-    font-size: 10px !important;
-    font-weight: bold !important;
-    transition: all 0.2s ease !important;
-    flex-shrink: 0 !important;
-}
-
-.template2 .leaf-node-empty {
-    display: inline-block !important;
-    width: 14px !important;
-    height: 14px !important;
-    margin-right: 6px !important;
-    border: 1px solid #6c757d !important;
-    border-radius: 2px !important;
-    background: white !important;
-    vertical-align: middle !important;
-    flex-shrink: 0 !important;
-}
-
-.template2 .dimension-label {
-    white-space: normal !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-    max-width: calc(100% - 25px) !important;
-    display: inline-block !important;
-    vertical-align: middle !important;
-    word-wrap: break-word !important;
-    overflow-wrap: break-word !important;
-    line-height: 1.3 !important;
-    hyphens: auto !important;
-}
-
-/* ---------- ENHANCED VISUAL HIERARCHY ---------- */
-/* Level-based indentation optimized for fixed width */
+/* Visual hierarchy */
 .template2 [data-level="0"] {
     padding-left: 8px !important;
     font-weight: 700 !important;
-    background-color: #f8fffe !important;
+    background-color: var(--primary-bg-light) !important;
 }
 
 .template2 [data-level="1"] {
@@ -319,7 +280,6 @@
     font-size: 0.9rem !important;
 }
 
-/* For deeper levels, reduce indentation to fit in constrained width */
 .template2 [data-level="5"], 
 .template2 [data-level="6"],
 .template2 [data-level="7"] {
@@ -328,73 +288,26 @@
     font-size: 0.85rem !important;
 }
 
-/* ---------- HOVER EFFECTS ---------- */
+/* Hover effects */
 .template2 tr:hover {
-    background-color: rgba(102, 204, 102, 0.05) !important;
+    background-color: rgba(102, 179, 255, 0.05) !important;
 }
 
 .template2 tr:hover .t2-dimension-cell {
-    background-color: rgba(102, 204, 102, 0.08) !important;
+    background-color: rgba(102, 179, 255, 0.08) !important;
 }
 
 .template2 tr:hover .dimension-label {
-    color: #004d00 !important;
+    color: var(--primary-text-dark) !important;
 }
 
-/* ---------- ENHANCED VALUE CELL STYLING ---------- */
-.template2 .value-cell.non-zero-value {
-    background: linear-gradient(135deg, #f0fff4 0%, #e6ffe6 100%) !important;
-    color: #006600 !important;
-    font-weight: 600 !important;
-}
-
-.template2 .value-cell.large-value {
-    background: linear-gradient(135deg, #fff8dc 0%, #f0e68c 100%) !important;
-    color: #b8860b !important;
-    font-weight: 700 !important;
-}
-
-.template2 .value-cell[data-raw-value^="-"] {
-    color: #dc2626 !important;
-    font-weight: 700 !important;
-    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%) !important;
-}
-
-/* ---------- CONTAINER OVERFLOW HANDLING ---------- */
-.template2 .pivot-table-container {
-    width: 100% !important;
-    overflow-x: auto !important;
-    overflow-y: auto !important;
-    max-height: 70vh !important;
-    border: 1px solid #e5e7eb !important;
-    border-radius: 0.375rem !important;
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important;
-}
-
-/* ---------- DEBUG HELPER (REMOVE IN PRODUCTION) ---------- */
-.template2.debug .t2-row-header {
-    background: rgba(255, 0, 0, 0.1) !important;
-    border: 2px solid red !important;
-}
-
-.template2.debug .t2-value-header {
-    background: rgba(0, 0, 255, 0.1) !important;
-    border: 2px solid blue !important;
-}
-
-.template2.debug .t2-dimension-cell {
-    background: rgba(255, 255, 0, 0.1) !important;
-}
-
-.template2.debug .value-cell {
-    background: rgba(0, 255, 0, 0.1) !important;
-}
-
-/* ---------- TEMPLATE 3: 1 row + 1 column + values ---------- */
+/* ===========================================
+   TEMPLATE 3: 1 row + 1 column + values
+   =========================================== */
 .template3 .t3-row-header {
-    background: linear-gradient(135deg, #fff0e6 0%, #ffe0cc 100%) !important;
-    border: 1px solid #ff9966 !important;
-    color: #cc4400 !important;
+    background: linear-gradient(135deg, var(--primary-bg-light) 0%, var(--primary-bg-medium) 100%) !important;
+    border: 1px solid var(--primary-border) !important;
+    color: var(--primary-text) !important;
     font-weight: 700 !important;
     text-align: center !important;
     text-transform: uppercase !important;
@@ -403,9 +316,9 @@
 }
 
 .template3 .t3-measures-header {
-    background: linear-gradient(135deg, #f8f0ff 0%, #e6ccff 100%) !important;
-    border: 2px solid #9966cc !important;
-    color: #663399 !important;
+    background: linear-gradient(135deg, var(--secondary-bg-light) 0%, var(--secondary-bg-medium) 100%) !important;
+    border: 2px solid var(--secondary-border) !important;
+    color: var(--secondary-text) !important;
     font-weight: 700 !important;
     text-align: center !important;
     text-transform: uppercase !important;
@@ -413,20 +326,21 @@
 }
 
 .template3 .t3-measure-header {
-    background: linear-gradient(135deg, #fff5e6 0%, #ffe0b3 100%) !important;
-    border: 1px solid #ff9933 !important;
-    color: #cc6600 !important;
+    background: linear-gradient(135deg, var(--secondary-bg-light) 0%, var(--secondary-bg-medium) 100%) !important;
+    border: 1px solid var(--secondary-border) !important;
+    color: var(--secondary-text) !important;
     font-weight: 600 !important;
     text-align: center !important;
     text-transform: uppercase !important;
 }
 
 .template3 .t3-column-header {
-    background: linear-gradient(135deg, #e6f7ff 0%, #ccf0ff 100%) !important;
-    border: 1px solid #66ccff !important;
-    color: #0099cc !important;
+    background: linear-gradient(135deg, var(--primary-bg-light) 0%, var(--primary-bg-medium) 100%) !important;
+    border: 1px solid var(--primary-border) !important;
+    color: var(--primary-text) !important;
     font-weight: 600 !important;
     text-align: center !important;
+    vertical-align: middle !important;
     min-width: 100px !important;
 }
 
@@ -434,984 +348,1163 @@
     position: sticky !important;
     left: 0 !important;
     z-index: 20 !important;
-    background: white !important;
-    border-right: 2px solid #ff9966 !important;
+    background: var(--white) !important;
+    border-right: 2px solid var(--primary-border) !important;
     min-width: 200px !important;
 }
 
+/* Root node styling for Template 3 */
+.template3 .t3-column-header.root-node {
+    background: linear-gradient(135deg, var(--primary-bg-medium) 0%, var(--primary-border) 100%) !important;
+    border: 3px solid var(--primary-text) !important;
+    color: var(--primary-text-dark) !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+    position: relative !important;
+    padding: 8px 12px !important;
+    min-width: 120px !important;
+}
+
+.template3 .t3-column-header.root-node .column-label.root-label {
+    font-weight: 800 !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+    display: inline-block !important;
+    vertical-align: middle !important;
+    /* border: 1px solid var(--primary-border) !important; */
+}
+
+.template3 .root-value-cell {
+    font-weight: 700 !important;
+    color: var(--primary-text-dark) !important;
+    position: relative !important;
+}
+
+.template3 .root-value-cell.non-zero-value {
+    color: var(--primary-text-dark) !important;
+}
+
+/* Visual separator between root and child columns */
+.template3 .t3-column-header.root-node + .t3-column-header:not(.root-node) {
+    border-left: 3px solid var(--primary-text) !important;
+}
+
+.template3 .root-value-cell + .value-cell:not(.root-value-cell) {
+    /* border-left: 3px solid var(--primary-text) !important; */
+}
+
+
 /* ===========================================
-   TEMPLATE 4 FULL WIDTH CSS - 45:55 SPLIT
-   2+ rows + 1 column + values with cross-tabulation
+   TEMPLATE 4: 2+ rows + 1 column + values
+   Complete CSS - Build on Template 3 Foundation
    =========================================== */
-/* ---------- CONTAINER SETUP FOR FROZEN PANES ---------- */
+
+/* Container styling - inherits Template 3's simplicity */
 .template4 {
     width: 100% !important;
-    height: auto !important; /* CHANGED: was 80vh */
-    max-height: 40vh !important; /* ADDED: 40% screen height limit */
-    min-height: 300px !important; /* ADDED: minimum usable height */
+    height: auto !important;
+    max-height: 60vh !important;
+    min-height: 250px !important;
+    overflow: auto !important;
+    border: 1px solid var(--border-light) !important;
+    border-radius: 0.375rem !important;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important;
     position: relative !important;
-    overflow: hidden !important;
 }
 
 .template4 .pivot-table-container {
     width: 100% !important;
     height: 100% !important;
-    position: relative !important;
-    overflow: hidden !important;
-    border: 1px solid #e5e7eb !important;
-    border-radius: 0.375rem !important;
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important;
+    overflow: auto !important;
+    background: var(--white) !important;
+    /* Ensure the container respects the width constraints */
+    min-width: 800px !important; /* Minimum width for usability */
 }
 
-/* ---------- FROZEN ROW DIMENSIONS AREA (LEFT SIDE) ---------- */
-.template4 .frozen-row-dimensions {
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 45% !important;
-    height: 100% !important;
-    background: white !important;
-    border-right: 1px solid #6c757d !important; /* CHANGED: consistent with separator */
-    z-index: 100 !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-}
-
-/* ---------- SCROLLABLE VALUE AREA (RIGHT SIDE) ---------- */
-.template4 .scrollable-value-area {
-    position: absolute !important;
-    top: 0 !important;
-    left: 45% !important; /* Starts after row dimensions */
-    width: 55% !important; /* Remaining 55% for values */
-    height: 100% !important;
-    overflow: auto !important; /* Both horizontal and vertical scroll */
-    background: white !important;
-}
-
-/* ---------- TABLE LAYOUT FOR FROZEN PANES ---------- */
 .template4 table {
     width: 100% !important;
-    table-layout: fixed !important;
-    border-collapse: separate !important; /* Separate for frozen effect */
+    table-layout: fixed !important; /* CRITICAL: Fixed layout for percentage widths */
+    border-collapse: separate !important;
     border-spacing: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
+    min-width: fit-content !important;
 }
 
-/* ROW DIMENSIONS TABLE (FROZEN AREA) */
-.template4 .frozen-row-dimensions table {
-    width: 100% !important;
-    table-layout: fixed !important;
+/* ===========================================
+   ROW DIMENSION HEADERS (Multiple) - 33% TOTAL WIDTH
+   =========================================== */
+
+/* Dynamic width calculation with 33% minimum for row dimensions */
+.template4.row-dimensions-2 .t4-row-header,
+.template4.row-dimensions-2 .t4-dimension-cell {
+    min-width: 16.5% !important;  /* 33% ÷ 2 dimensions */
+    width: 16.5% !important;
+    max-width: 16.5% !important;
 }
 
-/* VALUE AREA TABLE (SCROLLABLE AREA) */
-.template4 .scrollable-value-area table {
-    width: max-content !important; /* Expands based on content */
-    table-layout: auto !important;
-    min-width: 100% !important;
+.template4.row-dimensions-3 .t4-row-header,
+.template4.row-dimensions-3 .t4-dimension-cell {
+    min-width: 11% !important;    /* 33% ÷ 3 dimensions */
+    width: 11% !important;
+    max-width: 11% !important;
 }
 
-/* ---------- ROW DIMENSION STYLING (FROZEN) ---------- */
-.template4.row-dimensions-2 .frozen-row-dimensions .t4-row-header,
-.template4.row-dimensions-2 .frozen-row-dimensions .t4-dimension-cell {
-    width: 50% !important; /* Split the 45% evenly */
-    min-width: 50% !important;
-    max-width: 50% !important;
+.template4.row-dimensions-4 .t4-row-header,
+.template4.row-dimensions-4 .t4-dimension-cell {
+    min-width: 8.25% !important;  /* 33% ÷ 4 dimensions */
+    width: 8.25% !important;
+    max-width: 8.25% !important;
 }
 
-.template4.row-dimensions-3 .frozen-row-dimensions .t4-row-header,
-.template4.row-dimensions-3 .frozen-row-dimensions .t4-dimension-cell {
-    width: 33.333% !important; /* Split the 45% evenly */
-    min-width: 33.333% !important;
-    max-width: 33.333% !important;
+.template4.row-dimensions-5 .t4-row-header,
+.template4.row-dimensions-5 .t4-dimension-cell {
+    min-width: 6.6% !important;   /* 33% ÷ 5 dimensions */
+    width: 6.6% !important;
+    max-width: 6.6% !important;
 }
 
-.template4.row-dimensions-4 .frozen-row-dimensions .t4-row-header,
-.template4.row-dimensions-4 .frozen-row-dimensions .t4-dimension-cell {
-    width: 25% !important; /* Split the 45% evenly */
-    min-width: 25% !important;
-    max-width: 25% !important;
-}
-
-/* ---------- VALUE AREA STYLING (SCROLLABLE) ---------- */
-.template4 .scrollable-value-area .t4-measures-header,
-.template4 .scrollable-value-area .t4-measure-header,
-.template4 .scrollable-value-area .t4-column-header,
-.template4 .scrollable-value-area .value-cell {
-    width: auto !important;
-    min-width: max-content !important;
-    max-width: none !important;
-    white-space: nowrap !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-}
-
-/* ---------- SYNCHRONIZED SCROLLING ---------- */
-.template4 .frozen-row-dimensions {
-    scrollbar-width: none !important; /* Hide horizontal scrollbar */
-    -ms-overflow-style: none !important;
-}
-
-.template4 .frozen-row-dimensions::-webkit-scrollbar {
-    display: none !important; /* Hide horizontal scrollbar */
-    width: 6px !important; /* CHANGED: thinner scrollbar */
-    background: transparent !important;
-}
-
-.template4 .frozen-row-dimensions::-webkit-scrollbar-track {
-    background: #f8f9fa !important;
-}
-
-.template4 .frozen-row-dimensions::-webkit-scrollbar-thumb {
-    background: #cbd5e1 !important;
-    border-radius: 3px !important;
-}
-
-.template4 .cell-content {
-    width: 100% !important;
-    height: 100% !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: flex-start !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
-}
-
-.template4 .value-cell .cell-content {
-    justify-content: flex-end !important; /* Right-align values */
-}
-
-/* ---------- HEADER STYLING FOR BOTH AREAS ---------- */
-/* Frozen Row Dimension Headers */
-.template4 .frozen-row-dimensions .t4-row-header {
-    background: linear-gradient(135deg, #f0f8ff 0%, #ddeeff 100%) !important;
-    border: 1px solid #6699ff !important;
-    color: #003399 !important;
+/* Row dimension headers - inherit Template 3's proven styling */
+.template4 .t4-row-header {
+    background: linear-gradient(135deg, var(--primary-bg-light) 0%, var(--primary-bg-medium) 100%) !important;
+    border: 1px solid var(--primary-border) !important;
+    color: var(--primary-text) !important;
     font-weight: 700 !important;
     text-align: center !important;
     text-transform: uppercase !important;
     letter-spacing: 1px !important;
     padding: 12px 8px !important;
-    box-sizing: border-box !important;
     position: sticky !important;
+    left: 0 !important;
     top: 0 !important;
-    z-index: 20 !important;
+    z-index: 60 !important;
+    vertical-align: middle !important;
+    box-sizing: border-box !important;
 }
 
-/* Scrollable Value Headers */
-.template4 .scrollable-value-area .t4-measures-header {
-    background: linear-gradient(135deg, #f8f0ff 0%, #e6ccff 100%) !important;
-    border: 2px solid #9966cc !important;
-    color: #663399 !important;
+/* Sticky positioning with percentage-based left values for 2 dimensions */
+.template4.row-dimensions-2 .t4-row-header:nth-child(1) {
+    left: 0% !important;
+    z-index: 65 !important;
+}
+
+.template4.row-dimensions-2 .t4-row-header:nth-child(2) {
+    left: 16.5% !important;
+    z-index: 64 !important;
+    border-right: 3px solid var(--primary-text) !important;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Sticky positioning for 3 dimensions */
+.template4.row-dimensions-3 .t4-row-header:nth-child(1) {
+    left: 0% !important;
+    z-index: 65 !important;
+}
+
+.template4.row-dimensions-3 .t4-row-header:nth-child(2) {
+    left: 11% !important;
+    z-index: 64 !important;
+}
+
+.template4.row-dimensions-3 .t4-row-header:nth-child(3) {
+    left: 22% !important;
+    z-index: 63 !important;
+    border-right: 3px solid var(--primary-text) !important;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Sticky positioning for 4 dimensions */
+.template4.row-dimensions-4 .t4-row-header:nth-child(1) {
+    left: 0% !important;
+    z-index: 65 !important;
+}
+
+.template4.row-dimensions-4 .t4-row-header:nth-child(2) {
+    left: 8.25% !important;
+    z-index: 64 !important;
+}
+
+.template4.row-dimensions-4 .t4-row-header:nth-child(3) {
+    left: 16.5% !important;
+    z-index: 63 !important;
+}
+
+.template4.row-dimensions-4 .t4-row-header:nth-child(4) {
+    left: 24.75% !important;
+    z-index: 62 !important;
+    border-right: 3px solid var(--primary-text) !important;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Sticky positioning for 5 dimensions */
+.template4.row-dimensions-5 .t4-row-header:nth-child(1) {
+    left: 0% !important;
+    z-index: 65 !important;
+}
+
+.template4.row-dimensions-5 .t4-row-header:nth-child(2) {
+    left: 6.6% !important;
+    z-index: 64 !important;
+}
+
+.template4.row-dimensions-5 .t4-row-header:nth-child(3) {
+    left: 13.2% !important;
+    z-index: 63 !important;
+}
+
+.template4.row-dimensions-5 .t4-row-header:nth-child(4) {
+    left: 19.8% !important;
+    z-index: 62 !important;
+}
+
+.template4.row-dimensions-5 .t4-row-header:nth-child(5) {
+    left: 26.4% !important;
+    z-index: 61 !important;
+    border-right: 3px solid var(--primary-text) !important;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* ===========================================
+   MEASURES AREA (Template 3 Style) - 67% WIDTH
+   =========================================== */
+
+/* Measures header - inherit Template 3's styling */
+.template4 .t4-measures-header {
+    background: linear-gradient(135deg, var(--secondary-bg-light) 0%, var(--secondary-bg-medium) 100%) !important;
+    border: 2px solid var(--secondary-border) !important;
+    color: var(--secondary-text) !important;
     font-weight: 700 !important;
     text-align: center !important;
     text-transform: uppercase !important;
     letter-spacing: 1.5px !important;
-    padding: 12px 12px !important;
+    padding: 12px 15px !important;
     position: sticky !important;
     top: 0 !important;
     z-index: 15 !important;
+    box-sizing: border-box !important;
+    /* Measures area automatically gets remaining space after 33% for row dimensions */
+    min-width: 80px !important; /* Minimum column width for readability */
 }
 
-.template4 .scrollable-value-area .t4-measure-header {
-    background: linear-gradient(135deg, #fff5e6 0%, #ffe0b3 100%) !important;
-    border: 1px solid #ff9933 !important;
-    color: #cc6600 !important;
+/* Value field headers - inherit Template 3's styling */
+.template4 .t4-measure-header {
+    background: linear-gradient(135deg, var(--secondary-bg-light) 0%, var(--secondary-bg-medium) 100%) !important;
+    border: 1px solid var(--secondary-border) !important;
+    color: var(--secondary-text) !important;
     font-weight: 600 !important;
     text-align: center !important;
     text-transform: uppercase !important;
+    letter-spacing: 1px !important;
     padding: 10px 12px !important;
     position: sticky !important;
     top: 0 !important;
     z-index: 15 !important;
+    min-width: 100px !important;
+    box-sizing: border-box !important;
 }
 
-.template4 .scrollable-value-area .t4-column-header {
-    background: linear-gradient(135deg, #e6f7ff 0%, #ccf0ff 100%) !important;
-    border: 1px solid #66ccff !important;
-    color: #0099cc !important;
+/* Column headers - inherit Template 3's styling including root node styling */
+.template4 .t4-column-header {
+    background: linear-gradient(135deg, var(--primary-bg-light) 0%, var(--primary-bg-medium) 100%) !important;
+    border: 1px solid var(--primary-border) !important;
+    color: var(--primary-text) !important;
     font-weight: 600 !important;
     text-align: center !important;
-    padding: 8px 10px !important;
+    vertical-align: middle !important;
+    min-width: 100px !important;
+    padding: 8px 12px !important;
     position: sticky !important;
     top: 0 !important;
     z-index: 15 !important;
+    box-sizing: border-box !important;
 }
 
-/* ---------- BODY CELL STYLING ---------- */
-.template4 .frozen-row-dimensions .t4-dimension-cell {
-    background: white !important;
-    border: 1px solid #e5e7eb !important;
+/* Root node styling for Template 4 - inherit Template 3's proven approach */
+.template4 .t4-column-header.root-node {
+    background: linear-gradient(135deg, var(--primary-bg-medium) 0%, var(--primary-border) 100%) !important;
+    border: 3px solid var(--primary-text) !important;
+    color: var(--primary-text-dark) !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+    position: relative !important;
+    padding: 8px 12px !important;
+    min-width: 120px !important;
+}
+
+.template4 .t4-column-header.root-node .column-label.root-label {
+    font-weight: 800 !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+    display: inline-block !important;
+    vertical-align: middle !important;
+}
+
+/* ===========================================
+   ROW DIMENSION CELLS (Multiple) - 33% TOTAL WIDTH
+   =========================================== */
+
+/* Row dimension cells - inherit Template 2's proven multi-dimension approach */
+.template4 .t4-dimension-cell {
+    background: var(--white) !important;
+    border: 1px solid var(--border-light) !important;
     padding: 8px 12px !important;
     box-sizing: border-box !important;
     word-wrap: break-word !important;
     overflow-wrap: break-word !important;
     white-space: normal !important;
-    vertical-align: top !important;
+    vertical-align: middle !important;
+    position: sticky !important;
+    top: auto !important;
+    z-index: 20 !important;
 }
 
-.template4 .scrollable-value-area .value-cell {
-    background: white !important;
-    border: 1px solid #e5e7eb !important;
+/* Sticky positioning for dimension cells with 2 dimensions */
+.template4.row-dimensions-2 .t4-dimension-cell.dimension-0 {
+    left: 0% !important;
+    z-index: 25 !important;
+    border-right: 2px solid var(--primary-border) !important;
+}
+
+.template4.row-dimensions-2 .t4-dimension-cell.dimension-1 {
+    left: 16.5% !important;
+    z-index: 24 !important;
+    border-right: 3px solid var(--primary-text) !important;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Sticky positioning for dimension cells with 3 dimensions */
+.template4.row-dimensions-3 .t4-dimension-cell.dimension-0 {
+    left: 0% !important;
+    z-index: 25 !important;
+    border-right: 2px solid var(--primary-border) !important;
+}
+
+.template4.row-dimensions-3 .t4-dimension-cell.dimension-1 {
+    left: 11% !important;
+    z-index: 24 !important;
+    border-right: 2px solid var(--primary-border) !important;
+}
+
+.template4.row-dimensions-3 .t4-dimension-cell.dimension-2 {
+    left: 22% !important;
+    z-index: 23 !important;
+    border-right: 3px solid var(--primary-text) !important;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Sticky positioning for dimension cells with 4 dimensions */
+.template4.row-dimensions-4 .t4-dimension-cell.dimension-0 {
+    left: 0% !important;
+    z-index: 25 !important;
+    border-right: 2px solid var(--primary-border) !important;
+}
+
+.template4.row-dimensions-4 .t4-dimension-cell.dimension-1 {
+    left: 8.25% !important;
+    z-index: 24 !important;
+    border-right: 2px solid var(--primary-border) !important;
+}
+
+.template4.row-dimensions-4 .t4-dimension-cell.dimension-2 {
+    left: 16.5% !important;
+    z-index: 23 !important;
+    border-right: 2px solid var(--primary-border) !important;
+}
+
+.template4.row-dimensions-4 .t4-dimension-cell.dimension-3 {
+    left: 24.75% !important;
+    z-index: 22 !important;
+    border-right: 3px solid var(--primary-text) !important;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Sticky positioning for dimension cells with 5 dimensions */
+.template4.row-dimensions-5 .t4-dimension-cell.dimension-0 {
+    left: 0% !important;
+    z-index: 25 !important;
+    border-right: 2px solid var(--primary-border) !important;
+}
+
+.template4.row-dimensions-5 .t4-dimension-cell.dimension-1 {
+    left: 6.6% !important;
+    z-index: 24 !important;
+    border-right: 2px solid var(--primary-border) !important;
+}
+
+.template4.row-dimensions-5 .t4-dimension-cell.dimension-2 {
+    left: 13.2% !important;
+    z-index: 23 !important;
+    border-right: 2px solid var(--primary-border) !important;
+}
+
+.template4.row-dimensions-5 .t4-dimension-cell.dimension-3 {
+    left: 19.8% !important;
+    z-index: 22 !important;
+    border-right: 2px solid var(--primary-border) !important;
+}
+
+.template4.row-dimensions-5 .t4-dimension-cell.dimension-4 {
+    left: 26.4% !important;
+    z-index: 21 !important;
+    border-right: 3px solid var(--primary-text) !important;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* ===========================================
+   VALUE CELLS (Template 3 Style) - 67% WIDTH
+   =========================================== */
+
+/* Value cells - inherit Template 3's styling */
+.template4 .t4-value-cell {
+    background: var(--white) !important;
+    border: 1px solid var(--border-light) !important;
     text-align: right !important;
     padding: 8px 12px !important;
     font-variant-numeric: tabular-nums !important;
     font-weight: 500 !important;
     box-sizing: border-box !important;
     vertical-align: middle !important;
+    min-width: 80px !important;
+    white-space: nowrap !important;
 }
 
-/* ---------- ROW SYNCHRONIZATION ---------- */
-.template4 .frozen-row-dimensions tbody tr,
-.template4 .scrollable-value-area tbody tr {
-    height: 40px !important; /* ADDED: fixed height for alignment */
-    min-height: 40px !important;
-    max-height: 40px !important;
+/* Root value cells - inherit Template 3's styling */
+.template4 .root-value-cell {
+    font-weight: 700 !important;
+    color: var(--primary-text-dark) !important;
+    position: relative !important;
+}
+
+.template4 .root-value-cell.non-zero-value {
+    color: var(--primary-text-dark) !important;
+}
+
+/* ===========================================
+   HIERARCHY CONTROLS (Template 2 Style)
+   =========================================== */
+
+/* Visual hierarchy levels in dimension cells */
+.template4 [data-level="0"] {
+    font-weight: 700 !important;
+    background-color: var(--primary-bg-light) !important;
+}
+
+.template4 [data-level="1"] {
+    font-weight: 600 !important;
+    padding-left: 20px !important;
+}
+
+.template4 [data-level="2"] {
+    font-weight: 500 !important;
+    padding-left: 32px !important;
+}
+
+.template4 [data-level="3"] {
+    font-weight: 400 !important;
+    padding-left: 44px !important;
+}
+
+.template4 [data-level="4"] {
+    font-weight: 400 !important;
+    padding-left: 56px !important;
+    font-size: 0.9rem !important;
+}
+
+/* Cell content wrapper for proper alignment */
+.template4 .cell-content {
+    display: flex !important;
+    align-items: center !important;
+    min-height: auto !important;
+    padding: 2px 0 !important;
+}
+
+/* Visual indication of the 33% boundary */
+.template4::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 33%;
+    width: 2px;
+    height: 100%;
+    background: linear-gradient(to bottom, var(--primary-text) 0%, transparent 100%);
+    opacity: 0.2;
+    z-index: 5;
+    pointer-events: none;
+}
+
+/* ===========================================
+   HOVER EFFECTS
+   =========================================== */
+
+/* Hover effects - inherit Template 3's approach */
+.template4 tr:hover {
+    background-color: rgba(102, 179, 255, 0.05) !important;
+}
+
+.template4 tr:hover .t4-dimension-cell {
+    background-color: rgba(102, 179, 255, 0.08) !important;
+}
+
+.template4 tr:hover .t4-value-cell {
+    background-color: rgba(102, 179, 255, 0.03) !important;
+}
+
+.template4 tr:hover .dimension-label {
+    color: var(--primary-text-dark) !important;
+}
+
+/* ===========================================
+   SCROLLBAR STYLING
+   =========================================== */
+
+.template4::-webkit-scrollbar {
+    width: 8px !important;
+    height: 8px !important;
+}
+
+.template4::-webkit-scrollbar-track {
+    background: var(--secondary-bg-light) !important;
+    border-radius: 4px !important;
+}
+
+.template4::-webkit-scrollbar-thumb {
+    background: var(--primary-border) !important;
+    border-radius: 4px !important;
+    border: 1px solid var(--secondary-bg-light) !important;
+}
+
+.template4::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-text) !important;
+}
+
+/* ===========================================
+   RESPONSIVE DESIGN
+   =========================================== */
+
+/* Responsive: Maintain 33% minimum on smaller screens */
+@media (max-width: 1200px) {
+    /* Keep the same percentage-based approach but ensure minimum readability */
+    .template4.row-dimensions-2 .t4-row-header,
+    .template4.row-dimensions-2 .t4-dimension-cell {
+        min-width: 16.5% !important;
+        font-size: 0.85rem !important;
+    }
+    
+    .template4.row-dimensions-3 .t4-row-header,
+    .template4.row-dimensions-3 .t4-dimension-cell {
+        min-width: 11% !important;
+        font-size: 0.8rem !important;
+    }
+    
+    .template4.row-dimensions-4 .t4-row-header,
+    .template4.row-dimensions-4 .t4-dimension-cell {
+        min-width: 8.25% !important;
+        font-size: 0.75rem !important;
+        padding: 6px 8px !important;
+    }
+    
+    .template4.row-dimensions-5 .t4-row-header,
+    .template4.row-dimensions-5 .t4-dimension-cell {
+        min-width: 6.6% !important;
+        font-size: 0.7rem !important;
+        padding: 4px 6px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    /* On very small screens, still maintain proportions but with smaller text */
+    .template4 .pivot-table-container {
+        min-width: 600px !important;
+    }
+    
+    .template4 .t4-row-header,
+    .template4 .t4-dimension-cell {
+        font-size: 0.65rem !important;
+        padding: 4px !important;
+    }
+    
+    .template4 .t4-value-cell {
+        min-width: 60px !important;
+        font-size: 0.7rem !important;
+        padding: 4px 8px !important;
+    }
+}
+
+
+/* ===========================================
+   TEMPLATE 5: 2+ rows + 2+ columns + values
+   Build on Template 6 Foundation + 33% Row Width
+   =========================================== */
+
+
+/* Container styling - auto-width with 45vh height limit */
+   
+.template5 {
+    width: auto !important; /* Auto-extend based on content */
+    min-width: 800px !important; /* Increased minimum for better column spacing */
+    max-width: none !important; /* Allow unlimited horizontal expansion */
+    height: auto !important;
+    max-height: 45vh !important; /* Never exceed 45% of screen height */
+    min-height: 200px !important;
+    overflow: auto !important; /* Scrollbars appear automatically when needed */
+    border: 1px solid var(--border-light) !important;
+    border-radius: 0.375rem !important;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important;
+    position: relative !important;
+    display: block !important;
+}
+
+.template5 .pivot-table-container {
+    width: auto !important; /* Allow container to expand with content */
+    height: 100% !important;
+    overflow: visible !important; /* Let parent handle scrolling */
+    background: var(--white) !important;
+    min-width: fit-content !important; /* Ensure container fits all content */
+}
+
+.template5 table {
+    width: auto !important; /* Auto-size table based on content */
+    table-layout: auto !important; /* Auto layout for content-based sizing */
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    min-width: fit-content !important; /* Ensure table always fits content */
+}
+
+/* ===========================================
+   ROW DIMENSIONS - Auto-fit with minimum widths
+   =========================================== */
+
+/* Row dimension headers and cells - auto-size with generous minimums */
+.template5 .t5-row-header,
+.template5 .t5-dimension-cell {
+    width: auto !important; /* Auto-size based on content */
+    min-width: 150px !important; /* Generous minimum width */
+    max-width: none !important; /* No maximum constraint */
+}
+
+/* Row dimension headers */
+.template5 .t5-row-header {
+    background: linear-gradient(135deg, var(--primary-bg-light) 0%, var(--primary-bg-medium) 100%) !important;
+    border: 2px solid var(--primary-border) !important;
+    color: var(--primary-text) !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1.5px !important;
+    padding: 12px 15px !important; /* Increased padding for better spacing */
+    position: sticky !important;
+    left: 0 !important;
+    top: 0 !important;
+    z-index: 60 !important;
+    vertical-align: middle !important;
     box-sizing: border-box !important;
+    white-space: nowrap !important;
+    overflow: visible !important; /* Allow content to be fully visible */
+    text-overflow: clip !important; /* Don't truncate text */
 }
 
-.template4 .frozen-row-dimensions thead tr,
-.template4 .scrollable-value-area thead tr {
-    height: 45px !important; /* ADDED: consistent header height */
-    min-height: 45px !important;
-    max-height: 45px !important;
+/* Simplified sticky positioning - auto-calculated based on content width */
+.template5 .t5-row-header:nth-child(1) { 
+    left: 0 !important; 
+    z-index: 65 !important; 
+}
+
+.template5 .t5-row-header:nth-child(2) { 
+    z-index: 64 !important;
+}
+
+.template5 .t5-row-header:nth-child(3) { 
+    z-index: 63 !important;
+}
+
+.template5 .t5-row-header:nth-child(4) { 
+    z-index: 62 !important;
+}
+
+.template5 .t5-row-header:nth-child(5) { 
+    z-index: 61 !important;
+}
+
+/* Special border for the last row header */
+.template5 .t5-row-header:last-of-type {
+    border-right: 3px solid var(--primary-text) !important;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Row dimension cells */
+.template5 .t5-dimension-cell {
+    background: var(--white) !important;
+    border: 1px solid var(--border-light) !important;
+    padding: 8px 12px !important; /* Increased padding for better spacing */
     box-sizing: border-box !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    white-space: normal !important;
+    vertical-align: middle !important;
+    position: sticky !important;
+    top: auto !important;
+    z-index: 20 !important;
+    overflow: visible !important; /* Allow content to be fully visible */
 }
 
-.template4 .frozen-row-dimensions th,
-.template4 .frozen-row-dimensions td,
-.template4 .scrollable-value-area th,
-.template4 .scrollable-value-area td {
-    padding: 8px 12px !important;
+/* Simplified sticky positioning for dimension cells */
+.template5 .t5-dimension-cell.dimension-0 { 
+    left: 0 !important; 
+    z-index: 25 !important;
+    border-right: 2px solid var(--primary-border) !important;
+}
+
+.template5 .t5-dimension-cell.dimension-1 { 
+    z-index: 24 !important;
+    border-right: 2px solid var(--primary-border) !important;
+}
+
+.template5 .t5-dimension-cell.dimension-2 { 
+    z-index: 23 !important;
+    border-right: 2px solid var(--primary-border) !important;
+}
+
+.template5 .t5-dimension-cell.dimension-3 { 
+    z-index: 22 !important;
+    border-right: 2px solid var(--primary-border) !important;
+}
+
+.template5 .t5-dimension-cell.dimension-4 { 
+    z-index: 21 !important;
+    border-right: 2px solid var(--primary-border) !important;
+}
+
+/* Special border for the last dimension cell */
+.template5 .t5-dimension-cell:last-of-type {
+    border-right: 3px solid var(--primary-text) !important;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* ===========================================
+   MEASURES AREA - Auto-fit columns
+   =========================================== */
+
+/* Measures header */
+.template5 .t5-measures-header {
+    background: linear-gradient(135deg, var(--secondary-bg-light) 0%, var(--secondary-bg-medium) 100%) !important;
+    border: 2px solid var(--secondary-border) !important;
+    color: var(--secondary-text) !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1.5px !important;
+    padding: 12px 15px !important; /* Increased padding */
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 15 !important;
+    box-sizing: border-box !important;
+    min-width: 120px !important; /* Increased minimum width */
+    width: auto !important; /* Auto-size based on content */
+    white-space: nowrap !important;
+    overflow: visible !important; /* Allow content to be fully visible */
+    text-overflow: clip !important; /* Don't truncate text */
+}
+
+/* Value field headers */
+.template5 .t5-measure-header {
+    background: linear-gradient(135deg, var(--secondary-bg-light) 0%, var(--secondary-bg-medium) 100%) !important;
+    border: 1px solid var(--secondary-border) !important;
+    color: var(--secondary-text) !important;
+    font-weight: 600 !important;
+    text-align: center !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+    padding: 10px 12px !important; /* Increased padding */
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 15 !important;
+    min-width: 100px !important; /* Increased minimum width */
+    width: auto !important; /* Auto-size based on content */
+    box-sizing: border-box !important;
+    white-space: nowrap !important;
+    overflow: visible !important; /* Allow content to be fully visible */
+    text-overflow: clip !important; /* Don't truncate text */
+}
+
+/* Column headers (hierarchical) */
+.template5 .t5-column-header {
+    background: linear-gradient(135deg, var(--primary-bg-light) 0%, var(--primary-bg-medium) 100%) !important;
+    border: 1px solid var(--primary-border) !important;
+    color: var(--primary-text) !important;
+    font-weight: 600 !important;
+    text-align: center !important;
+    padding: 8px 12px !important; /* Increased padding */
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 15 !important;
+    min-width: 90px !important; /* Increased minimum width */
+    width: auto !important; /* Auto-size based on content */
     box-sizing: border-box !important;
     vertical-align: middle !important;
-    line-height: 1.2 !important;
-    overflow: hidden !important;
+    white-space: nowrap !important;
+    overflow: visible !important; /* Allow content to be fully visible */
+    text-overflow: clip !important; /* Don't truncate text */
 }
 
-/* ---------- ENHANCED SCROLLBARS FOR VALUE AREA ---------- */
-.template4 .scrollable-value-area::-webkit-scrollbar {
+/* Different styling for different column dimension levels */
+.template5 .t5-column-header.dimension-level-0 {
+    background: linear-gradient(135deg, var(--primary-bg-medium) 0%, var(--primary-border) 100%) !important;
+    border: 2px solid var(--primary-text) !important;
+    color: var(--primary-text-dark) !important;
+    font-weight: 700 !important;
+    font-size: 0.9rem !important;
+    letter-spacing: 0.5px !important;
+    padding: 10px 8px !important;
+}
+
+.template5 .t5-column-header.dimension-level-1 {
+    background: linear-gradient(135deg, var(--primary-bg-light) 0%, var(--primary-bg-medium) 100%) !important;
+    border: 1px solid var(--primary-border) !important;
+    color: var(--primary-text) !important;
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
+    padding: 8px 6px !important;
+}
+
+.template5 .t5-column-header.dimension-level-2 {
+    background: linear-gradient(135deg, var(--secondary-bg-light) 0%, var(--secondary-bg-medium) 100%) !important;
+    border: 1px solid var(--secondary-border) !important;
+    color: var(--secondary-text) !important;
+    font-weight: 600 !important;
+    font-size: 0.8rem !important;
+    padding: 6px 4px !important;
+}
+
+/* ===========================================
+   VALUE CELLS - Auto-fit with right alignment
+   =========================================== */
+
+/* Value cells with right alignment for all numeric values */
+.template5 .t5-value-cell {
+    background: var(--white) !important;
+    border: 1px solid var(--border-light) !important;
+    text-align: right !important; /* RIGHT ALIGNED as requested */
+    padding: 8px 15px !important; /* Increased padding for better spacing */
+    font-variant-numeric: tabular-nums !important;
+    font-weight: 500 !important;
+    box-sizing: border-box !important;
+    vertical-align: middle !important;
+    min-width: 90px !important; /* Increased minimum width */
+    width: auto !important; /* Auto-size based on content */
+    white-space: nowrap !important;
+    overflow: visible !important; /* Allow content to be fully visible */
+    text-overflow: clip !important; /* Don't truncate numbers */
+}
+
+/* Enhanced styling for non-zero values */
+.template5 .t5-value-cell.non-zero-value {
+    /* background: var(--value-bg-positive) !important; */
+    color: var(--value-text-positive) !important;
+    font-weight: 600 !important;
+}
+
+.template5 .t5-value-cell.large-value {
+    /* background: var(--value-bg-large) !important; */
+    color: var(--value-text-large) !important;
+    font-weight: 700 !important;
+}
+
+/* Negative values styling */
+.template5 .t5-value-cell.negative-value,
+.template5 .t5-value-cell[data-raw-value^="-"] {
+    color: var(--value-text-negative) !important;
+    font-weight: 700 !important;
+    /* background: var(--value-bg-negative) !important; */
+}
+
+/* ===========================================
+   HIERARCHY CONTROLS
+   =========================================== */
+
+/* Visual hierarchy levels in dimension cells */
+.template5 [data-level="0"] {
+    font-weight: 700 !important;
+    background-color: var(--primary-bg-light) !important;
+    padding-left: 8px !important;
+}
+
+.template5 [data-level="1"] {
+    font-weight: 600 !important;
+    padding-left: 16px !important;
+}
+
+.template5 [data-level="2"] {
+    font-weight: 500 !important;
+    padding-left: 24px !important;
+}
+
+.template5 [data-level="3"] {
+    font-weight: 400 !important;
+    padding-left: 32px !important;
+}
+
+.template5 [data-level="4"] {
+    font-weight: 400 !important;
+    padding-left: 40px !important;
+    font-size: 0.9rem !important;
+}
+
+.template5 [data-level="5"],
+.template5 [data-level="6"],
+.template5 [data-level="7"] {
+    font-weight: 400 !important;
+    padding-left: 48px !important;
+    font-size: 0.85rem !important;
+}
+
+/* Expand/collapse controls */
+.template5 .expand-collapse {
+    display: inline-flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 16px !important;
+    height: 16px !important;
+    margin-right: 6px !important;
+    vertical-align: middle !important;
+    border: 1px solid var(--border-medium) !important;
+    border-radius: 3px !important;
+    background: var(--white) !important;
+    cursor: pointer !important;
+    font-size: 11px !important;
+    font-weight: bold !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+    flex-shrink: 0 !important;
+}
+
+.template5 .expand-collapse.collapsed {
+    background: linear-gradient(135deg, var(--primary-bg-light) 0%, var(--primary-bg-medium) 100%) !important;
+    border-color: var(--primary-border) !important;
+    color: var(--primary-text) !important;
+}
+
+.template5 .expand-collapse.collapsed::before {
+    content: "+" !important;
+}
+
+.template5 .expand-collapse.expanded {
+    background: linear-gradient(135deg, var(--secondary-bg-light) 0%, var(--secondary-bg-medium) 100%) !important;
+    border-color: var(--secondary-border) !important;
+    color: var(--secondary-text) !important;
+}
+
+.template5 .expand-collapse.expanded::before {
+    content: "−" !important;
+}
+
+.template5 .expand-collapse:hover {
+    transform: scale(1.1) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Leaf node styling */
+.template5 .leaf-node-empty {
+    display: inline-block !important;
+    width: 16px !important;
+    height: 16px !important;
+    margin-right: 6px !important;
+    border: 1px solid var(--border-medium) !important;
+    border-radius: 3px !important;
+    background: var(--white) !important;
+    vertical-align: middle !important;
+    flex-shrink: 0 !important;
+}
+
+/* ===========================================
+   ENHANCED SCROLLBARS - Auto-display
+   =========================================== */
+
+.template5::-webkit-scrollbar {
     width: 12px !important;
     height: 12px !important;
 }
 
-.template4 .scrollable-value-area::-webkit-scrollbar-track {
-    background: #f8f9fa !important;
+.template5::-webkit-scrollbar-track {
+    background: var(--secondary-bg-light) !important;
     border-radius: 6px !important;
+    border: 1px solid var(--border-light) !important;
 }
 
-.template4 .scrollable-value-area::-webkit-scrollbar-thumb {
-    background: #cbd5e1 !important;
+.template5::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, var(--primary-border) 0%, var(--primary-text) 100%) !important;
     border-radius: 6px !important;
-    border: 2px solid #f8f9fa !important;
+    border: 2px solid var(--secondary-bg-light) !important;
+    min-height: 20px !important;
 }
 
-.template4 .scrollable-value-area::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8 !important;
+.template5::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, var(--primary-text) 0%, var(--primary-text-dark) 100%) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
 }
 
-.template4 .scrollable-value-area::-webkit-scrollbar-corner {
-    background: #f8f9fa !important;
+.template5::-webkit-scrollbar-corner {
+    background: var(--secondary-bg-light) !important;
+    border: 1px solid var(--border-light) !important;
 }
 
-/* ---------- HIERARCHY STYLING ---------- */
-.template4 .expand-collapse {
-    display: inline-flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-    width: 14px !important;
-    height: 14px !important;
-    margin-right: 6px !important;
-    vertical-align: middle !important;
-    border: 1px solid #6c757d !important;
-    border-radius: 2px !important;
-    background: white !important;
-    cursor: pointer !important;
-    font-size: 10px !important;
-    font-weight: bold !important;
-    transition: all 0.2s ease !important;
-    flex-shrink: 0 !important;
+/* Firefox scrollbar support */
+.template5 {
+    scrollbar-width: auto !important;
+    scrollbar-color: var(--primary-border) var(--secondary-bg-light) !important;
 }
 
-.template4 .leaf-node-empty {
-    display: inline-block !important;
-    width: 14px !important;
-    height: 14px !important;
-    margin-right: 6px !important;
-    border: 1px solid #6c757d !important;
-    border-radius: 2px !important;
-    background: white !important;
-    vertical-align: middle !important;
-    flex-shrink: 0 !important;
+/* ===========================================
+   HOVER EFFECTS
+   =========================================== */
+
+.template5 tr:hover {
+    background-color: rgba(102, 179, 255, 0.05) !important;
 }
 
-.template4 .dimension-label {
-    white-space: normal !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-    max-width: calc(100% - 25px) !important;
-    display: inline-block !important;
-    vertical-align: middle !important;
-    word-wrap: break-word !important;
-    overflow-wrap: break-word !important;
-    line-height: 1.3 !important;
+.template5 tr:hover .t5-dimension-cell {
+    background-color: rgba(102, 179, 255, 0.08) !important;
 }
 
-.template4 .column-label {
-    display: inline-block !important;
-    white-space: nowrap !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-    max-width: none !important;
-    width: auto !important;
-    font-weight: inherit !important;
-    color: inherit !important;
+.template5 tr:hover .t5-value-cell {
+    background-color: rgba(102, 179, 255, 0.03) !important;
 }
 
-.template4 .frozen-separator {
-    position: absolute !important;
-    top: 0 !important;
-    left: 45% !important;
-    width: 1px !important; /* CHANGED: was 3px */
-    height: 100% !important;
-    background: #6c757d !important; /* CHANGED: was gradient, now solid grey */
-    z-index: 200 !important;
-    cursor: col-resize !important;
-    box-shadow: none !important; /* REMOVED: was shadow */
+.template5 tr:hover .dimension-label {
+    color: var(--primary-text-dark) !important;
 }
 
-.template4 .frozen-separator:hover {
-    background: #495057 !important; /* CHANGED: darker grey instead of gradient */
-    width: 1px !important; /* CHANGED: keep 1px instead of expanding */
-    left: 45% !important; /* CHANGED: no position shift */
+.template5 .t5-column-header:hover {
+    background-color: rgba(102, 179, 255, 0.15) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
 }
 
-/* ---------- RESPONSIVE ADJUSTMENTS ---------- */
-@media (max-width: 1400px) {
-    .template4 .frozen-row-dimensions {
-        width: 40% !important;
+/* Remove the 40% boundary indicator since we're using auto-fit columns */
+.template5::before {
+    display: none !important;
+}
+
+/* ===========================================
+   RESPONSIVE DESIGN
+   =========================================== */
+
+@media (max-width: 1200px) {
+    .template5 {
+        min-width: 600px !important; /* Reduced for smaller screens */
     }
     
-    .template4 .scrollable-value-area {
-        left: 40% !important;
-        width: 60% !important;
+    .template5 .t5-row-header,
+    .template5 .t5-dimension-cell {
+        min-width: 120px !important; /* Maintain readability */
+        padding: 6px 10px !important;
+        font-size: 0.8rem !important;
     }
     
-    .template4 .frozen-separator {
-        left: 40% !important;
-    }
-}
-
-@media (max-width: 1024px) {
-    .template4 .frozen-row-dimensions {
-        width: 35% !important;
+    .template5 .t5-value-cell {
+        min-width: 70px !important;
+        padding: 6px 12px !important;
+        font-size: 0.8rem !important;
     }
     
-    .template4 .scrollable-value-area {
-        left: 35% !important;
-        width: 65% !important;
-    }
-    
-    .template4 .frozen-separator {
-        left: 35% !important;
-    }
-    
-    .template4 th,
-    .template4 td {
+    .template5 .t5-column-header {
+        min-width: 70px !important;
         padding: 6px 8px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    .template5 .t5-measure-header,
+    .template5 .t5-measures-header {
+        min-width: 80px !important;
+        padding: 8px 10px !important;
         font-size: 0.8rem !important;
     }
 }
 
 @media (max-width: 768px) {
-    .template4 {
-        height: 60vh !important;
+    .template5 {
+        max-height: 40vh !important;
+        min-width: 500px !important; /* Further reduced for mobile */
     }
     
-    .template4 th,
-    .template4 td {
+    .template5 .t5-row-header,
+    .template5 .t5-dimension-cell {
+        min-width: 100px !important;
+        padding: 4px 8px !important;
+        font-size: 0.7rem !important;
+    }
+    
+    .template5 .t5-value-cell {
+        min-width: 60px !important;
+        padding: 4px 10px !important;
+        font-size: 0.7rem !important;
+    }
+    
+    .template5 .t5-column-header {
+        min-width: 60px !important;
         padding: 4px 6px !important;
-        font-size: 0.75rem !important;
-    }
-}
-
-@media (max-height: 800px) {
-    .template4 {
-        max-height: 35vh !important;
-    }
-}
-
-@media (max-height: 600px) {
-    .template4 {
-        max-height: 50vh !important;
-    }
-}
-
-/* ---------- HOVER EFFECTS ---------- */
-.template4 .frozen-row-dimensions tr:hover .t4-dimension-cell {
-    background-color: rgba(102, 153, 255, 0.08) !important;
-}
-
-.template4 .scrollable-value-area tr:hover .value-cell {
-    background-color: rgba(102, 153, 255, 0.05) !important;
-}
-
-/* ---------- VALUE CELL ENHANCEMENTS ---------- */
-.template4 .value-cell.non-zero-value {
-    background: linear-gradient(135deg, #f0fff4 0%, #e6ffe6 100%) !important;
-    color: #006600 !important;
-    font-weight: 600 !important;
-}
-
-.template4 .value-cell.large-value {
-    background: linear-gradient(135deg, #fff8dc 0%, #f0e68c 100%) !important;
-    color: #b8860b !important;
-    font-weight: 700 !important;
-}
-
-.template4 .value-cell[data-raw-value^="-"] {
-    color: #dc2626 !important;
-    font-weight: 700 !important;
-    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%) !important;
-}
-
-/* Template 4 Enhanced Header Alignment */
-.template4 .frozen-row-dimensions .t4-row-header[rowspan] {
-    vertical-align: middle !important;
-    text-align: center !important;
-    padding: 12px 8px !important;
-    line-height: 1.2 !important;
-    height: auto !important;
-    border-right: 2px solid #6699ff !important;
-}
-
-/* Ensure header heights match between frozen and scrollable areas */
-.template4 .frozen-row-dimensions thead,
-.template4 .scrollable-value-area thead {
-    height: auto !important;
-}
-
-.template4 .frozen-row-dimensions thead tr,
-.template4 .scrollable-value-area thead tr {
-    height: 45px !important;
-    min-height: 45px !important;
-}
-
-/* Prevent header row height conflicts */
-.template4 .frozen-row-dimensions .t4-row-header {
-    box-sizing: border-box !important;
-    display: table-cell !important;
-    vertical-align: middle !important;
-}
-
-/* CRITICAL FIX: Ensure Template 4 headers span exactly 3 rows */
-.template4 .frozen-row-dimensions .t4-row-header[rowspan="3"] {
-    vertical-align: middle !important;
-    text-align: center !important;
-    padding: 12px 8px !important;
-    line-height: 1.2 !important;
-    height: auto !important;
-    border-right: 2px solid #6699ff !important;
-    background: linear-gradient(135deg, #f0f8ff 0%, #ddeeff 100%) !important;
-    border: 1px solid #6699ff !important;
-    color: #003399 !important;
-    font-weight: 700 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 1px !important;
-}
-
-/* Ensure proper header row heights for alignment */
-.template4 .frozen-row-dimensions thead tr {
-    height: 45px !important;
-    min-height: 45px !important;
-    max-height: 45px !important;
-}
-
-.template4 .scrollable-value-area thead tr {
-    height: 45px !important;
-    min-height: 45px !important;
-    max-height: 45px !important;
-}
-
-/* Fix the CSS syntax error */
-.template4 .frozen-row-dimensions tbody tr,
-.template4 .scrollable-value-area tbody tr {
-    height: 40px !important;
-    min-height: 40px !important;
-    max-height: 40px !important;
-    box-sizing: border-box !important; /* FIXED: removed invalid "/" */
-}
-
-/* Ensure both areas have consistent table structure */
-.template4 .frozen-row-dimensions table,
-.template4 .scrollable-value-area table {
-    border-collapse: separate !important;
-    border-spacing: 0 !important;
-}
-
-/* Enhanced frozen separator visibility */
-.template4 .frozen-separator {
-    position: absolute !important;
-    top: 0 !important;
-    left: 45% !important;
-    width: 1px !important;
-    height: 100% !important;
-    background: #6c757d !important;
-    z-index: 200 !important;
-    pointer-events: none !important;
-}
-
-/* Prevent any header content overflow */
-.template4 .t4-row-header .header-content {
-    width: 100% !important;
-    height: auto !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    text-align: center !important;
-    word-wrap: break-word !important;
-    overflow-wrap: break-word !important;
-    hyphens: auto !important;
-}
-
-/* ---------- TEMPLATE 5: 2+ rows + 2+ columns + values ---------- */
-/* ===========================================
-   TEMPLATE 5 FIXES - Excel-like Frozen Panes System
-   Multi-row × Multi-column with 45:55 split and frozen boundaries
-   =========================================== */
-
-/* ---------- CONTAINER SETUP FOR EXCEL-LIKE FROZEN PANES ---------- */
-.template5 {
-    width: 100% !important;
-    height: auto !important;
-    max-height: 40vh !important;
-    min-height: 300px !important;
-    position: relative !important;
-    overflow: hidden !important;
-    border: 1px solid #e5e7eb !important;
-    border-radius: 0.375rem !important;
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important;
-}
-
-.template5 .pivot-table-container {
-    width: 100% !important;
-    height: 100% !important;
-    position: relative !important;
-    overflow: hidden !important;
-    background: white !important;
-}
-
-/* ---------- FROZEN ROW DIMENSIONS AREA (45% LEFT SIDE) ---------- */
-.template5 .frozen-row-dimensions {
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 45% !important;
-    height: 100% !important;
-    background: white !important;
-    border-right: 1px solid #6c757d !important;
-    z-index: 100 !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-}
-
-/* ---------- SCROLLABLE VALUE AREA (55% RIGHT SIDE) ---------- */
-.template5 .scrollable-value-area {
-    position: absolute !important;
-    top: 0 !important;
-    left: 45% !important;
-    width: 55% !important;
-    height: 100% !important;
-    overflow: auto !important;
-    background: white !important;
-    z-index: 50 !important;
-}
-
-/* ---------- FROZEN SEPARATOR (1PX GREY LINE) ---------- */
-.template5 .frozen-separator {
-    position: absolute !important;
-    top: 0 !important;
-    left: 45% !important;
-    width: 1px !important;
-    height: 100% !important;
-    background: #6c757d !important;
-    z-index: 200 !important;
-    cursor: col-resize !important;
-    pointer-events: none !important;
-}
-
-/* ---------- TABLE LAYOUT FOR BOTH AREAS ---------- */
-.template5 .frozen-row-dimensions table,
-.template5 .scrollable-value-area table {
-    width: 100% !important;
-    table-layout: fixed !important;
-    border-collapse: separate !important;
-    border-spacing: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-}
-
-/* Values area table should expand based on content */
-.template5 .scrollable-value-area table {
-    width: max-content !important;
-    min-width: 100% !important;
-    table-layout: auto !important;
-}
-
-/* ---------- ROW DIMENSION EQUAL WIDTH DISTRIBUTION (45% SPLIT) ---------- */
-/* 2 Row Dimensions */
-.template5.row-dimensions-2 .frozen-row-dimensions .t5-row-header,
-.template5.row-dimensions-2 .frozen-row-dimensions .t5-dimension-cell {
-    width: 50% !important;
-    min-width: 50% !important;
-    max-width: 50% !important;
-}
-
-/* 3 Row Dimensions */
-.template5.row-dimensions-3 .frozen-row-dimensions .t5-row-header,
-.template5.row-dimensions-3 .frozen-row-dimensions .t5-dimension-cell {
-    width: 33.333% !important;
-    min-width: 33.333% !important;
-    max-width: 33.333% !important;
-}
-
-/* 4 Row Dimensions */
-.template5.row-dimensions-4 .frozen-row-dimensions .t5-row-header,
-.template5.row-dimensions-4 .frozen-row-dimensions .t5-dimension-cell {
-    width: 25% !important;
-    min-width: 25% !important;
-    max-width: 25% !important;
-}
-
-/* 5 Row Dimensions */
-.template5.row-dimensions-5 .frozen-row-dimensions .t5-row-header,
-.template5.row-dimensions-5 .frozen-row-dimensions .t5-dimension-cell {
-    width: 20% !important;
-    min-width: 20% !important;
-    max-width: 20% !important;
-}
-
-/* ---------- VALUE AREA DYNAMIC WIDTH (55% AREA, AUTO COLUMNS) ---------- */
-.template5 .scrollable-value-area .t5-measures-header,
-.template5 .scrollable-value-area .t5-measure-header,
-.template5 .scrollable-value-area .t5-column-header,
-.template5 .scrollable-value-area .value-cell {
-    width: auto !important;
-    min-width: 80px !important;
-    max-width: none !important;
-    white-space: nowrap !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-}
-
-/* ---------- CONSISTENT ROW HEIGHTS FOR ALIGNMENT ---------- */
-.template5 .frozen-row-dimensions tbody tr,
-.template5 .scrollable-value-area tbody tr {
-    height: 40px !important;
-    min-height: 40px !important;
-    max-height: 40px !important;
-    box-sizing: border-box !important;
-}
-
-.template5 .frozen-row-dimensions thead tr,
-.template5 .scrollable-value-area thead tr {
-    height: 45px !important;
-    min-height: 45px !important;
-    max-height: 45px !important;
-    box-sizing: border-box !important;
-}
-
-/* ---------- HEADER STYLING FOR FROZEN AREA ---------- */
-.template5 .frozen-row-dimensions .t5-row-header {
-    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
-    border: 1px solid #3b82f6 !important;
-    color: #1e40af !important;
-    font-weight: 700 !important;
-    text-align: center !important;
-    text-transform: uppercase !important;
-    letter-spacing: 1px !important;
-    padding: 12px 8px !important;
-    box-sizing: border-box !important;
-    position: sticky !important;
-    top: 0 !important;
-    z-index: 25 !important;
-    vertical-align: middle !important;
-}
-
-/* ---------- HEADER STYLING FOR SCROLLABLE AREA ---------- */
-.template5 .scrollable-value-area .t5-measures-header {
-    background: linear-gradient(135deg, #f8f0ff 0%, #e6ccff 100%) !important;
-    border: 2px solid #9966cc !important;
-    color: #663399 !important;
-    font-weight: 700 !important;
-    text-align: center !important;
-    text-transform: uppercase !important;
-    letter-spacing: 1.5px !important;
-    padding: 12px 12px !important;
-    position: sticky !important;
-    top: 0 !important;
-    z-index: 15 !important;
-}
-
-.template5 .scrollable-value-area .t5-measure-header {
-    background: linear-gradient(135deg, #fff5e6 0%, #ffe0b3 100%) !important;
-    border: 1px solid #ff9933 !important;
-    color: #cc6600 !important;
-    font-weight: 600 !important;
-    text-align: center !important;
-    text-transform: uppercase !important;
-    padding: 10px 12px !important;
-    position: sticky !important;
-    top: 0 !important;
-    z-index: 15 !important;
-}
-
-.template5 .scrollable-value-area .t5-column-header {
-    background: linear-gradient(135deg, #f0fff4 0%, #dcfce7 100%) !important;
-    border: 1px solid #22c55e !important;
-    color: #15803d !important;
-    font-weight: 600 !important;
-    text-align: center !important;
-    padding: 8px 10px !important;
-    position: sticky !important;
-    top: 0 !important;
-    z-index: 15 !important;
-    min-width: 80px !important;
-}
-
-/* ---------- BODY CELL STYLING ---------- */
-.template5 .frozen-row-dimensions .t5-dimension-cell {
-    background: white !important;
-    border: 1px solid #e5e7eb !important;
-    padding: 8px 12px !important;
-    box-sizing: border-box !important;
-    word-wrap: break-word !important;
-    overflow-wrap: break-word !important;
-    white-space: normal !important;
-    vertical-align: middle !important;
-    line-height: 1.2 !important;
-}
-
-.template5 .scrollable-value-area .value-cell {
-    background: white !important;
-    border: 1px solid #e5e7eb !important;
-    text-align: right !important;
-    padding: 8px 12px !important;
-    font-variant-numeric: tabular-nums !important;
-    font-weight: 500 !important;
-    box-sizing: border-box !important;
-    vertical-align: middle !important;
-    min-width: 80px !important;
-}
-
-/* ---------- HIERARCHY CONTROLS ---------- */
-.template5 .expand-collapse {
-    display: inline-flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-    width: 14px !important;
-    height: 14px !important;
-    margin-right: 6px !important;
-    vertical-align: middle !important;
-    border: 1px solid #6c757d !important;
-    border-radius: 2px !important;
-    background: white !important;
-    cursor: pointer !important;
-    font-size: 10px !important;
-    font-weight: bold !important;
-    transition: all 0.2s ease !important;
-    flex-shrink: 0 !important;
-}
-
-.template5 .leaf-node-empty {
-    display: inline-block !important;
-    width: 14px !important;
-    height: 14px !important;
-    margin-right: 6px !important;
-    border: 1px solid #6c757d !important;
-    border-radius: 2px !important;
-    background: white !important;
-    vertical-align: middle !important;
-    flex-shrink: 0 !important;
-}
-
-.template5 .dimension-label {
-    white-space: normal !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-    display: inline-block !important;
-    vertical-align: middle !important;
-    word-wrap: break-word !important;
-    overflow-wrap: break-word !important;
-    line-height: 1.3 !important;
-}
-
-.template5 .column-label {
-    display: inline-block !important;
-    white-space: nowrap !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-    font-weight: inherit !important;
-    color: inherit !important;
-}
-
-/* ---------- ENHANCED SCROLLBARS ---------- */
-.template5 .frozen-row-dimensions::-webkit-scrollbar {
-    width: 6px !important;
-    background: transparent !important;
-}
-
-.template5 .frozen-row-dimensions::-webkit-scrollbar-track {
-    background: #f8f9fa !important;
-}
-
-.template5 .frozen-row-dimensions::-webkit-scrollbar-thumb {
-    background: #cbd5e1 !important;
-    border-radius: 3px !important;
-}
-
-.template5 .scrollable-value-area::-webkit-scrollbar {
-    width: 8px !important;
-    height: 8px !important;
-}
-
-.template5 .scrollable-value-area::-webkit-scrollbar-track {
-    background: #f8f9fa !important;
-    border-radius: 4px !important;
-}
-
-.template5 .scrollable-value-area::-webkit-scrollbar-thumb {
-    background: #cbd5e1 !important;
-    border-radius: 4px !important;
-    border: 1px solid #f8f9fa !important;
-}
-
-.template5 .scrollable-value-area::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8 !important;
-}
-
-.template5 .scrollable-value-area::-webkit-scrollbar-corner {
-    background: #f8f9fa !important;
-}
-
-/* ---------- HOVER EFFECTS ---------- */
-.template5 .frozen-row-dimensions tr:hover .t5-dimension-cell {
-    background-color: rgba(59, 130, 246, 0.05) !important;
-}
-
-.template5 .scrollable-value-area tr:hover .value-cell {
-    background-color: rgba(59, 130, 246, 0.05) !important;
-}
-
-/* ---------- VALUE CELL ENHANCEMENTS ---------- */
-.template5 .value-cell.non-zero-value {
-    background: linear-gradient(135deg, #f0fff4 0%, #e6ffe6 100%) !important;
-    color: #006600 !important;
-    font-weight: 600 !important;
-}
-
-.template5 .value-cell.large-value {
-    background: linear-gradient(135deg, #fff8dc 0%, #f0e68c 100%) !important;
-    color: #b8860b !important;
-    font-weight: 700 !important;
-}
-
-.template5 .value-cell[data-raw-value^="-"] {
-    color: #dc2626 !important;
-    font-weight: 700 !important;
-    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%) !important;
-}
-
-/* ---------- RESPONSIVE ADJUSTMENTS ---------- */
-@media (max-width: 1400px) {
-    .template5 .frozen-row-dimensions {
-        width: 40% !important;
+        font-size: 0.65rem !important;
     }
     
-    .template5 .scrollable-value-area {
-        left: 40% !important;
-        width: 60% !important;
+    .template5 .t5-measure-header,
+    .template5 .t5-measures-header {
+        min-width: 70px !important;
+        padding: 6px 8px !important;
+        font-size: 0.7rem !important;
     }
     
-    .template5 .frozen-separator {
-        left: 40% !important;
+    .template5 .expand-collapse,
+    .template5 .leaf-node-empty {
+        width: 14px !important;
+        height: 14px !important;
+        margin-right: 4px !important;
     }
-}
-
-@media (max-width: 1024px) {
-    .template5 .frozen-row-dimensions {
-        width: 35% !important;
-    }
-    
-    .template5 .scrollable-value-area {
-        left: 35% !important;
-        width: 65% !important;
-    }
-    
-    .template5 .frozen-separator {
-        left: 35% !important;
-    }
-}
-
-@media (max-height: 800px) {
-    .template5 {
-        max-height: 35vh !important;
-    }
-}
-
-@media (max-height: 600px) {
-    .template5 {
-        max-height: 50vh !important;
-    }
-}
-
-/* ---------- CELL CONTENT WRAPPER FOR ALIGNMENT ---------- */
-.template5 .cell-content {
-    width: 100% !important;
-    height: 100% !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: flex-start !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
-}
-
-.template5 .value-cell .cell-content {
-    justify-content: flex-end !important;
-}
-
-/* ---------- DEBUG HELPERS (REMOVE IN PRODUCTION) ---------- */
-.template5.debug .frozen-row-dimensions {
-    background: rgba(255, 0, 0, 0.1) !important;
-    border: 2px solid red !important;
-}
-
-.template5.debug .scrollable-value-area {
-    background: rgba(0, 0, 255, 0.1) !important;
-    border: 2px solid blue !important;
-}
-
-.template5.debug .frozen-separator {
-    background: lime !important;
-    width: 3px !important;
 }
 
 /* ===========================================
-   ENHANCED TEMPLATE 6 CSS - HIERARCHICAL MULTI-COLUMN
-   1 row + 2+ columns + values with Excel-like column spanning
+   ACCESSIBILITY
    =========================================== */
 
+.template5 .expand-collapse:focus {
+    outline: 2px solid var(--primary-text) !important;
+    outline-offset: 2px !important;
+}
 
-/* ---------- CONTAINER AND TABLE LAYOUT ---------- */
+.template5 .t5-column-header:focus-within {
+    outline: 2px solid var(--primary-text) !important;
+    outline-offset: 2px !important;
+}
+
+/* ===========================================
+   PRINT STYLES
+   =========================================== */
+
+@media print {
+    .template5 {
+        max-height: none !important;
+        overflow: visible !important;
+        box-shadow: none !important;
+        border: 1px solid #000 !important;
+    }
+    
+    .template5 .expand-collapse,
+    .template5 .leaf-node-empty {
+        display: none !important;
+    }
+}
+
+
+/* ===========================================
+   TEMPLATE 6: 1 row + 2+ columns + values (Hierarchical)
+   =========================================== */
 .template6 {
     width: 100% !important;
     height: auto !important;
     max-height: 60vh !important;
     min-height: 250px !important;
     overflow: auto !important;
-    border: 1px solid #e5e7eb !important;
+    border: 1px solid var(--border-light) !important;
     border-radius: 0.375rem !important;
     box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important;
 }
@@ -1420,7 +1513,7 @@
     width: 100% !important;
     height: 100% !important;
     overflow: auto !important;
-    background: white !important;
+    background: var(--white) !important;
 }
 
 .template6 table {
@@ -1433,11 +1526,11 @@
     min-width: fit-content !important;
 }
 
-/* ---------- ROW DIMENSION HEADER (STICKY LEFT) ---------- */
+/* Row dimension header (sticky left) */
 .template6 .t6-row-header {
-    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
-    border: 2px solid #d97706 !important;
-    color: #92400e !important;
+    background: linear-gradient(135deg, var(--primary-bg-light) 0%, var(--primary-bg-medium) 100%) !important;
+    border: 2px solid var(--primary-border) !important;
+    color: var(--primary-text) !important;
     font-weight: 700 !important;
     text-align: center !important;
     text-transform: uppercase !important;
@@ -1454,11 +1547,11 @@
     box-sizing: border-box !important;
 }
 
-/* ---------- MEASURES HEADER ---------- */
+/* Measures header */
 .template6 .t6-measures-header {
-    background: linear-gradient(135deg, #f8f0ff 0%, #e6ccff 100%) !important;
-    border: 2px solid #9966cc !important;
-    color: #663399 !important;
+    background: linear-gradient(135deg, var(--secondary-bg-light) 0%, var(--secondary-bg-medium) 100%) !important;
+    border: 2px solid var(--secondary-border) !important;
+    color: var(--secondary-text) !important;
     font-weight: 700 !important;
     text-align: center !important;
     text-transform: uppercase !important;
@@ -1470,11 +1563,11 @@
     box-sizing: border-box !important;
 }
 
-/* ---------- VALUE FIELD HEADERS ---------- */
+/* Value field headers */
 .template6 .t6-measure-header {
-    background: linear-gradient(135deg, #fff5e6 0%, #ffe0b3 100%) !important;
-    border: 1px solid #ff9933 !important;
-    color: #cc6600 !important;
+    background: linear-gradient(135deg, var(--secondary-bg-light) 0%, var(--secondary-bg-medium) 100%) !important;
+    border: 1px solid var(--secondary-border) !important;
+    color: var(--secondary-text) !important;
     font-weight: 600 !important;
     text-align: center !important;
     text-transform: uppercase !important;
@@ -1487,11 +1580,11 @@
     box-sizing: border-box !important;
 }
 
-/* ---------- HIERARCHICAL COLUMN HEADERS WITH SPANNING ---------- */
+/* Hierarchical column headers */
 .template6 .t6-column-header {
-    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%) !important;
-    border: 1px solid #22c55e !important;
-    color: #15803d !important;
+    background: linear-gradient(135deg, var(--primary-bg-light) 0%, var(--primary-bg-medium) 100%) !important;
+    border: 1px solid var(--primary-border) !important;
+    color: var(--primary-text) !important;
     font-weight: 600 !important;
     text-align: center !important;
     padding: 8px 12px !important;
@@ -1506,9 +1599,9 @@
 
 /* Different styling for different dimension levels */
 .template6 .t6-column-header.dimension-level-0 {
-    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
-    border: 2px solid #3b82f6 !important;
-    color: #1e40af !important;
+    background: linear-gradient(135deg, var(--primary-bg-medium) 0%, var(--primary-border) 100%) !important;
+    border: 2px solid var(--primary-text) !important;
+    color: var(--primary-text-dark) !important;
     font-weight: 700 !important;
     font-size: 0.9rem !important;
     letter-spacing: 0.5px !important;
@@ -1516,28 +1609,28 @@
 }
 
 .template6 .t6-column-header.dimension-level-1 {
-    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%) !important;
-    border: 1px solid #16a34a !important;
-    color: #166534 !important;
+    background: linear-gradient(135deg, var(--primary-bg-light) 0%, var(--primary-bg-medium) 100%) !important;
+    border: 1px solid var(--primary-border) !important;
+    color: var(--primary-text) !important;
     font-weight: 600 !important;
     font-size: 0.85rem !important;
     padding: 8px 10px !important;
 }
 
 .template6 .t6-column-header.dimension-level-2 {
-    background: linear-gradient(135deg, #fefce8 0%, #fef3c7 100%) !important;
-    border: 1px solid #eab308 !important;
-    color: #a16207 !important;
+    background: linear-gradient(135deg, var(--secondary-bg-light) 0%, var(--secondary-bg-medium) 100%) !important;
+    border: 1px solid var(--secondary-border) !important;
+    color: var(--secondary-text) !important;
     font-weight: 600 !important;
     font-size: 0.8rem !important;
     padding: 6px 8px !important;
 }
 
-/* ---------- ROW HIERARCHY CELL (STICKY LEFT) ---------- */
+/* Row hierarchy cell (sticky left) */
 .template6 .t6-hierarchy-cell {
-    background: white !important;
-    border: 1px solid #e5e7eb !important;
-    border-right: 2px solid #d97706 !important;
+    background: var(--white) !important;
+    border: 1px solid var(--border-light) !important;
+    border-right: 2px solid var(--primary-border) !important;
     padding: 8px 12px !important;
     position: sticky !important;
     left: 0 !important;
@@ -1552,10 +1645,10 @@
     white-space: normal !important;
 }
 
-/* ---------- VALUE CELLS ---------- */
+/* Value cells */
 .template6 .t6-value-cell {
-    background: white !important;
-    border: 1px solid #e5e7eb !important;
+    background: var(--white) !important;
+    border: 1px solid var(--border-light) !important;
     text-align: right !important;
     padding: 8px 12px !important;
     font-variant-numeric: tabular-nums !important;
@@ -1566,476 +1659,22 @@
     white-space: nowrap !important;
 }
 
-/* Enhanced value cell styling */
-.template6 .t6-value-cell.non-zero-value {
-    background: linear-gradient(135deg, #f0fff4 0%, #e6ffe6 100%) !important;
-    color: #15803d !important;
-    font-weight: 600 !important;
-}
+/* ===========================================
+   UNIVERSAL STYLES FOR ALL TEMPLATES
+   =========================================== */
 
-.template6 .t6-value-cell.large-value {
-    background: linear-gradient(135deg, #fff8dc 0%, #f0e68c 100%) !important;
-    color: #b8860b !important;
-    font-weight: 700 !important;
-}
-
-.template6 .t6-value-cell.negative-value {
-    color: #dc2626 !important;
-    font-weight: 700 !important;
-    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%) !important;
-}
-
-/* ---------- ENHANCED EXPAND/COLLAPSE CONTROLS - IMPROVEMENTS 2 & 3 ---------- */
-.template6 .expand-collapse {
-    display: inline-flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-    width: 16px !important;
-    height: 16px !important;
-    margin-right: 8px !important;
-    vertical-align: middle !important;
-    border: 1px solid #6c757d !important;
-    border-radius: 3px !important;
-    background: white !important;
-    cursor: pointer !important;
-    font-size: 12px !important;
-    font-weight: bold !important;
-    transition: all 0.2s ease !important;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
-    flex-shrink: 0 !important;
-}
-
-.template6 .expand-collapse.collapsed {
-    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
-    border-color: #d97706 !important;
-    color: #92400e !important;
-}
-
-.template6 .expand-collapse.collapsed::before {
-    content: "+" !important;
-    display: block !important;
-    line-height: 1 !important;
-    font-size: 14px !important;
-    font-weight: bold !important;
-}
-
-.template6 .expand-collapse.expanded {
-    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%) !important;
-    border-color: #16a34a !important;
-    color: #15803d !important;
-}
-
-.template6 .expand-collapse.expanded::before {
-    content: "−" !important;
-    display: block !important;
-    line-height: 1 !important;
-    font-size: 16px !important;
-    font-weight: bold !important;
-}
-
-.template6 .expand-collapse:hover {
-    transform: scale(1.1) !important;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15) !important;
-}
-
-/* IMPROVEMENT 3: Remove leaf node styling from column headers - only in column zone */
-.template6 .t6-column-header .leaf-node-empty {
-    display: none !important;
-}
-
-/* Keep leaf node styling only for row hierarchy cells */
-.template6 .t6-hierarchy-cell .leaf-node-empty {
-    display: inline-block !important;
-    width: 16px !important;
-    height: 16px !important;
-    margin-right: 8px !important;
-    border: 1px solid #6c757d !important;
-    border-radius: 3px !important;
-    background: white !important;
-    vertical-align: middle !important;
-    flex-shrink: 0 !important;
-    box-sizing: border-box !important;
-}
-
-/* ---------- DIMENSION AND COLUMN LABELS ---------- */
-.template6 .dimension-label {
-    white-space: normal !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-    display: inline-block !important;
-    vertical-align: middle !important;
-    word-wrap: break-word !important;
-    overflow-wrap: break-word !important;
-    line-height: 1.3 !important;
-    max-width: calc(100% - 30px) !important;
-}
-
-.template6 .column-label {
-    display: inline-block !important;
-    white-space: nowrap !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-    font-weight: inherit !important;
-    color: inherit !important;
-    max-width: none !important;
-}
-
-/* ---------- CELL CONTENT WRAPPER ---------- */
-.template6 .cell-content {
-    width: 100% !important;
-    height: 100% !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: flex-start !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-    white-space: nowrap !important;
-}
-
-.template6 .t6-value-cell .cell-content {
-    justify-content: flex-end !important;
-}
-
-.template6 .t6-column-header .cell-content,
-.template6 .t6-measure-header .cell-content,
-.template6 .t6-measures-header .cell-content {
-    justify-content: center !important;
-}
-
-/* ---------- STICKY POSITIONING ---------- */
-.template6 thead th {
-    position: sticky !important;
-    top: 0 !important;
-    z-index: 10 !important;
-    background-clip: padding-box !important;
-}
-
-/* Ensure row header stays on top of everything */
-.template6 .t6-row-header {
-    z-index: 60 !important;
-}
-
-/* Ensure hierarchy cells stay sticky */
-.template6 .t6-hierarchy-cell {
-    z-index: 20 !important;
-}
-
-/* ---------- HOVER EFFECTS ---------- */
-.template6 tbody tr:hover {
-    background-color: rgba(251, 191, 36, 0.05) !important;
-}
-
-.template6 tbody tr:hover .t6-hierarchy-cell {
-    background-color: rgba(251, 191, 36, 0.08) !important;
-}
-
-.template6 tbody tr:hover .t6-value-cell {
-    background-color: rgba(251, 191, 36, 0.03) !important;
-}
-
-.template6 .t6-column-header:hover {
-    background-color: rgba(34, 197, 94, 0.15) !important;
-    transform: translateY(-1px) !important;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
-}
-
-/* ---------- VISUAL HIERARCHY FOR ROW LEVELS ---------- */
-.template6 [data-level="0"] {
-    font-weight: 700 !important;
-    background-color: #fffbeb !important;
-}
-
-.template6 [data-level="1"] {
-    font-weight: 600 !important;
-    padding-left: 20px !important;
-}
-
-.template6 [data-level="2"] {
-    font-weight: 500 !important;
-    padding-left: 32px !important;
-}
-
-.template6 [data-level="3"] {
-    font-weight: 400 !important;
-    padding-left: 44px !important;
-}
-
-.template6 [data-level="4"] {
-    font-weight: 400 !important;
-    padding-left: 56px !important;
-    font-size: 0.9rem !important;
-}
-
-/* ---------- RESPONSIVE ADJUSTMENTS ---------- */
-@media (max-width: 1400px) {
-    .template6 .t6-row-header,
-    .template6 .t6-hierarchy-cell {
-        min-width: 35% !important;
-        max-width: 40% !important;
-    }
-    
-    .template6 .t6-column-header,
-    .template6 .t6-value-cell {
-        min-width: 70px !important;
-        padding: 6px 8px !important;
-    }
-}
-
-@media (max-width: 1024px) {
-    .template6 {
-        max-height: 50vh !important;
-    }
-    
-    .template6 .t6-row-header,
-    .template6 .t6-hierarchy-cell {
-        min-width: 35% !important;
-        max-width: 40% !important;
-        font-size: 0.85rem !important;
-    }
-    
-    .template6 .t6-column-header,
-    .template6 .t6-value-cell {
-        min-width: 60px !important;
-        padding: 4px 6px !important;
-        font-size: 0.8rem !important;
-    }
-    
-    .template6 .expand-collapse,
-    .template6 .leaf-node-empty {
-        width: 14px !important;
-        height: 14px !important;
-        margin-right: 6px !important;
-        font-size: 10px !important;
-    }
-}
-
-@media (max-width: 768px) {
-    .template6 {
-        max-height: 40vh !important;
-    }
-    
-    .template6 .t6-row-header,
-    .template6 .t6-hierarchy-cell {
-        min-width: 35% !important;
-        max-width: 40% !important;
-        font-size: 0.8rem !important;
-    }
-    
-    .template6 .t6-column-header,
-    .template6 .t6-value-cell {
-        min-width: 50px !important;
-        padding: 3px 4px !important;
-        font-size: 0.75rem !important;
-    }
-    
-    .template6 .expand-collapse,
-    .template6 .leaf-node-empty {
-        width: 12px !important;
-        height: 12px !important;
-        margin-right: 4px !important;
-        font-size: 8px !important;
-    }
-}
-
-/* ---------- PRINT STYLES ---------- */
-@media print {
-    .template6 {
-        max-height: none !important;
-        overflow: visible !important;
-        box-shadow: none !important;
-        border: 1px solid #000 !important;
-    }
-    
-    .template6 .expand-collapse {
-        display: none !important;
-    }
-    
-    .template6 .leaf-node-empty {
-        display: none !important;
-    }
-}
-
-/* ---------- ACCESSIBILITY ENHANCEMENTS ---------- */
-.template6 .expand-collapse:focus {
-    outline: 2px solid #3b82f6 !important;
-    outline-offset: 2px !important;
-}
-
-.template6 .t6-column-header:focus-within {
-    outline: 2px solid #22c55e !important;
-    outline-offset: 1px !important;
-}
-
-/* ---------- HIGH CONTRAST MODE ---------- */
-@media (prefers-contrast: high) {
-    .template6 .t6-row-header {
-        background: #000 !important;
-        color: #fff !important;
-        border: 2px solid #fff !important;
-    }
-    
-    .template6 .t6-column-header {
-        background: #fff !important;
-        color: #000 !important;
-        border: 2px solid #000 !important;
-    }
-    
-    .template6 .t6-value-cell {
-        background: #fff !important;
-        color: #000 !important;
-        border: 1px solid #000 !important;
-    }
-}
-
-/* ---------- ANIMATION FOR EXPAND/COLLAPSE ---------- */
-@keyframes expandCollapse {
-    0% { transform: scale(1) rotate(0deg); }
-    50% { transform: scale(1.2) rotate(180deg); }
-    100% { transform: scale(1) rotate(360deg); }
-}
-
-.template6 .expand-collapse.animating {
-    animation: expandCollapse 0.3s ease-in-out !important;
-}
-
-/* ---------- SPANNING HEADER VISUAL SEPARATION ---------- */
-.template6 .t6-column-header[colspan] {
-    position: relative !important;
-}
-
-.template6 .t6-column-header[colspan]::after {
-    content: "" !important;
-    position: absolute !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    height: 2px !important;
-    background: linear-gradient(90deg, transparent 0%, currentColor 50%, transparent 100%) !important;
-    opacity: 0.3 !important;
-}
-
-/* ---------- OPTIMIZED TABLE RENDERING ---------- */
-.template6 table {
-    will-change: scroll-position !important;
-    contain: layout !important;
-}
-
-.template6 .t6-value-cell {
-    contain: paint !important;
-}
-
-/* ---------- SCROLLBAR STYLING ---------- */
-.template6::-webkit-scrollbar {
-    width: 10px !important;
-    height: 10px !important;
-}
-
-.template6::-webkit-scrollbar-track {
-    background: #f8f9fa !important;
-    border-radius: 5px !important;
-}
-
-.template6::-webkit-scrollbar-thumb {
-    background: #d97706 !important;
-    border-radius: 5px !important;
-    border: 2px solid #f8f9fa !important;
-}
-
-.template6::-webkit-scrollbar-thumb:hover {
-    background: #b45309 !important;
-}
-
-.template6::-webkit-scrollbar-corner {
-    background: #f8f9fa !important;
-}
-
-/* COMPREHENSIVE FIX: Remove leaf node dots from column headers in all templates */
-[class*="template"] .column-header .leaf-node,
-[class*="template"] thead .leaf-node,
-[class*="template"] .t6-column-header .leaf-node-empty,
-[class*="template"] .t5-column-header .leaf-node-empty,
-[class*="template"] .t4-column-header .leaf-node-empty,
-[class*="template"] .t3-column-header .leaf-node-empty {
-    display: none !important;
-}
-
-[class*="template"] .column-header .leaf-node::after,
-[class*="template"] .column-header .leaf-node::before,
-[class*="template"] thead .leaf-node::after,
-[class*="template"] thead .leaf-node::before {
-    display: none !important;
-    content: none !important;
-}
-
-/* ---------- UNIVERSAL FIXES FOR ALL TEMPLATES ---------- */
-/* Apply the original fixes to all templates */
-
-/* FIX 1: Hide VALUE columns in all templates */
-[class*="template"] th[data-material-type="VALUE"],
-[class*="template"] th[data-measure="VALUE"],
-[class*="template"] .column-header[data-material-type="VALUE"],
-[class*="template"] td[data-raw-value="VALUE"] {
-    display: none !important;
-}
-
-/* FIX 2: Remove leaf node dots from column headers in all templates */
-[class*="template"] .column-header .leaf-node,
-[class*="template"] thead .leaf-node {
-    display: none !important;
-}
-
-[class*="template"] .column-header .leaf-node::after,
-[class*="template"] .column-header .leaf-node::before {
-    display: none !important;
-    content: none !important;
-}
-
-/* FIX 3: Ensure full labels are displayed in all templates */
-[class*="template"] .dimension-label {
-    white-space: nowrap !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-    max-width: none !important;
-    display: inline-block !important;
-    vertical-align: middle !important;
-    word-wrap: normal !important;
-    overflow-wrap: normal !important;
-    line-height: 1.4 !important;
-}
-
-/* FIX 4: Empty leaf nodes for all templates */
-[class*="template"] .leaf-node-empty {
-    display: inline-block !important;
-    width: 16px !important;
-    height: 16px !important;
-    margin-right: 8px !important;
-    border: 1px solid #6c757d !important;
-    border-radius: 2px !important;
-    background: white !important;
-    vertical-align: middle !important;
-    flex-shrink: 0 !important;
-    box-sizing: border-box !important;
-}
-
-/* Remove dots from leaf nodes in all templates */
-[class*="template"] .leaf-node::after,
-[class*="template"] .leaf-node::before {
-    display: none !important;
-    content: none !important;
-}
-
-/* Enhanced expand/collapse controls for all templates */
+/* Enhanced expand/collapse controls using blue theme */
 [class*="template"] .expand-collapse {
     display: inline-flex !important;
     justify-content: center !important;
     align-items: center !important;
-    width: 16px !important;
-    height: 16px !important;
+    width: 18px !important;
+    height: 18px !important;
     margin-right: 8px !important;
     vertical-align: middle !important;
-    border: 1px solid #6c757d !important;
-    border-radius: 2px !important;
-    background: white !important;
+    border: 1px solid var(--border-medium) !important;
+    border-radius: 3px !important;
+    background: var(--white) !important;
     cursor: pointer !important;
     font-size: 12px !important;
     font-weight: bold !important;
@@ -2045,9 +1684,9 @@
 }
 
 [class*="template"] .expand-collapse.collapsed {
-    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
-    border-color: #d97706 !important;
-    color: #92400e !important;
+    background: linear-gradient(135deg, var(--primary-bg-light) 0%, var(--primary-bg-medium) 100%) !important;
+    border-color: var(--primary-border) !important;
+    color: var(--primary-text) !important;
 }
 
 [class*="template"] .expand-collapse.collapsed::before {
@@ -2059,9 +1698,9 @@
 }
 
 [class*="template"] .expand-collapse.expanded {
-    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%) !important;
-    border-color: #16a34a !important;
-    color: #15803d !important;
+    background: linear-gradient(135deg, var(--secondary-bg-light) 0%, var(--secondary-bg-medium) 100%) !important;
+    border-color: var(--secondary-border) !important;
+    color: var(--secondary-text) !important;
 }
 
 [class*="template"] .expand-collapse.expanded::before {
@@ -2072,40 +1711,260 @@
     font-weight: bold !important;
 }
 
+[class*="template"] .expand-collapse:hover {
+    transform: scale(1.1) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Leaf node styling */
+[class*="template"] .leaf-node-empty {
+    display: inline-block !important;
+    width: 18px !important;
+    height: 18px !important;
+    margin-right: 8px !important;
+    border: 1px solid var(--border-medium) !important;
+    border-radius: 3px !important;
+    background: var(--white) !important;
+    vertical-align: middle !important;
+    flex-shrink: 0 !important;
+    box-sizing: border-box !important;
+}
+
+/* Dimension labels */
+[class*="template"] .dimension-label {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    display: inline-block !important;
+    vertical-align: middle !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    line-height: 1.3 !important;
+    max-width: calc(100% - 30px) !important;
+}
+
+[class*="template"] .column-label {
+    display: inline-block !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    font-weight: inherit !important;
+    color: inherit !important;
+    max-width: none !important;
+}
+
 /* Value cells consistent across all templates */
 [class*="template"] .value-cell {
     text-align: right !important;
     font-family: var(--font-sans, system-ui) !important;
-    background-color: white !important;
+    background-color: var(--value-bg-zero) !important;
     padding: 8px 12px !important;
     font-variant-numeric: tabular-nums !important;
     font-weight: 500 !important;
     transition: background-color 0.2s ease !important;
     min-width: fit-content !important;
     width: auto !important;
-    border: 1px solid #e5e7eb !important;
+    border: 1px solid var(--border-light) !important;
 }
 
-/* Enhanced value cell styling for non-zero values */
+/* Enhanced value cell styling for non-zero values using blue theme */
 [class*="template"] .value-cell.non-zero-value {
-    background: #f0fdf4 !important;
-    color: #15803d !important;
+    /* background: var(--value-bg-positive) !important; */
+    color: var(--value-text-positive) !important;
     font-weight: 600 !important;
+}
+
+[class*="template"] .value-cell.large-value {
+    /* background: var(--value-bg-large) !important; */
+    color: var(--value-text-large) !important;
+    font-weight: 700 !important;
 }
 
 /* Negative values styling */
 [class*="template"] .value-cell[data-raw-value^="-"] {
-    color: #dc2626 !important;
+    color: var(--value-text-negative) !important;
     font-weight: 700 !important;
-    background-color: white !important;
+    /* background: var(--value-bg-negative) !important; */
 }
 
-/* Responsive adjustments for all templates */
+[class*="template"] .value-cell.negative-value {
+    color: var(--value-text-negative) !important;
+    font-weight: 700 !important;
+    /* background: var(--value-bg-negative) !important; */
+}
+
+/* ===========================================
+   ROOT NODE STYLING - UNIFIED BLUE THEME
+   =========================================== */
+
+/* Root node headers in all templates */
+[class*="template"] .column-header.root-node,
+[class*="template"] [class*="-column-header"].root-node {
+    background: linear-gradient(135deg, var(--root-bg-light) 0%, var(--root-bg-medium) 100%) !important;
+    border: 2px solid var(--root-border) !important;
+    color: var(--root-text-dark) !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1.2px !important;
+}
+
+/* Root node labels */
+[class*="template"] .column-label.root-label {
+    font-weight: 800 !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Root node expand/collapse controls */
+[class*="template"] .root-node .expand-collapse {
+    background: linear-gradient(135deg, var(--root-text) 0%, var(--root-border) 100%) !important;
+    border: 1px solid var(--root-text) !important;
+    color: var(--white) !important;
+    font-weight: bold !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+}
+
+[class*="template"] .root-node .expand-collapse:hover {
+    transform: scale(1.1) !important;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Template 3 specific root node enhancements */
+.template3 .t3-column-header.root-node .expand-collapse {
+    display: inline-flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 20px !important;
+    height: 20px !important;
+    margin-right: 8px !important;
+    vertical-align: middle !important;
+    border: 2px solid var(--border-medium) !important;
+    border-radius: 4px !important;
+    background: var(--white) !important;
+    cursor: pointer !important;
+    font-size: 14px !important;
+    font-weight: bold !important;
+    transition: all 0.2s ease !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+    flex-shrink: 0 !important;
+    pointer-events: auto !important;
+    z-index: 10 !important;
+    position: relative !important;
+}
+
+.template3 .t3-column-header.root-node .expand-collapse.collapsed {
+    background: linear-gradient(135deg, var(--primary-bg-light) 0%, var(--primary-bg-medium) 100%) !important;
+    border-color: var(--primary-border) !important;
+    color: var(--primary-text) !important;
+}
+
+.template3 .t3-column-header.root-node .expand-collapse.expanded {
+    background: linear-gradient(135deg, var(--secondary-bg-light) 0%, var(--secondary-bg-medium) 100%) !important;
+    border-color: var(--secondary-border) !important;
+    color: var(--secondary-text) !important;
+}
+
+/* Root value cells */
+[class*="template"] .root-value-cell {
+    font-weight: 600 !important;
+    color: var(--root-text-dark) !important;
+}
+
+/* ===========================================
+   HIERARCHY CONTROLS FOR ALL TEMPLATES
+   =========================================== */
+[class*="template"] .hierarchy-cell,
+[class*="template"] [class*="hierarchy-cell"],
+[class*="template"] [class*="dimension-cell"] {
+    padding: 8px 12px !important;
+    vertical-align: middle !important;
+    border: 1px solid var(--border-light) !important;
+}
+
+/* Visual hierarchy levels */
+[class*="template"] [data-level="0"] {
+    font-weight: 700 !important;
+    background-color: var(--primary-bg-light) !important;
+}
+
+[class*="template"] [data-level="1"] {
+    font-weight: 600 !important;
+    padding-left: 20px !important;
+}
+
+[class*="template"] [data-level="2"] {
+    font-weight: 500 !important;
+    padding-left: 32px !important;
+}
+
+[class*="template"] [data-level="3"] {
+    font-weight: 400 !important;
+    padding-left: 44px !important;
+}
+
+[class*="template"] [data-level="4"] {
+    font-weight: 400 !important;
+    padding-left: 56px !important;
+    font-size: 0.9rem !important;
+}
+
+/* ===========================================
+   HOVER EFFECTS - UNIFIED BLUE THEME
+   =========================================== */
+[class*="template"] tr:hover {
+    background-color: rgba(102, 179, 255, 0.05) !important;
+}
+
+[class*="template"] tr:hover [class*="dimension-cell"],
+[class*="template"] tr:hover [class*="hierarchy-cell"] {
+    background-color: rgba(102, 179, 255, 0.08) !important;
+}
+
+[class*="template"] tr:hover .value-cell {
+    background-color: rgba(102, 179, 255, 0.03) !important;
+}
+
+[class*="template"] [class*="column-header"]:hover {
+    background-color: rgba(102, 179, 255, 0.15) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* ===========================================
+   STICKY POSITIONING FOR ALL TEMPLATES
+   =========================================== */
+[class*="template"] thead th {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 10 !important;
+    background-clip: padding-box !important;
+}
+
+[class*="template"] [class*="hierarchy-cell"],
+[class*="template"] [class*="dimension-cell"]:first-child {
+    position: sticky !important;
+    left: 0 !important;
+    z-index: 20 !important;
+    background: var(--white) !important;
+}
+
+[class*="template"] .corner-cell,
+[class*="template"] [class*="row-header"][rowspan] {
+    position: sticky !important;
+    left: 0 !important;
+    top: 0 !important;
+    z-index: 50 !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+}
+
+/* ===========================================
+   RESPONSIVE DESIGN FOR ALL TEMPLATES
+   =========================================== */
 @media (max-width: 1200px) {
     [class*="template"] .leaf-node-empty,
     [class*="template"] .expand-collapse {
-        width: 14px !important;
-        height: 14px !important;
+        width: 16px !important;
+        height: 16px !important;
         margin-right: 6px !important;
         font-size: 10px !important;
     }
@@ -2120,8 +1979,8 @@
 @media (max-width: 768px) {
     [class*="template"] .leaf-node-empty,
     [class*="template"] .expand-collapse {
-        width: 12px !important;
-        height: 12px !important;
+        width: 14px !important;
+        height: 14px !important;
         margin-right: 4px !important;
         font-size: 8px !important;
     }
@@ -2133,30 +1992,68 @@
     }
 }
 
-/* Sticky headers for all templates */
-[class*="template"] thead th {
-    position: sticky !important;
-    top: 0 !important;
-    z-index: 10 !important;
-    background-clip: padding-box !important;
+/* ===========================================
+   SCROLLBAR STYLING - UNIFIED THEME
+   =========================================== */
+[class*="template"]::-webkit-scrollbar {
+    width: 8px !important;
+    height: 8px !important;
 }
 
-/* Sticky first column for all templates */
-[class*="template"] [class*="hierarchy-cell"],
-[class*="template"] [class*="dimension-cell"]:first-child {
-    position: sticky !important;
-    left: 0 !important;
-    z-index: 20 !important;
-    background: white !important;
+[class*="template"]::-webkit-scrollbar-track {
+    background: var(--secondary-bg-light) !important;
+    border-radius: 4px !important;
 }
 
-/* Corner cells for all templates */
-[class*="template"] .corner-cell,
-[class*="template"] [class*="row-header"][rowspan] {
-    position: sticky !important;
-    left: 0 !important;
-    top: 0 !important;
-    z-index: 50 !important;
-    text-align: center !important;
-    vertical-align: middle !important;
+[class*="template"]::-webkit-scrollbar-thumb {
+    background: var(--primary-border) !important;
+    border-radius: 4px !important;
+    border: 1px solid var(--secondary-bg-light) !important;
+}
+
+[class*="template"]::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-text) !important;
+}
+
+[class*="template"]::-webkit-scrollbar-corner {
+    background: var(--secondary-bg-light) !important;
+}
+
+/* ===========================================
+   ACCESSIBILITY AND PRINT STYLES
+   =========================================== */
+[class*="template"] .expand-collapse:focus,
+[class*="template"] [class*="column-header"]:focus-within {
+    outline: 2px solid var(--primary-text) !important;
+    outline-offset: 2px !important;
+}
+
+@media print {
+    [class*="template"] {
+        box-shadow: none !important;
+        border: 1px solid #000 !important;
+    }
+    
+    [class*="template"] .expand-collapse {
+        display: none !important;
+    }
+    
+    [class*="template"] .leaf-node-empty {
+        display: none !important;
+    }
+}
+
+@media (prefers-contrast: high) {
+    [class*="template"] [class*="row-header"],
+    [class*="template"] [class*="column-header"] {
+        background: #000 !important;
+        color: #fff !important;
+        border: 2px solid #fff !important;
+    }
+    
+    [class*="template"] .value-cell {
+        background: #fff !important;
+        color: #000 !important;
+        border: 1px solid #000 !important;
+    }
 }
