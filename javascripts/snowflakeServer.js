@@ -7,8 +7,9 @@ const cors = require('cors');
 require('dotenv').config();
 const { executeSnowflakeQuery, connectToSnowflake, closeSnowflakeConnection } = require('./snowflakeClient');
 
+
 const app = express();
-const PORT = 3000;
+const PORT = process.argv[2] || 3000;
 
 app.use(cors()); 
 app.use(express.json());
@@ -29,7 +30,10 @@ async function getTableSchema(tableName) {
     }
     
     try {
-        const conn = await connectToSnowflake();
+        // Pass user config from global context (for SSO)
+        // This function must be refactored to accept userConfig if per-user SSO is needed
+        // For now, fallback to .env or default headers (for demo)
+        const conn = await connectToSnowflake(global._userSnowflakeConfig || {});
         const result = await new Promise((resolve, reject) => {
             conn.execute({
                 sqlText: `
@@ -123,10 +127,10 @@ app.post('/api/dimension-fields/:table', async (req, res) => {
 
     try {
         console.log(`⏳ Smart fetching fields [${sanitizedFields.join(', ')}] from ${tableName}...`);
-        
+
         // Validate fields against actual schema
         const validation = await validateAndFilterFields(tableName, sanitizedFields);
-        
+
         if (validation.validFields.length === 0) {
             return res.status(400).json({
                 error: 'None of the requested fields exist in the table',
@@ -135,41 +139,29 @@ app.post('/api/dimension-fields/:table', async (req, res) => {
                 invalidFields: validation.invalidFields
             });
         }
-        
+
         // Log any invalid fields but continue with valid ones
         if (validation.invalidFields.length > 0) {
             console.warn(`⚠️ Invalid fields in ${tableName}: ${validation.invalidFields.join(', ')}`);
             console.log(`✅ Using valid fields: ${validation.validFields.join(', ')}`);
         }
-        
+
         const conn = await connectToSnowflake();
-        
+
         // Build optimized SQL query
         const fieldsString = validation.validFields.join(', ');
         const distinct = options.distinct !== false ? 'DISTINCT' : '';
-        // const limit = Math.min(options.limit || 5000, 10000); 
-        const orderBy = validation.validFields[0]; // Order by first field
-        
-        // Add WHERE clause to filter out nulls for better performance
+        const orderBy = validation.validFields[0];
         const whereClause = `WHERE ${validation.validFields[0]} IS NOT NULL`;
-        
-        // const sqlQuery = `
-        //     SELECT ${distinct} ${fieldsString} 
-        //     FROM ONEMNS_PROD.DMT_BOM.${tableName} 
-        //     ${whereClause}
-        //     ORDER BY ${orderBy} 
-        //     LIMIT ${limit}
-        // `.trim();
-
         const sqlQuery = `
             SELECT ${distinct} ${fieldsString} 
             FROM ONEMNS_PROD.DMT_BOM.${tableName} 
             ${whereClause}
             ORDER BY ${orderBy}
         `.trim();
-        
+
         console.log(`📊 Executing optimized SQL: ${sqlQuery}`);
-        
+
         const stream = conn.execute({
             sqlText: sqlQuery,
             streamResult: true
@@ -181,22 +173,18 @@ app.post('/api/dimension-fields/:table', async (req, res) => {
         res.setHeader('X-Invalid-Fields', validation.invalidFields.join(','));
 
         let rowCount = 0;
-        
         stream.on('data', row => {
             res.write(JSON.stringify(row) + '\n');
             rowCount++;
-            
             if (rowCount % 1000 === 0) {
                 console.log(`📊 Streamed ${rowCount} optimized rows from ${tableName}...`);
             }
         });
-        
         stream.on('end', () => {
             console.log(`✅ Completed streaming ${rowCount} optimized rows from ${tableName}`);
             console.log(`📊 Performance: Selected ${validation.validFields.length}/${validation.availableColumns.length} columns (${Math.round(validation.validFields.length/validation.availableColumns.length*100)}% column reduction)`);
             res.end();
         });
-        
         stream.on('error', err => {
             console.error(`❌ Stream error for ${tableName}:`, err.message);
             if (!res.headersSent) {
@@ -205,10 +193,8 @@ app.post('/api/dimension-fields/:table', async (req, res) => {
                 res.end();
             }
         });
-        
     } catch (err) {
         console.error(`❌ Snowflake error for ${tableName}:`, err.message);
-        
         if (err.message.includes('Invalid field name')) {
             res.status(400).json({ error: err.message });
         } else if (err.message.includes('Could not retrieve schema')) {

@@ -34,7 +34,8 @@ class EnhancedFilterSystem {
       filterContent: document.getElementById('filterContent'),
       filterComponentsContainer: null,
       filteredRecordsCount: document.getElementById('filteredRecordsCount'),
-      applyFiltersBtn: null
+      applyFiltersBtn: null,
+      resetFiltersBtn: null
     };
     
     // Filter metadata for each dimension
@@ -732,13 +733,40 @@ class EnhancedFilterSystem {
       this.createFilterComponent(filterComponentsContainer, dimension);
     });
     
-    // Add Apply Filters button
-    const applyButtonContainer = document.createElement('div');
-    applyButtonContainer.className = 'apply-filters-container';
-    applyButtonContainer.style.display = 'flex';
-    applyButtonContainer.style.justifyContent = 'flex-end';
-    applyButtonContainer.style.marginTop = '20px';
+    // Add Apply Filters and Reset Filters buttons
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = 'filter-buttons-container';
+    buttonContainer.style.display = 'flex';
+    buttonContainer.style.justifyContent = 'flex-end';
+    buttonContainer.style.gap = '12px';
+    buttonContainer.style.marginTop = '20px';
     
+    // Reset Filters button
+    const resetButton = document.createElement('button');
+    resetButton.id = 'resetFiltersBtn';
+    resetButton.className = 'reset-filters-btn';
+    resetButton.innerHTML = '<i class="fas fa-undo"></i> Reset Filters';
+    resetButton.style.display = 'inline-flex';
+    resetButton.style.alignItems = 'center';
+    resetButton.style.gap = '8px';
+    resetButton.style.padding = '8px 16px';
+    resetButton.style.backgroundColor = '#6b7280';
+    resetButton.style.color = 'white';
+    resetButton.style.border = 'none';
+    resetButton.style.borderRadius = '0.25rem';
+    resetButton.style.fontWeight = '500';
+    resetButton.style.cursor = 'pointer';
+    resetButton.style.transition = 'background-color 0.2s';
+    
+    // Add hover effect
+    resetButton.addEventListener('mouseenter', () => {
+      resetButton.style.backgroundColor = '#4b5563';
+    });
+    resetButton.addEventListener('mouseleave', () => {
+      resetButton.style.backgroundColor = '#6b7280';
+    });
+    
+    // Apply Filters button
     const applyButton = document.createElement('button');
     applyButton.id = 'applyFiltersBtn';
     applyButton.className = 'apply-filters-btn';
@@ -753,11 +781,22 @@ class EnhancedFilterSystem {
     applyButton.style.borderRadius = '0.25rem';
     applyButton.style.fontWeight = '500';
     applyButton.style.cursor = 'pointer';
+    applyButton.style.transition = 'background-color 0.2s';
     
-    applyButtonContainer.appendChild(applyButton);
-    filterContent.appendChild(applyButtonContainer);
+    // Add hover effect
+    applyButton.addEventListener('mouseenter', () => {
+      applyButton.style.backgroundColor = '#1d4ed8';
+    });
+    applyButton.addEventListener('mouseleave', () => {
+      applyButton.style.backgroundColor = '#2563eb';
+    });
+    
+    buttonContainer.appendChild(applyButton);
+    buttonContainer.appendChild(resetButton);
+    filterContent.appendChild(buttonContainer);
     
     this.elements.applyFiltersBtn = applyButton;
+    this.elements.resetFiltersBtn = resetButton;
     this.createDataVolumeIndicator(filterContent);
   }
 
@@ -1080,11 +1119,284 @@ class EnhancedFilterSystem {
    */
   setupApplyButton() {
     const applyBtn = this.elements.applyFiltersBtn;
+    const resetBtn = this.elements.resetFiltersBtn;
+    
     if (applyBtn) {
       applyBtn.addEventListener('click', () => {
         this.applyAllFilters();
       });
     }
+    
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        this.resetAllFilters();
+      });
+    }
+  }
+
+
+  /**
+   * Reset all filters to zero selection (no items selected)
+   */
+  resetAllFilters() {
+    console.log('🔄 Resetting all filters to zero selection...');
+    
+    // Clear all filter selections (making everything excluded/unchecked)
+    Object.values(this.filterMeta).forEach(dimension => {
+        if (dimension.hierarchical) {
+            // For hierarchical filters, clear all checkboxes
+            const treeContainer = document.getElementById(`${dimension.id}TreeContainer`);
+            if (treeContainer) {
+                const checkboxes = treeContainer.querySelectorAll('input[type="checkbox"]');
+                checkboxes.forEach(checkbox => {
+                    checkbox.checked = false;
+                    
+                    // Add all nodes to excluded set
+                    const checkboxId = checkbox.id;
+                    if (checkboxId.startsWith(`${dimension.id}_node_`)) {
+                        const nodeId = checkboxId.replace(`${dimension.id}_node_`, '');
+                        this.filterSelections[dimension.id].add(nodeId);
+                    }
+                });
+            }
+            
+            // Also collapse all expanded nodes for a clean slate
+            this.expandedFilterNodes[dimension.id] = {};
+            this.collapseAllHierarchicalNodes(dimension);
+            
+        } else {
+            // For simple filters, clear all checkboxes
+            const checkboxList = document.getElementById(`${dimension.id}CheckboxList`);
+            if (checkboxList) {
+                const checkboxes = checkboxList.querySelectorAll('input[type="checkbox"]');
+                checkboxes.forEach(checkbox => {
+                    checkbox.checked = false;
+                    this.filterSelections[dimension.id].add(checkbox.value);
+                });
+            }
+        }
+        
+        // Clear search inputs
+        const searchInput = document.getElementById(`${dimension.id}Search`);
+        if (searchInput) {
+            searchInput.value = '';
+            this.handleFilterSearch(dimension, ''); // Clear search filter
+        }
+    });
+    
+    // Update all selection counts
+    this.updateAllSelectionCounts();
+    
+    // Clear any existing data and show ready state
+    this.clearDataAndShowResetState();
+    
+    console.log('✅ All filters reset to zero selection');
+  }
+
+
+  /**
+   * Clear only the largest data structures from memory to free up RAM
+   * Preserves other useful state data and only targets FACT_BOM, DIM_GMID_DISPLAY, and gmid_display hierarchy
+   */
+  clearLargeDataStructures() {
+      if (!this.state) return;
+      
+      console.log('🧹 Starting selective memory cleanup - clearing only large data structures...');
+      
+      // Track memory being cleared for logging
+      const memoryCleared = {
+          factBom: 0,
+          gmidDisplay: 0,
+          gmidHierarchy: 0
+      };
+      
+      try {
+          // Clear FACT_BOM data (typically the largest dataset)
+          if (this.state.factData && Array.isArray(this.state.factData)) {
+              memoryCleared.factBom = this.state.factData.length;
+              this.state.factData = [];  // Clear contents but keep the array reference
+              console.log(`   📊 Cleared ${memoryCleared.factBom.toLocaleString()} FACT_BOM records`);
+          }
+          
+          if (this.state.filteredData && Array.isArray(this.state.filteredData)) {
+              this.state.filteredData = [];  // Clear contents but keep the array reference
+          }
+          
+          // Clear only DIM_GMID_DISPLAY from state.dimensions (preserve other dimensions)
+          if (this.state.dimensions) {
+              if (this.state.dimensions.gmid_display && Array.isArray(this.state.dimensions.gmid_display)) {
+                  memoryCleared.gmidDisplay = this.state.dimensions.gmid_display.length;
+                  this.state.dimensions.gmid_display = [];  // Clear contents but keep structure
+                  console.log(`   📋 Cleared ${memoryCleared.gmidDisplay.toLocaleString()} gmid_display records`);
+              }
+              
+              // Also clear alternative key if it exists
+              if (this.state.dimensions.DIM_GMID_DISPLAY && Array.isArray(this.state.dimensions.DIM_GMID_DISPLAY)) {
+                  if (!memoryCleared.gmidDisplay) {
+                      memoryCleared.gmidDisplay = this.state.dimensions.DIM_GMID_DISPLAY.length;
+                  }
+                  this.state.dimensions.DIM_GMID_DISPLAY = [];  // Clear contents but keep structure
+                  console.log(`   📋 Cleared DIM_GMID_DISPLAY records`);
+              }
+          }
+          
+          // Clear only gmid_display hierarchy (preserve other hierarchies)
+          if (this.state.hierarchies && this.state.hierarchies.gmid_display) {
+              // Count nodes in hierarchy before clearing
+              if (this.state.hierarchies.gmid_display.nodesMap) {
+                  memoryCleared.gmidHierarchy = Object.keys(this.state.hierarchies.gmid_display.nodesMap).length;
+              }
+              
+              // Set to empty structure instead of deleting, preserving the reference
+              this.state.hierarchies.gmid_display = {
+                  root: null,
+                  nodesMap: {},
+                  flatData: []
+              };
+              console.log(`   🌳 Cleared ${memoryCleared.gmidHierarchy.toLocaleString()} GMID hierarchy nodes`);
+          }
+          
+          // Clear any GMID-related cached data (this is safe to clear completely)
+          if (this.gmidCache) {
+              this.gmidCache.clear();
+              this.gmidCacheTimestamps.clear();
+              console.log('   🗄️ Cleared GMID data cache');
+          }
+          
+          // Clear only GMID-related entries from backup hierarchies (preserve others)
+          if (this.state._originalHierarchies && this.state._originalHierarchies.gmid_display) {
+              // Set to empty structure instead of deleting
+              this.state._originalHierarchies.gmid_display = {
+                  root: null,
+                  nodesMap: {},
+                  flatData: []
+              };
+              console.log('   🔄 Cleared GMID hierarchy backup');
+          }
+          
+          // Clear only GMID dimension filters (preserve other dimension filters)
+          if (this.state.dimensionFilters && this.state.dimensionFilters.gmid_display) {
+              delete this.state.dimensionFilters.gmid_display;
+              console.log('   🔍 Cleared GMID dimension filters');
+          }
+          
+          // Reset only specific GMID-related flags (preserve other state flags)
+          this.isGmidPlaceholder = false;
+          this.state.factDataLoaded = false;
+          
+          // Only reset empty filter state if it was related to GMID
+          if (this.state._emptyFilterDimension === 'gmidDisplay') {
+              this.state._emptyFilterResult = false;
+              this.state._emptyFilterDimension = null;
+          }
+          
+          // Force garbage collection hint (modern browsers may ignore this)
+          if (window.gc && typeof window.gc === 'function') {
+              window.gc();
+          }
+          
+          // Calculate total estimated memory freed
+          const totalRecords = memoryCleared.factBom + memoryCleared.gmidDisplay + memoryCleared.gmidHierarchy;
+          
+          console.log('✅ Selective memory cleanup completed:');
+          console.log(`   📊 FACT_BOM records: ${memoryCleared.factBom.toLocaleString()}`);
+          console.log(`   📋 GMID_DISPLAY records: ${memoryCleared.gmidDisplay.toLocaleString()}`);
+          console.log(`   🌳 GMID hierarchy nodes: ${memoryCleared.gmidHierarchy.toLocaleString()}`);
+          console.log(`   🎯 Total items cleared: ${totalRecords.toLocaleString()}`);
+          console.log('   ✅ Other state data preserved (dimensions, hierarchies, configurations, etc.)');
+          
+          // Update GMID filter state to reflect cleared data
+          this.setGmidFilterState('disabled', 'GMID data cleared - select ROOT_GMID to reload');
+          
+      } catch (error) {
+          console.error('❌ Error during selective memory cleanup:', error);
+          // Continue with reset even if cleanup partially fails
+      }
+  }
+
+
+  /**
+   * Collapse all nodes in a hierarchical filter
+   * @param {Object} dimension - Dimension configuration
+   */
+  collapseAllHierarchicalNodes(dimension) {
+      const treeContainer = document.getElementById(`${dimension.id}TreeContainer`);
+      if (!treeContainer) return;
+      
+      // Find all expand/collapse controls and collapse them
+      const expandControls = treeContainer.querySelectorAll('.expand-collapse.expanded');
+      expandControls.forEach(control => {
+          // control.innerHTML = '▶';
+          control.classList.remove('expanded');
+          control.classList.add('collapsed');
+          
+          // Hide children container
+          const nodeContainer = control.closest('.filter-tree-node');
+          const childrenContainer = nodeContainer?.querySelector('.filter-tree-children');
+          if (childrenContainer) {
+              childrenContainer.style.display = 'none';
+          }
+      });
+      
+      // Reset expanded states
+      this.expandedFilterNodes[dimension.id] = {};
+  }
+
+
+  /**
+   * Clear current data and show reset state in UI
+   */
+  clearDataAndShowResetState() {
+    // Clear large data structures from memory first
+    this.clearLargeDataStructures();
+    
+    // Clear any remaining small data references
+    if (this.state) {
+        this.state.factData = [];
+        this.state.filteredData = [];
+        this.state.factDataLoaded = false;
+    }
+    
+    // Update data volume indicator
+    const dataText = document.getElementById('dataVolumeText');
+    if (dataText) {
+        dataText.innerHTML = '<i class="fas fa-filter"></i> All filters reset - ready to apply new selections';
+    }
+    
+    // Update progress bar
+    const progressBar = document.querySelector('.progress-bar');
+    if (progressBar) {
+        progressBar.style.width = '0%';
+        progressBar.style.backgroundColor = '#e5e7eb';
+    }
+    
+    // Clear filtered records count
+    this.updateFilteredRecordsCount(0);
+    
+    // Clear pivot table
+    const pivotTableBody = document.getElementById('pivotTableBody');
+    if (pivotTableBody) {
+        pivotTableBody.innerHTML = `
+            <tr>
+                <td colspan="100%" style="text-align: center; padding: 20px; color: #6b7280;">
+                    <i class="fas fa-filter" style="font-size: 2rem; margin-bottom: 10px;"></i><br>
+                    Filters have been reset and large datasets cleared from memory.<br>
+                    <small style="color: #9ca3af;">Select filter criteria and click "Apply Filters" to load fresh data.</small>
+                </td>
+            </tr>
+        `;
+    }
+    
+    // Clear any existing validation messages
+    const existingMessage = document.querySelector('.filter-validation-message');
+    if (existingMessage) {
+        existingMessage.remove();
+    }
+    
+    // Clear GMID filter UI since data has been cleared
+    this.clearGmidFilterUI();
+    
+    console.log('🔄 UI reset completed - system ready for fresh data loading');
   }
   
 
@@ -1527,7 +1839,7 @@ class EnhancedFilterSystem {
     if (hasChildren) {
       expandControl = document.createElement('span');
       expandControl.className = `expand-collapse ${this.expandedFilterNodes[dimension.id][node.id] ? 'expanded' : 'collapsed'}`;
-      expandControl.innerHTML = this.expandedFilterNodes[dimension.id][node.id] ? '▼' : '▶';
+      // expandControl.innerHTML = this.expandedFilterNodes[dimension.id][node.id] ? '▼' : '▶';
       expandControl.style.cursor = 'pointer';
       expandControl.style.marginRight = '4px';
       
@@ -1537,7 +1849,7 @@ class EnhancedFilterSystem {
     } else {
       expandControl = document.createElement('span');
       expandControl.className = 'leaf-node';
-      expandControl.innerHTML = '&nbsp;&nbsp;';
+      // expandControl.innerHTML = '&nbsp;&nbsp;';
       expandControl.style.marginRight = '4px';
     }
     
@@ -1601,7 +1913,14 @@ class EnhancedFilterSystem {
     // Update UI
     const expandControl = nodeContainer.querySelector('.expand-collapse');
     if (expandControl) {
-      expandControl.innerHTML = expanded ? '▼' : '▶';
+      // expandControl.innerHTML = expanded ? '▼' : '▶';
+      if (expanded) {
+        expandControl.classList.remove('collapsed');
+        expandControl.classList.add('expanded');
+      } else {
+        expandControl.classList.remove('expanded');
+        expandControl.classList.add('collapsed');
+      }
     }
     
     // Show/hide children
@@ -3727,1185 +4046,6 @@ class EnhancedFilterSystem {
 
 
   /**
-   * Rebuild filtered hierarchies based on current selections
-   */
-  // rebuildFilteredHierarchies() {
-  //   console.log("⏳ Status: Rebuilding hierarchies based on filter selections...");
-    
-  //   // Rebuild each hierarchy
-  //   this.rebuildGmidHierarchyWithFilters();     
-  //   this.rebuildItemCostTypeHierarchy();        
-  //   this.rebuildMaterialTypeHierarchy();        
-  //   this.rebuildYearHierarchy();                
-  //   this.rebuildMcHierarchy();                  
-  //   this.rebuildLegalEntityHierarchy();         
-  //   this.rebuildCostElementHierarchy();         
-  //   this.rebuildSmartcodeHierarchy();
-  // }
-
-
-  /**
-   * Rebuild GMID display hierarchy based on filters
-   */
-  // rebuildGmidHierarchyWithFilters() {
-  //     console.log("⏳ Status: Rebuilding GMID display hierarchy based on filters...");
-      
-  //     const rootGmidFilter = this.filterSelections.rootGmid;
-      
-  //     // Get all available ROOT_GMIDs
-  //     const allRootGmids = [];
-  //     if (this.state.dimensions && this.state.dimensions.gmid_display) {
-  //         this.state.dimensions.gmid_display.forEach(item => {
-  //             if (item.ROOT_GMID && !allRootGmids.includes(item.ROOT_GMID)) {
-  //                 allRootGmids.push(item.ROOT_GMID);
-  //             }
-  //         });
-  //     }
-      
-  //     // console.log(`✅ Status: Found ${allRootGmids.length} total ROOT_GMIDs`);
-      
-  //     // Check if ALL items are selected (no exclusions)
-  //     const allItemsSelected = !rootGmidFilter || rootGmidFilter.size === 0;
-      
-  //     if (allItemsSelected) {
-  //         // console.log("✅ Status: ALL ROOT_GMIDs selected - restoring/rebuilding complete hierarchy");
-          
-  //         // Always rebuild from original data when all are selected to ensure proper structure
-  //         const originalDimData = this.state.dimensions?.gmid_display;
-  //         if (originalDimData && originalDimData.length > 0) {
-  //             console.log(`📊 Rebuilding complete hierarchy from ${originalDimData.length} dimension records`);
-  //             const completeHierarchy = this.buildFilteredGmidDisplayHierarchy(originalDimData, null);
-              
-  //             // Install the complete hierarchy
-  //             this.state.hierarchies.gmid_display = completeHierarchy;
-              
-  //             // Update backup
-  //             if (!this.state._originalHierarchies) {
-  //                 this.state._originalHierarchies = {};
-  //             }
-  //             this.state._originalHierarchies.gmid_display = {
-  //                 root: { ...completeHierarchy.root },
-  //                 nodesMap: { ...completeHierarchy.nodesMap },
-  //                 flatData: [...completeHierarchy.flatData]
-  //             };
-              
-  //             const nodeCount = Object.keys(completeHierarchy.nodesMap).length;
-  //             const rootChildren = completeHierarchy.root.children ? completeHierarchy.root.children.length : 0;
-              
-  //             console.log(`✅ Status: Complete GMID hierarchy: ${nodeCount} nodes, ROOT has ${rootChildren} children`);
-  //             return false; // No rebuilding needed - we just did it
-  //         }
-  //     }
-      
-  //     // Continue with filtered rebuilding for partial selections...
-  //     // (rest of the method unchanged)
-  //     const selectedRootGmids = allRootGmids.filter(gmid => !rootGmidFilter.has(gmid));
-      
-  //     if (selectedRootGmids.length === 0) {
-  //         this.createEmptyHierarchy(this.filterMeta.rootGmid);
-  //         this.state._emptyFilterResult = true;
-  //         return true;
-  //     }
-      
-  //     const originalDimData = this.state.dimensions.gmid_display;
-  //     const filteredDimData = originalDimData.filter(item => 
-  //         item.ROOT_GMID && selectedRootGmids.includes(item.ROOT_GMID)
-  //     );
-      
-  //     const filteredHierarchy = this.buildFilteredGmidDisplayHierarchy(filteredDimData, selectedRootGmids);
-  //     this.state.hierarchies.gmid_display = filteredHierarchy;
-      
-  //     console.log(`✅ Status: Rebuilt filtered GMID hierarchy with ${selectedRootGmids.length} ROOT_GMIDs`);
-  //     return true;
-  // }
-
-
-  // Method to rebuild GMID hierarchy from original data
-  // rebuildGmidHierarchyFromOriginalData() {
-  //     console.log("🔧 Rebuilding GMID hierarchy from original dimension data...");
-      
-  //     const originalDimData = this.state.dimensions?.gmid_display;
-  //     if (!originalDimData || originalDimData.length === 0) {
-  //         // console.error("❌ No original GMID dimension data available");
-  //         return false;
-  //     }
-      
-  //     // console.log(`📊 Rebuilding from ${originalDimData.length} dimension records`);
-      
-  //     // Rebuild the complete hierarchy using all data
-  //     const completeHierarchy = this.buildFilteredGmidDisplayHierarchy(originalDimData, null);
-      
-  //     // Store as both current and backup
-  //     this.state.hierarchies.gmid_display = completeHierarchy;
-      
-  //     if (!this.state._originalHierarchies) {
-  //         this.state._originalHierarchies = {};
-  //     }
-  //     this.state._originalHierarchies.gmid_display = {
-  //         root: completeHierarchy.root,
-  //         nodesMap: { ...completeHierarchy.nodesMap },
-  //         flatData: [...completeHierarchy.flatData]
-  //     };
-      
-  //     const nodeCount = Object.keys(completeHierarchy.nodesMap).length;
-  //     // console.log(`✅ Rebuilt complete GMID hierarchy with ${nodeCount} nodes`);
-      
-  //     // Verify ROOT node has children
-  //     const rootNode = completeHierarchy.nodesMap['ROOT'];
-  //     if (rootNode && rootNode.children) {
-  //         // console.log(`✅ ROOT node now has ${rootNode.children.length} children`);
-  //         return true;
-  //     } else {
-  //         // console.error("❌ ROOT node still has no children after rebuild");
-  //         return false;
-  //     }
-  // }
-
-
-  /**
-   * Rebuild ITEM_COST_TYPE hierarchy based on filter selections
-   */
-  // rebuildItemCostTypeHierarchy() {
-  //   console.log("⏳ Status: Rebuilding ITEM_COST_TYPE hierarchy based on filters...");
-    
-  //   // Get the filter selections for item cost type
-  //   const itemCostTypeFilter = this.filterSelections.itemCostType;
-    
-  //   // Get all available item cost types
-  //   const allItemCostTypes = [];
-  //   if (this.state.dimensions && this.state.dimensions.item_cost_type) {
-  //     this.state.dimensions.item_cost_type.forEach(item => {
-  //       if (item.ITEM_COST_TYPE && !allItemCostTypes.includes(item.ITEM_COST_TYPE)) {
-  //         allItemCostTypes.push(item.ITEM_COST_TYPE);
-  //       }
-  //     });
-  //   }
-    
-  //   // Determine selected item cost types (empty set means all selected)
-  //   let selectedItemCostTypes = [];
-  //   if (itemCostTypeFilter && itemCostTypeFilter.size > 0) {
-  //     // We store excluded values, so we need to invert the selection
-  //     selectedItemCostTypes = allItemCostTypes.filter(type => !itemCostTypeFilter.has(type));
-  //   } else {
-  //     // All types are selected
-  //     selectedItemCostTypes = [...allItemCostTypes];
-  //   }
-    
-  //   console.log(`✅ Status: Selected ITEM_COST_TYPEs: ${selectedItemCostTypes.length} of ${allItemCostTypes.length}`);
-    
-  //   // Only rebuild if we're filtering (otherwise use the original hierarchy)
-  //   if (selectedItemCostTypes.length < allItemCostTypes.length) {
-  //     // Get the original dimension data
-  //     const originalDimData = this.state.dimensions.item_cost_type;
-      
-  //     // Filter dimension data to only include selected types
-  //     const filteredDimData = originalDimData.filter(item => 
-  //       item.ITEM_COST_TYPE && selectedItemCostTypes.includes(item.ITEM_COST_TYPE)
-  //     );
-      
-  //     // Build the filtered hierarchy
-  //     const filteredHierarchy = this.buildFilteredItemCostTypeHierarchy(filteredDimData);
-      
-  //     // Store in state
-  //     this.state.hierarchies.item_cost_type = filteredHierarchy;
-      
-  //     // console.log(`✅ Status: Rebuilt ITEM_COST_TYPE hierarchy with ${selectedItemCostTypes.length} types`);
-  //     return true;
-  //   } else {
-  //     // console.log("✅ Status: All ITEM_COST_TYPEs selected, no need to rebuild hierarchy");
-      
-  //     // Restore original hierarchy if we previously filtered
-  //     if (this.state._originalHierarchies && this.state._originalHierarchies.item_cost_type) {
-  //       this.state.hierarchies.item_cost_type = this.state._originalHierarchies.item_cost_type;
-  //       // console.log("✅ Status: Restored original ITEM_COST_TYPE hierarchy");
-  //     }
-      
-  //     return false;
-  //   }
-  // }
-
-
-  /**
-   * Rebuild MATERIAL_TYPE hierarchy based on filter selections
-   */
-  // rebuildMaterialTypeHierarchy() {
-  //   console.log("⏳ Status: Rebuilding MATERIAL_TYPE hierarchy based on filters...");
-    
-  //   // Get the filter selections for material type
-  //   const materialTypeFilter = this.filterSelections.materialType;
-    
-  //   // Get all available material types
-  //   const allMaterialTypes = [];
-  //   if (this.state.dimensions && this.state.dimensions.material_type) {
-  //     this.state.dimensions.material_type.forEach(item => {
-  //       if (item.MATERIAL_TYPE && !allMaterialTypes.includes(item.MATERIAL_TYPE)) {
-  //         allMaterialTypes.push(item.MATERIAL_TYPE);
-  //       }
-  //     });
-  //   }
-    
-  //   // Determine selected material types (empty set means all selected)
-  //   let selectedMaterialTypes = [];
-  //   if (materialTypeFilter && materialTypeFilter.size > 0) {
-  //     // We store excluded values, so we need to invert the selection
-  //     selectedMaterialTypes = allMaterialTypes.filter(type => !materialTypeFilter.has(type));
-  //   } else {
-  //     // All types are selected
-  //     selectedMaterialTypes = [...allMaterialTypes];
-  //   }
-    
-  //   // console.log(`✅ Status: Selected MATERIAL_TYPEs: ${selectedMaterialTypes.length} of ${allMaterialTypes.length}`);
-    
-  //   // Only rebuild if we're filtering (otherwise use the original hierarchy)
-  //   if (selectedMaterialTypes.length < allMaterialTypes.length) {
-  //     // Get the original dimension data
-  //     const originalDimData = this.state.dimensions.material_type;
-      
-  //     // Filter dimension data to only include selected types
-  //     const filteredDimData = originalDimData.filter(item => 
-  //       item.MATERIAL_TYPE && selectedMaterialTypes.includes(item.MATERIAL_TYPE)
-  //     );
-      
-  //     // Build the filtered hierarchy
-  //     const filteredHierarchy = this.buildFilteredMaterialTypeHierarchy(filteredDimData);
-      
-  //     // Store in state
-  //     this.state.hierarchies.material_type = filteredHierarchy;
-      
-  //     // console.log(`✅ Status: Rebuilt MATERIAL_TYPE hierarchy with ${selectedMaterialTypes.length} types`);
-  //     return true;
-  //   } else {
-  //     // console.log("✅ Status: All MATERIAL_TYPEs selected, no need to rebuild hierarchy");
-      
-  //     // Restore original hierarchy if we previously filtered
-  //     if (this.state._originalHierarchies && this.state._originalHierarchies.material_type) {
-  //       this.state.hierarchies.material_type = this.state._originalHierarchies.material_type;
-  //       // console.log("✅ Status: Restored original MATERIAL_TYPE hierarchy");
-  //     }
-      
-  //     return false;
-  //   }
-  // }
-
-
-  /**
-   * Rebuild YEAR hierarchy based on filter selections
-   */
-  // rebuildYearHierarchy() {
-  //   console.log("⏳ Status: Rebuilding YEAR hierarchy based on filters...");
-    
-  //   // Get the filter selections for business year
-  //   const yearFilter = this.filterSelections.businessYear;
-    
-  //   // Get all available years
-  //   const allYears = [];
-  //   if (this.state.dimensions && this.state.dimensions.year) {
-  //     this.state.dimensions.year.forEach(item => {
-  //       if (item.YEAR && !allYears.includes(item.YEAR.toString())) {
-  //         allYears.push(item.YEAR.toString());
-  //       }
-  //     });
-  //   }
-    
-  //   // Determine selected years (empty set means all selected)
-  //   let selectedYears = [];
-  //   if (yearFilter && yearFilter.size > 0) {
-  //     // We store excluded values, so we need to invert the selection
-  //     selectedYears = allYears.filter(year => !yearFilter.has(year));
-  //   } else {
-  //     // All years are selected
-  //     selectedYears = [...allYears];
-  //   }
-    
-  //   console.log(`✅ Status: Selected YEARS: ${selectedYears.length} of ${allYears.length}`);
-    
-  //   // Only rebuild if we're filtering (otherwise use the original hierarchy)
-  //   if (selectedYears.length < allYears.length) {
-  //     // Get the original dimension data
-  //     const originalDimData = this.state.dimensions.year;
-      
-  //     // Filter dimension data to only include selected years
-  //     const filteredDimData = originalDimData.filter(item => 
-  //       item.YEAR && selectedYears.includes(item.YEAR.toString())
-  //     );
-      
-  //     // Build the filtered hierarchy
-  //     const filteredHierarchy = this.buildFilteredYearHierarchy(filteredDimData);
-      
-  //     // Store in state
-  //     this.state.hierarchies.year = filteredHierarchy;
-      
-  //     // console.log(`✅ Status: Rebuilt YEAR hierarchy with ${selectedYears.length} years`);
-  //     return true;
-  //   } else {
-  //     // console.log("✅ Status: All YEARs selected, no need to rebuild hierarchy");
-      
-  //     // Restore original hierarchy if we previously filtered
-  //     if (this.state._originalHierarchies && this.state._originalHierarchies.year) {
-  //       this.state.hierarchies.year = this.state._originalHierarchies.year;
-  //       // console.log("✅ Status: Restored original YEAR hierarchy");
-  //     }
-      
-  //     return false;
-  //   }
-  // }
-
-
-  /**
-   * Rebuild MC hierarchy based on filter selections
-   */
-  // rebuildMcHierarchy() {
-  //   console.log("⏳ Status: Rebuilding MC hierarchy based on filters...");
-    
-  //   // Get the filter selections for MC
-  //   const mcFilter = this.filterSelections.managementCentre;
-    
-  //   // Get all available MCs
-  //   const allMCs = [];
-  //   if (this.state.dimensions && this.state.dimensions.mc) {
-  //     this.state.dimensions.mc.forEach(item => {
-  //       if (item.MC && !allMCs.includes(item.MC)) {
-  //         allMCs.push(item.MC);
-  //       }
-  //     });
-  //   }
-    
-  //   // Determine selected MCs (empty set means all selected)
-  //   let selectedMCs = [];
-  //   if (mcFilter && mcFilter.size > 0) {
-  //     // We store excluded values, so we need to invert the selection
-  //     selectedMCs = allMCs.filter(mc => !mcFilter.has(mc));
-  //   } else {
-  //     // All MCs are selected
-  //     selectedMCs = [...allMCs];
-  //   }
-    
-  //   console.log(`✅ Status: Selected MCs: ${selectedMCs.length} of ${allMCs.length}`);
-    
-  //   // Only rebuild if we're filtering (otherwise use the original hierarchy)
-  //   if (selectedMCs.length < allMCs.length) {
-  //     // Get the original dimension data
-  //     const originalDimData = this.state.dimensions.mc;
-      
-  //     // Filter dimension data to only include selected MCs
-  //     const filteredDimData = originalDimData.filter(item => 
-  //       item.MC && selectedMCs.includes(item.MC)
-  //     );
-      
-  //     // Build the filtered hierarchy
-  //     const filteredHierarchy = this.buildFilteredMcHierarchy(filteredDimData);
-      
-  //     // Store in state
-  //     this.state.hierarchies.mc = filteredHierarchy;
-        
-  //     // console.log(`✅ Status: Rebuilt MC hierarchy with ${selectedMCs.length} MCs`);
-  //     return true;
-  //   } else {
-  //     // console.log("✅ Status: All MCs selected, no need to rebuild hierarchy");
-      
-  //     // Restore original hierarchy if we previously filtered
-  //     if (this.state._originalHierarchies && this.state._originalHierarchies.mc) {
-  //       this.state.hierarchies.mc = this.state._originalHierarchies.mc;
-  //       // console.log("✅ Status: Restored original MC hierarchy");
-  //     }
-      
-  //     return false;
-  //   }
-  // }
-  
-
-  /**
-   * Builds a filtered GMID display hierarchy based on selected ROOT_GMIDs
-   * @param {Array} data - The GMID display dimension data
-   * @param {Array} selectedRootGmids - Array of selected ROOT_GMID values
-   * @returns {Object} - Hierarchy object with root, nodesMap and original data
-   */
-  // buildFilteredGmidDisplayHierarchy(data, selectedRootGmids = null) {
-  //     console.log(`⏳ Status: Building GMID display hierarchy${selectedRootGmids ? ' with ROOT_GMID filtering' : ''}...`);
-      
-  //     // Check if we should apply ROOT_GMID filtering
-  //     const applyRootGmidFilter = selectedRootGmids && 
-  //                               Array.isArray(selectedRootGmids) && 
-  //                               selectedRootGmids.length > 0;
-      
-  //     if (applyRootGmidFilter) {
-  //         // console.log(`✅ Status: Filtering GMID hierarchy to include only ${selectedRootGmids.length} selected ROOT_GMIDs`);
-  //         data = data.filter(item => item.ROOT_GMID && selectedRootGmids.includes(item.ROOT_GMID));
-  //         console.log(`✅ Status: Filtered to ${data.length} GMID dimension records`);
-  //     }
-      
-  //     // Create root node
-  //     const rootNode = { 
-  //         id: 'ROOT', 
-  //         label: 'All GMIDs', 
-  //         children: [], 
-  //         level: 0, 
-  //         path: ['ROOT'],
-  //         expanded: true,
-  //         isLeaf: false,
-  //         hasChildren: false
-  //     };
-      
-  //     // Map to store all nodes by their ID for quick lookup
-  //     const nodesMap = { 'ROOT': rootNode };
-      
-  //     // Debug: Keep track of how many nodes we're creating at each level
-  //     const levelCounts = { 0: 1 }; // Root node
-      
-  //     // Process each row in the data
-  //     data.forEach((item, index) => {
-  //         if (!item) {
-  //             console.warn(`Skipping null item at index ${index}`);
-  //             return;
-  //         }
-          
-  //         // Handle missing required fields
-  //         if (!item.PATH_GMID || !item.DISPLAY) {
-  //             return;
-  //         }
-          
-  //         // Split the PATH_GMID and DISPLAY columns by their respective delimiters
-  //         const pathSegments = item.PATH_GMID.split('/');
-  //         const displaySegments = item.DISPLAY.split('//');
-          
-  //         // Validate that we have matching segments
-  //         if (pathSegments.length !== displaySegments.length) {
-  //             return;
-  //         }
-          
-  //         // CRITICAL FIX: Determine the GMID for this row, handling null COMPONENT_GMID
-  //         let gmid;
-  //         if (pathSegments[pathSegments.length - 1] === '#') {
-  //             // When leaf segment is '#', use the entire PATH_GMID as factId
-  //             // This allows matching records with null COMPONENT_GMID but matching PATH_GMID
-  //             gmid = item.PATH_GMID;
-  //         } else {
-  //             // Otherwise, use the COMPONENT_GMID value (could be null)
-  //             gmid = item.COMPONENT_GMID || item.PATH_GMID; // Fallback to PATH_GMID if COMPONENT_GMID is null
-  //         }
-          
-  //         // Track the maximum level
-  //         const maxLevel = pathSegments.length;
-          
-  //         let currentNode = rootNode;
-  //         let currentPath = ['ROOT'];
-          
-  //         // Process each level
-  //         for (let i = 0; i < maxLevel; i++) {
-  //             const pathSegment = pathSegments[i];
-  //             const displaySegment = displaySegments[i];
-              
-  //             // Skip if segment is empty
-  //             if (!displaySegment || displaySegment.trim() === '') {
-  //                 continue;
-  //             }
-              
-  //             // Create a unique node ID for this segment that's safe for DOM
-  //             const safeId = pathSegment.replace(/[^a-zA-Z0-9]/g, '_');
-  //             const nodeId = `LEVEL_${i+1}_${safeId}`;
-              
-  //             // Track nodes created at this level
-  //             levelCounts[i+1] = (levelCounts[i+1] || 0) + 1;
-              
-  //             // Check if we already have a node for this segment
-  //             if (!nodesMap[nodeId]) {
-  //                 // Create a new node
-  //                 const isLastLevel = i === maxLevel - 1;
-  //                 const newNode = {
-  //                     id: nodeId,
-  //                     label: displaySegment.trim(),
-  //                     levelNum: i + 1,
-  //                     levelValue: pathSegment.trim(),
-  //                     children: [],
-  //                     level: i + 1,
-  //                     path: [...currentPath, nodeId],
-  //                     expanded: i < 2, // Auto-expand first two levels
-  //                     isLeaf: isLastLevel,
-  //                     hasChildren: false,
-  //                     rootGmid: item.ROOT_GMID,
-  //                     rootDisplay: item.ROOT_DISPLAY,
-  //                     // CRITICAL: Store the factId for filtering (could be PATH_GMID or COMPONENT_GMID)
-  //                     factId: isLastLevel ? gmid : null
-  //                 };
-                  
-  //                 nodesMap[nodeId] = newNode;
-                  
-  //                 // Add to parent's children
-  //                 currentNode.children.push(newNode);
-  //                 currentNode.isLeaf = false;
-  //                 currentNode.hasChildren = true;
-  //             } else if (i === maxLevel - 1 && currentNode.id === nodesMap[nodeId].path[nodesMap[nodeId].path.length - 2]) {
-  //                 // Handle multiple GMIDs mapping to the same node
-  //                 const existingNode = nodesMap[nodeId];
-                  
-  //                 if (!existingNode.factId) {
-  //                     existingNode.factId = gmid;
-  //                     existingNode.isLeaf = true;
-  //                 } else if (existingNode.factId !== gmid) {
-  //                     // Convert factId to array if it isn't already
-  //                     if (!Array.isArray(existingNode.factId)) {
-  //                         existingNode.factId = [existingNode.factId];
-  //                     }
-  //                     // Add this GMID if it's not already in the array
-  //                     if (!existingNode.factId.includes(gmid)) {
-  //                         existingNode.factId.push(gmid);
-  //                     }
-  //                 }
-                  
-  //                 // Mark as non-leaf if it has children
-  //                 if (existingNode.children && existingNode.children.length > 0) {
-  //                     existingNode.isLeaf = false;
-  //                 }
-  //             }
-              
-  //             // Update current node and path for next level
-  //             currentNode = nodesMap[nodeId];
-  //             currentPath = [...currentPath, nodeId];
-  //         }
-  //     });
-            
-  //     // Sort nodes at each level
-  //     const sortHierarchyNodes = (node) => {
-  //         if (node.children && node.children.length > 0) {
-  //             // Sort children by label
-  //             node.children.sort((a, b) => {
-  //                 return a.label.localeCompare(b.label);
-  //             });
-              
-  //             // Recursively sort children's children
-  //             node.children.forEach(child => sortHierarchyNodes(child));
-  //         }
-  //     };
-      
-  //     sortHierarchyNodes(rootNode);
-      
-  //     // Return the hierarchy
-  //     return {
-  //         root: rootNode,
-  //         nodesMap: nodesMap,
-  //         flatData: data
-  //     };
-  // }
-
-
-  /**
-   * Build a filtered ITEM_COST_TYPE hierarchy
-   * @param {Array} data - The filtered item cost type dimension data
-   * @returns {Object} - Hierarchy object with root, nodesMap, and flatData
-   */
-  // buildFilteredItemCostTypeHierarchy(data) {
-  //   console.log(`⏳ Status: Building filtered ITEM_COST_TYPE hierarchy with ${data.length} records...`);
-    
-  //   // Create root node
-  //   const root = {
-  //     id: 'ITEM_COST_TYPE_ROOT',
-  //     label: 'All Item Cost Types',
-  //     children: [],
-  //     level: 0,
-  //     expanded: true,
-  //     isLeaf: false,
-  //     hasChildren: false,
-  //     path: ['ITEM_COST_TYPE_ROOT'],
-  //     hierarchyName: 'item_cost_type'
-  //   };
-    
-  //   // Map to store all nodes by their ID for quick lookup
-  //   const nodesMap = { 'ITEM_COST_TYPE_ROOT': root };
-    
-  //   // Get unique item cost types from filtered dimension data
-  //   const itemCostTypeMap = new Map();
-    
-  //   data.forEach(item => {
-  //     if (item && item.ITEM_COST_TYPE !== undefined) {
-  //       // Use description as label
-  //       const description = item.ITEM_COST_TYPE_DESC || item.ITEM_COST_TYPE;
-        
-  //       // Store the item cost type and its description
-  //       itemCostTypeMap.set(item.ITEM_COST_TYPE, description);
-  //     }
-  //   });
-    
-  //   // Create nodes for each item cost type
-  //   itemCostTypeMap.forEach((description, itemCostTypeCode) => {
-  //     // Handle null values
-  //     const safeCode = itemCostTypeCode === null ? 'null' : itemCostTypeCode;
-  //     const nodeId = `ITEM_COST_TYPE_${safeCode}`;
-      
-  //     const node = {
-  //       id: nodeId,
-  //       label: description || 'null',
-  //       itemCostTypeCode: itemCostTypeCode,
-  //       children: [],
-  //       level: 1,
-  //       expanded: false,
-  //       isLeaf: true,
-  //       hasChildren: false,
-  //       path: ['ITEM_COST_TYPE_ROOT', nodeId],
-  //       factId: itemCostTypeCode,
-  //       hierarchyName: 'item_cost_type'
-  //     };
-      
-  //     // Add to maps
-  //     nodesMap[nodeId] = node;
-      
-  //     // Add as child to root
-  //     root.children.push(node);
-  //     root.hasChildren = true;
-  //   });
-    
-  //   // Sort children alphabetically
-  //   root.children.sort((a, b) => {
-  //     const aLabel = a.label;
-  //     const bLabel = b.label;
-  //     return aLabel.localeCompare(bLabel);
-  //   });
-    
-  //   console.log(`✅ Status: Built filtered ITEM_COST_TYPE hierarchy with ${Object.keys(nodesMap).length} nodes`);
-    
-  //   return {
-  //     root: root,
-  //     nodesMap: nodesMap,
-  //     flatData: data
-  //   };
-  // }
-
-
-  /**
-   * Build a filtered MATERIAL_TYPE hierarchy
-   * @param {Array} data - The filtered material type dimension data
-   * @returns {Object} - Hierarchy object with root, nodesMap, and flatData
-   */
-  // buildFilteredMaterialTypeHierarchy(data) {
-  //   console.log(`⏳ Status: Building filtered MATERIAL_TYPE hierarchy with ${data.length} records...`);
-    
-  //   // Create root node
-  //   const root = {
-  //     id: 'MATERIAL_TYPE_ROOT',
-  //     label: 'All Material Types',
-  //     children: [],
-  //     level: 0,
-  //     expanded: true,
-  //     isLeaf: false,
-  //     hasChildren: false,
-  //     path: ['MATERIAL_TYPE_ROOT'],
-  //     hierarchyName: 'material_type'
-  //   };
-    
-  //   // Map to store all nodes by their ID for quick lookup
-  //   const nodesMap = { 'MATERIAL_TYPE_ROOT': root };
-    
-  //   // Get unique material types from filtered dimension data
-  //   const materialTypeMap = new Map();
-    
-  //   data.forEach(item => {
-  //     if (item && item.MATERIAL_TYPE !== undefined) {
-  //       // Use description as label if available, otherwise use the code
-  //       const description = item.MATERIAL_TYPE_DESC || item.MATERIAL_TYPE;
-        
-  //       // Store the material type and its description
-  //       materialTypeMap.set(item.MATERIAL_TYPE, description);
-  //     }
-  //   });
-    
-  //   // Create nodes for each material type
-  //   materialTypeMap.forEach((description, materialTypeCode) => {
-  //     // Handle null values
-  //     const safeCode = materialTypeCode === null ? 'null' : materialTypeCode;
-  //     const nodeId = `MATERIAL_TYPE_${safeCode}`;
-      
-  //     const node = {
-  //       id: nodeId,
-  //       label: description || 'null',
-  //       materialTypeCode: materialTypeCode,
-  //       children: [],
-  //       level: 1,
-  //       expanded: false,
-  //       isLeaf: true,
-  //       hasChildren: false,
-  //       path: ['MATERIAL_TYPE_ROOT', nodeId],
-  //       factId: materialTypeCode,
-  //       hierarchyName: 'material_type'
-  //     };
-      
-  //     // Add to maps
-  //     nodesMap[nodeId] = node;
-      
-  //     // Add as child to root
-  //     root.children.push(node);
-  //     root.hasChildren = true;
-  //   });
-    
-  //   // Sort children alphabetically
-  //   root.children.sort((a, b) => {
-  //     const aLabel = a.label;
-  //     const bLabel = b.label;
-  //     return aLabel.localeCompare(bLabel);
-  //   });
-    
-  //   console.log(`✅ Status: Built filtered MATERIAL_TYPE hierarchy with ${Object.keys(nodesMap).length} nodes`);
-    
-  //   return {
-  //     root: root,
-  //     nodesMap: nodesMap,
-  //     flatData: data
-  //   };
-  // }
-
-
-  /**
-   * Build a filtered YEAR hierarchy
-   * @param {Array} data - The filtered year dimension data
-   * @returns {Object} - Hierarchy object with root, nodesMap, and flatData
-   */
-  // buildFilteredYearHierarchy(data) {
-  //   console.log(`⏳ Status: Building filtered YEAR hierarchy with ${data.length} records...`);
-    
-  //   // Create root node
-  //   const root = {
-  //     id: 'YEAR_ROOT',
-  //     label: 'All Years',
-  //     children: [],
-  //     level: 0,
-  //     expanded: true,
-  //     isLeaf: false,
-  //     hasChildren: false,
-  //     path: ['YEAR_ROOT'],
-  //     hierarchyName: 'year'
-  //   };
-    
-  //   // Map to store all nodes by their ID for quick lookup
-  //   const nodesMap = { 'YEAR_ROOT': root };
-    
-  //   // Get unique years from filtered dimension data
-  //   const uniqueYears = new Set();
-    
-  //   data.forEach(item => {
-  //     if (item && item.YEAR) {
-  //       uniqueYears.add(item.YEAR.toString());
-  //     }
-  //   });
-    
-  //   // Create nodes for each year
-  //   uniqueYears.forEach(year => {
-  //     const nodeId = `YEAR_${year}`;
-      
-  //     const node = {
-  //       id: nodeId,
-  //       label: year,
-  //       children: [],
-  //       level: 1,
-  //       expanded: false,
-  //       isLeaf: true,
-  //       hasChildren: false,
-  //       path: ['YEAR_ROOT', nodeId],
-  //       factId: year,
-  //       hierarchyName: 'year'
-  //     };
-      
-  //     // Add to maps
-  //     nodesMap[nodeId] = node;
-      
-  //     // Add as child to root
-  //     root.children.push(node);
-  //     root.hasChildren = true;
-  //   });
-    
-  //   // Sort children chronologically
-  //   root.children.sort((a, b) => {
-  //     const yearA = parseInt(a.label);
-  //     const yearB = parseInt(b.label);
-  //     return yearA - yearB;
-  //   });
-    
-  //   console.log(`✅ Status: Built filtered YEAR hierarchy with ${Object.keys(nodesMap).length} nodes`);
-    
-  //   return {
-  //     root: root,
-  //     nodesMap: nodesMap,
-  //     flatData: data
-  //   };
-  // }
-
-
-  /**
-   * Build a filtered MC hierarchy
-   * @param {Array} data - The filtered management centre dimension data
-   * @returns {Object} - Hierarchy object with root, nodesMap, and flatData
-   */
-  // buildFilteredMcHierarchy(data) {
-  //   console.log(`⏳ Status: Building filtered MC hierarchy with ${data.length} records...`);
-    
-  //   // Create root node
-  //   const root = {
-  //     id: 'MC_ROOT',
-  //     label: 'All Management Centres',
-  //     children: [],
-  //     level: 0,
-  //     expanded: true,
-  //     isLeaf: false,
-  //     hasChildren: false,
-  //     path: ['MC_ROOT'],
-  //     hierarchyName: 'mc'
-  //   };
-    
-  //   // Map to store all nodes by their ID for quick lookup
-  //   const nodesMap = { 'MC_ROOT': root };
-    
-  //   // Check if we have PATH data for hierarchical structure
-  //   const hasPath = data.some(item => item.PATH);
-    
-  //   if (hasPath) {
-  //     // Process MC data as a hierarchical structure using PATH
-  //     this.buildPathHierarchy(data, root, nodesMap, 'MC', '//');
-  //   } else {
-  //     // Process as flat structure if no PATH data
-  //     const mcMap = new Map();
-      
-  //     // Collect unique MC values with descriptions
-  //     data.forEach(item => {
-  //       if (item && item.MC) {
-  //         const description = item.MC_DESC || item.MC;
-  //         mcMap.set(item.MC, description);
-  //       }
-  //     });
-      
-  //     // Create nodes for each MC
-  //     mcMap.forEach((description, mcCode) => {
-  //       const nodeId = `MC_${mcCode}`;
-        
-  //       const node = {
-  //         id: nodeId,
-  //         label: description,
-  //         children: [],
-  //         level: 1,
-  //         expanded: false,
-  //         isLeaf: true,
-  //         hasChildren: false,
-  //         path: ['MC_ROOT', nodeId],
-  //         factId: mcCode,
-  //         hierarchyName: 'mc'
-  //       };
-        
-  //       // Add to maps
-  //       nodesMap[nodeId] = node;
-        
-  //       // Add as child to root
-  //       root.children.push(node);
-  //       root.hasChildren = true;
-  //     });
-      
-  //     // Sort children alphabetically
-  //     root.children.sort((a, b) => {
-  //       const aLabel = a.label;
-  //       const bLabel = b.label;
-  //       return aLabel.localeCompare(bLabel);
-  //     });
-  //   }
-    
-  //   console.log(`✅ Status: Built filtered MC hierarchy with ${Object.keys(nodesMap).length} nodes`);
-    
-  //   return {
-  //     root: root,
-  //     nodesMap: nodesMap,
-  //     flatData: data
-  //   };
-  // } 
-
-  
-  /**
-   * Rebuild Legal Entity hierarchy based on filter selections
-   */
-  // rebuildLegalEntityHierarchy() {
-  //   console.log("⏳ Status: Rebuilding Legal Entity hierarchy based on filters...");
-    
-  //   // Get the filter selections for Legal Entity
-  //   const leFilter = this.filterSelections.legalEntity;
-    
-  //   // Get all available legal entities
-  //   const allLEs = [];
-  //   if (this.state.dimensions && this.state.dimensions.le) {
-  //     this.state.dimensions.le.forEach(item => {
-  //       if (item.LE && !allLEs.includes(item.LE)) {
-  //         allLEs.push(item.LE);
-  //       }
-  //     });
-  //   }
-    
-  //   // Determine selected legal entities (empty set means all selected)
-  //   let selectedLEs = [];
-  //   if (leFilter && leFilter.size > 0) {
-  //     // We store excluded values, so we need to invert the selection
-  //     selectedLEs = allLEs.filter(le => !leFilter.has(le));
-  //   } else {
-  //     // All legal entities are selected
-  //     selectedLEs = [...allLEs];
-  //   }
-    
-  //   console.log(`⏳ Status: Selected LEs: ${selectedLEs.length} of ${allLEs.length}`);
-    
-  //   // Only rebuild if we're filtering (otherwise use the original hierarchy)
-  //   if (selectedLEs.length < allLEs.length) {
-  //     // 1. Filter fact data based on selected legal entities
-  //     if (this.state.factData && this.state.factData.length > 0) {
-  //       const originalFactData = this.state.factData;
-        
-  //       // Create filtered data if it doesn't exist yet
-  //       if (!this.state.filteredData) {
-  //         this.state.filteredData = [...originalFactData];
-  //       }
-        
-  //       // Apply filter to fact data (may already be filtered by other dimensions)
-  //       this.state.filteredData = this.state.filteredData.filter(record => 
-  //         record.LE && selectedLEs.includes(record.LE)
-  //       );
-        
-  //       console.log(`✅ Status: Filtered FACT data based on LE: ${originalFactData.length} -> ${this.state.filteredData.length} records`);
-        
-  //       // Check if any records remain after filtering
-  //       if (this.state.filteredData.length === 0) {
-  //         // Create an empty hierarchy when no data matches
-  //         console.log("✅ Status: No records match LE filter, creating empty hierarchy");
-  //         this.createEmptyHierarchy(this.filterMeta.legalEntity);
-          
-  //         // Set a flag to indicate we have an empty result set
-  //         this.state._emptyFilterResult = true;
-  //         return true;
-  //       }
-  //     }
-      
-  //     // 2. Get the original dimension data
-  //     const originalDimData = this.state.dimensions.le;
-      
-  //     // 3. Filter dimension data to only include selected legal entities
-  //     const filteredDimData = originalDimData.filter(item => 
-  //       item.LE && selectedLEs.includes(item.LE)
-  //     );
-      
-  //     // 4. Build the filtered hierarchy using the filtered dimension data
-  //     const filteredHierarchy = this.buildFilteredLegalEntityHierarchy(filteredDimData);
-      
-  //     // 5. Store filtered hierarchy in state
-  //     this.state.hierarchies.le = filteredHierarchy;
-        
-  //     // console.log(`✅ Status: Rebuilt LE hierarchy with ${selectedLEs.length} legal entities from ${filteredDimData.length} dimension records`);
-  //     return true;
-  //   } else {
-  //     // console.log("✅ Status: All Legal Entities selected, no need to rebuild hierarchy");
-      
-  //     // Restore original hierarchy if we previously filtered
-  //     if (this.state._originalHierarchies && this.state._originalHierarchies.le) {
-  //       this.state.hierarchies.le = this.state._originalHierarchies.le;
-  //       // console.log("✅ Status: Restored original LE hierarchy");
-  //     }
-      
-  //     return false;
-  //   }
-  // }
-
-  
-  /**
-   * Rebuild Cost Element hierarchy based on filter selections
-   */
-  // rebuildCostElementHierarchy() {
-  //   console.log("⏳ Status: Rebuilding Cost Element hierarchy based on filters...");
-    
-  //   // Get the filter selections for Cost Element
-  //   const ceFilter = this.filterSelections.costElement;
-    
-  //   // Get all available cost elements
-  //   const allCEs = [];
-  //   if (this.state.dimensions && this.state.dimensions.cost_element) {
-  //     this.state.dimensions.cost_element.forEach(item => {
-  //       if (item.COST_ELEMENT && !allCEs.includes(item.COST_ELEMENT)) {
-  //         allCEs.push(item.COST_ELEMENT);
-  //       }
-  //     });
-  //   }
-    
-  //   // Determine selected cost elements (empty set means all selected)
-  //   let selectedCEs = [];
-  //   if (ceFilter && ceFilter.size > 0) {
-  //     // We store excluded values, so we need to invert the selection
-  //     selectedCEs = allCEs.filter(ce => !ceFilter.has(ce));
-  //   } else {
-  //     // All cost elements are selected
-  //     selectedCEs = [...allCEs];
-  //   }
-    
-  //   console.log(`✅ Status: Selected Cost Elements: ${selectedCEs.length} of ${allCEs.length}`);
-    
-  //   // Only rebuild if we're filtering (otherwise use the original hierarchy)
-  //   if (selectedCEs.length < allCEs.length) {
-  //     // 1. Filter fact data based on selected cost elements
-  //     if (this.state.factData && this.state.factData.length > 0) {
-  //       const originalFactData = this.state.factData;
-        
-  //       // Create filtered data if it doesn't exist yet
-  //       if (!this.state.filteredData) {
-  //         this.state.filteredData = [...originalFactData];
-  //       }
-        
-  //       // Apply filter to fact data (may already be filtered by other dimensions)
-  //       this.state.filteredData = this.state.filteredData.filter(record => 
-  //         record.COST_ELEMENT && selectedCEs.includes(record.COST_ELEMENT)
-  //       );
-        
-  //       console.log(`✅ Status: Filtered FACT data based on COST_ELEMENT: ${originalFactData.length} -> ${this.state.filteredData.length} records`);
-        
-  //       // Check if any records remain after filtering
-  //       if (this.state.filteredData.length === 0) {
-  //         // Create an empty hierarchy when no data matches
-  //         console.log("✅ Status: No records match COST_ELEMENT filter, creating empty hierarchy");
-  //         this.createEmptyHierarchy(this.filterMeta.costElement);
-          
-  //         // Set a flag to indicate we have an empty result set
-  //         this.state._emptyFilterResult = true;
-  //         return true;
-  //       }
-  //     }
-      
-  //     // 2. Get the original dimension data
-  //     const originalDimData = this.state.dimensions.cost_element;
-      
-  //     // 3. Filter dimension data to only include selected cost elements
-  //     const filteredDimData = originalDimData.filter(item => 
-  //       item.COST_ELEMENT && selectedCEs.includes(item.COST_ELEMENT)
-  //     );
-      
-  //     // 4. Build the filtered hierarchy using the filtered dimension data
-  //     const filteredHierarchy = this.buildFilteredCostElementHierarchy(filteredDimData);
-      
-  //     // 5. Store filtered hierarchy in state
-  //     this.state.hierarchies.cost_element = filteredHierarchy;
-        
-  //     // console.log(`✅ Status: Rebuilt Cost Element hierarchy with ${selectedCEs.length} cost elements from ${filteredDimData.length} dimension records`);
-  //     return true;
-  //   } else {
-  //     // console.log("✅ Status: All Cost Elements selected, no need to rebuild hierarchy");
-      
-  //     // Restore original hierarchy if we previously filtered
-  //     if (this.state._originalHierarchies && this.state._originalHierarchies.cost_element) {
-  //       this.state.hierarchies.cost_element = this.state._originalHierarchies.cost_element;
-  //       // console.log("✅ Status: Restored original Cost Element hierarchy");
-  //     }
-      
-  //     return false;
-  //   }
-  // }
-
-  
-  /**
-   * Rebuild Smartcode hierarchy based on filter selections
-   */
-  // rebuildSmartcodeHierarchy() {
-  //   console.log("⏳ Status: Rebuilding Smartcode hierarchy based on filters...");
-    
-  //   // Get the filter selections for Smartcode
-  //   const scFilter = this.filterSelections.smartcode;
-    
-  //   // Get all available smartcodes
-  //   const allSCs = [];
-  //   if (this.state.dimensions && this.state.dimensions.smartcode) {
-  //     this.state.dimensions.smartcode.forEach(item => {
-  //       if (item.SMARTCODE && !allSCs.includes(item.SMARTCODE)) {
-  //         allSCs.push(item.SMARTCODE);
-  //       }
-  //     });
-  //   }
-    
-  //   // Determine selected smartcodes (empty set means all selected)
-  //   let selectedSCs = [];
-  //   if (scFilter && scFilter.size > 0) {
-  //     // We store excluded values, so we need to invert the selection
-  //     selectedSCs = allSCs.filter(sc => !scFilter.has(sc));
-  //   } else {
-  //     // All smartcodes are selected
-  //     selectedSCs = [...allSCs];
-  //   }
-    
-  //   console.log(`✅ Status: Selected Smartcodes: ${selectedSCs.length} of ${allSCs.length}`);
-    
-  //   // Only rebuild if we're filtering (otherwise use the original hierarchy)
-  //   if (selectedSCs.length < allSCs.length) {
-  //     // 1. Get the original dimension data
-  //     const originalDimData = this.state.dimensions.smartcode;
-      
-  //     // 2. Filter dimension data to only include selected smartcodes
-  //     const filteredDimData = originalDimData.filter(item => 
-  //       item.SMARTCODE && selectedSCs.includes(item.SMARTCODE)
-  //     );
-      
-  //     // 5. Filter fact data based on selected smartcodes
-  //     if (this.state.factData && this.state.factData.length > 0) {
-  //       const originalFactData = this.state.factData;
-        
-  //       // Filter records to only include those with selected ROOT_SMARTCODE values
-  //       if (!this.state.filteredData) {
-  //         this.state.filteredData = [...originalFactData];
-  //       }
-        
-  //       // Apply filter to fact data (may already be filtered by other dimensions)
-  //       this.state.filteredData = this.state.filteredData.filter(record => 
-  //         record.ROOT_SMARTCODE && selectedSCs.includes(record.ROOT_SMARTCODE)
-  //       );
-        
-  //       console.log(`✅ Status: Filtered FACT data based on SMARTCODE: ${originalFactData.length} -> ${this.state.filteredData.length} records`);
-        
-  //       // Check if any records remain after filtering
-  //       if (this.state.filteredData.length === 0) {
-  //         // Create an empty hierarchy when no data matches
-  //         console.log("✅ Status: No records match SMARTCODE filter, creating empty hierarchy");
-          
-  //         // Create an empty hierarchy with just a root node
-  //         const emptyHierarchy = {
-  //           root: {
-  //             id: 'SMARTCODE_ROOT',
-  //             label: 'All Smartcodes (No matching records)',
-  //             children: [],
-  //             level: 0,
-  //             expanded: true,
-  //             isLeaf: true,
-  //             hasChildren: false,
-  //             path: ['SMARTCODE_ROOT'],
-  //             hierarchyName: 'smartcode'
-  //           },
-  //           nodesMap: { 'SMARTCODE_ROOT': this.state.hierarchies.smartcode.root },
-  //           flatData: []
-  //         };
-          
-  //         // Store the empty hierarchy
-  //         this.state.hierarchies.smartcode = emptyHierarchy;
-          
-  //         // Set a flag to indicate we have an empty result set
-  //         this.state._emptyFilterResult = true;
-  //         return true;
-  //       }
-  //     }
-      
-  //     // Only build the filtered hierarchy if there's matching data
-  //     // 3. Build the filtered hierarchy using the filtered dimension data
-  //     const filteredHierarchy = this.buildFilteredSmartcodeHierarchy(filteredDimData);
-      
-  //     // 4. Store filtered hierarchy in state
-  //     this.state.hierarchies.smartcode = filteredHierarchy;
-        
-  //     // console.log(`✅ Status: Rebuilt Smartcode hierarchy with ${selectedSCs.length} smartcodes from ${filteredDimData.length} dimension records`);
-  //     return true;
-  //   } else {
-  //     // console.log("✅ Status: All Smartcodes selected, no need to rebuild hierarchy");
-      
-  //     // Restore original hierarchy if we previously filtered
-  //     if (this.state._originalHierarchies && this.state._originalHierarchies.smartcode) {
-  //       this.state.hierarchies.smartcode = this.state._originalHierarchies.smartcode;
-  //       // console.log("✅ Status: Restored original Smartcode hierarchy");
-  //     }
-      
-  //     return false;
-  //   }
-  // }
-
-
-  /**
    * Builds a hierarchical structure from PATH-based data
    * For use with LE, COST_ELEMENT, MC, and SMARTCODE dimensions
    * 
@@ -5029,369 +4169,6 @@ class EnhancedFilterSystem {
         root.hierarchyName === 'mc' ? 'MC_DESC' : factIdField);
     }
   }
-
-
-  /**
- * Build a filtered legal entity hierarchy
- * @param {Array} data - The filtered legal entity dimension data
- * @returns {Object} - Hierarchy object with root, nodesMap, and flatData
- */
-  // buildFilteredLegalEntityHierarchy(data) {
-  //   console.log(`⏳ Status: Building filtered legal entity hierarchy with ${data.length} records...`);
-    
-  //   // Create root node
-  //   const root = {
-  //     id: 'LE_ROOT',
-  //     label: 'All Legal Entities',
-  //     children: [],
-  //     level: 0,
-  //     expanded: true,
-  //     isLeaf: false,
-  //     hasChildren: false,
-  //     path: ['LE_ROOT'],
-  //     hierarchyName: 'le'
-  //   };
-    
-  //   // Map to store all nodes by their ID for quick lookup
-  //   const nodesMap = { 'LE_ROOT': root };
-    
-  //   // Check if we have PATH data for hierarchical structure
-  //   const hasPath = data.some(item => item.PATH);
-    
-  //   if (hasPath) {
-  //     // Process legal entity data as a hierarchical structure using PATH
-  //     // Use a more robust approach to ensure proper hierarchy building
-  //     try {
-  //       // Extract unique PATH values for analysis
-  //       const paths = data.filter(item => item.PATH).map(item => item.PATH);
-  //       // console.log(`✅ Status: Found ${paths.length} unique PATH values for Legal Entities`);
-        
-  //       // Get common delimiter (should be '//')
-  //       const pathSeparator = '//';
-        
-  //       // console.log(`Using path separator: "${pathSeparator}" for Legal Entity hierarchy`);
-        
-  //       // Build the hierarchy using the robust path processing
-  //       this.buildPathHierarchy(data, root, nodesMap, 'LE', pathSeparator);
-        
-  //       // Log hierarchy building success
-  //       console.log(`✅ Status: Successfully built Legal Entity hierarchy: ${root.children.length} top-level nodes, ${Object.keys(nodesMap).length} total nodes`);
-  //     } catch (error) {
-  //       console.error("❌ Alert! Error building Legal Entity hierarchy:", error);
-  //       // Fall back to flat structure on error
-  //       this.buildFlatHierarchy(data, root, nodesMap, 'LE', 'LE_DESC');
-  //     }
-  //   } else {
-  //     // Process as flat structure if no PATH data
-  //     this.buildFlatHierarchy(data, root, nodesMap, 'LE', 'LE_DESC');
-  //   }
-    
-  //   // Ensure root has children flag set correctly
-  //   root.hasChildren = root.children.length > 0;
-    
-  //   console.log(`✅ Status: Built filtered LE hierarchy with ${Object.keys(nodesMap).length} nodes`);
-    
-  //   return {
-  //     root: root,
-  //     nodesMap: nodesMap,
-  //     flatData: data
-  //   };
-  // }
-
-
-  /**
-   * Build a filtered cost element hierarchy
-   * @param {Array} data - The filtered cost element dimension data
-   * @returns {Object} - Hierarchy object with root, nodesMap, and flatData
-   */
-  // buildFilteredCostElementHierarchy(data) {
-  //   console.log(`⏳ Status: Building filtered Cost Element hierarchy with ${data.length} records...`);
-    
-  //   // Create root node
-  //   const root = {
-  //     id: 'COST_ELEMENT_ROOT',
-  //     label: 'All Cost Elements',
-  //     children: [],
-  //     level: 0,
-  //     expanded: true,
-  //     isLeaf: false,
-  //     hasChildren: false,
-  //     path: ['COST_ELEMENT_ROOT'],
-  //     hierarchyName: 'cost_element'
-  //   };
-    
-  //   // Map to store all nodes by their ID for quick lookup
-  //   const nodesMap = { 'COST_ELEMENT_ROOT': root };
-    
-  //   // Check if we have PATH data for hierarchical structure
-  //   const hasPath = data.some(item => item.PATH);
-    
-  //   if (hasPath) {
-  //     // Process cost element data as a hierarchical structure using PATH
-  //     // We'll use a more robust approach to ensure proper hierarchy building
-  //     try {
-  //       // Extract unique PATH values for analysis
-  //       const paths = data.filter(item => item.PATH).map(item => item.PATH);
-  //       // console.log(`✅ Status: Found ${paths.length} unique PATH values for Cost Elements`);
-        
-  //       // Get common delimiter (should be '//')
-  //       // Use // as the default path separator as specified
-  //       const pathSeparator = '//';
-        
-  //       // console.log(`✅ Status: Using path separator: "${pathSeparator}" for Cost Element hierarchy`);
-        
-  //       // Build the hierarchy using the robust path processing
-  //       this.buildPathHierarchy(data, root, nodesMap, 'COST_ELEMENT', pathSeparator);
-        
-  //       // Log hierarchy building success
-  //       console.log(`✅ Status: Successfully built Cost Element hierarchy: ${root.children.length} top-level nodes, ${Object.keys(nodesMap).length} total nodes`);
-  //     } catch (error) {
-  //       console.error("❌ Alert! Error building Cost Element hierarchy:", error);
-  //       // Fall back to flat structure on error
-  //       this.buildFlatHierarchy(data, root, nodesMap, 'COST_ELEMENT', 'COST_ELEMENT_DESC');
-  //     }
-  //   } else {
-  //     // Process as flat structure if no PATH data
-  //     this.buildFlatHierarchy(data, root, nodesMap, 'COST_ELEMENT', 'COST_ELEMENT_DESC');
-  //   }
-    
-  //   // Ensure root has children flag set correctly
-  //   root.hasChildren = root.children.length > 0;
-    
-  //   console.log(`✅ Status: Built filtered Cost Element hierarchy with ${Object.keys(nodesMap).length} nodes`);
-    
-  //   return {
-  //     root: root,
-  //     nodesMap: nodesMap,
-  //     flatData: data
-  //   };
-  // }
-
-
-  /**
-   * Build a filtered smartcode hierarchy
-   * @param {Array} data - The filtered smartcode dimension data
-   * @returns {Object} - Hierarchy object with root, nodesMap, and flatData
-   */
-  // buildFilteredSmartcodeHierarchy(data) {
-  //   console.log(`⏳ Status: Building filtered Smartcode hierarchy with ${data.length} records...`);
-    
-  //   // Create root node
-  //   const root = {
-  //     id: 'SMARTCODE_ROOT',
-  //     label: 'All Smartcodes',
-  //     children: [],
-  //     level: 0,
-  //     expanded: true,
-  //     isLeaf: false,
-  //     hasChildren: false,
-  //     path: ['SMARTCODE_ROOT'],
-  //     hierarchyName: 'smartcode'
-  //   };
-    
-  //   // Map to store all nodes by their ID for quick lookup
-  //   const nodesMap = { 'SMARTCODE_ROOT': root };
-    
-  //   // Check if we have PATH data for hierarchical structure
-  //   const hasPath = data.some(item => item.PATH);
-    
-  //   if (hasPath) {
-  //     // Process smartcode data as a hierarchical structure using PATH
-  //     this.buildPathHierarchy(data, root, nodesMap, 'SMARTCODE', '//');
-  //   } else {
-  //     // Process as flat structure if no PATH data
-  //     const scMap = new Map();
-      
-  //     // Collect unique SMARTCODE values with descriptions
-  //     data.forEach(item => {
-  //       if (item && item.SMARTCODE) {
-  //         const description = item.SMARTCODE_DESC || item.SMARTCODE;
-  //         scMap.set(item.SMARTCODE, description);
-  //       }
-  //     });
-      
-  //     // Create nodes for each SMARTCODE
-  //     scMap.forEach((description, scCode) => {
-  //       const nodeId = `SMARTCODE_${scCode}`;
-        
-  //       const node = {
-  //         id: nodeId,
-  //         label: description,
-  //         children: [],
-  //         level: 1,
-  //         expanded: false,
-  //         isLeaf: true,
-  //         hasChildren: false,
-  //         path: ['SMARTCODE_ROOT', nodeId],
-  //         factId: scCode,
-  //         hierarchyName: 'smartcode'
-  //       };
-        
-  //       // Add to maps
-  //       nodesMap[nodeId] = node;
-        
-  //       // Add as child to root
-  //       root.children.push(node);
-  //       root.hasChildren = true;
-  //     });
-      
-  //     // Sort children alphabetically
-  //     root.children.sort((a, b) => {
-  //       const aLabel = a.label;
-  //       const bLabel = b.label;
-  //       return aLabel.localeCompare(bLabel);
-  //     });
-  //   }
-    
-  //   console.log(`✅ Status: Built filtered Smartcode hierarchy with ${Object.keys(nodesMap).length} nodes`);
-    
-  //   return {
-  //     root: root,
-  //     nodesMap: nodesMap,
-  //     flatData: data
-  //   };
-  // }
-
-
-  /**
-   * Build a hierarchical MC structure from PATH data
-   * @param {Array} data - The MC dimension data
-   * @param {Object} root - The root node to add children to
-   * @param {Object} nodesMap - The map of node IDs to node objects
-   */
-  // buildMcHierarchyFromPath(data, root, nodesMap) {
-  //   // Maps to track nodes by path
-  //   const nodeByPath = new Map();
-    
-  //   // Process each item to build the hierarchy
-  //   data.forEach(item => {
-  //       if (!item.PATH) return;
-        
-  //       // Split the path into segments
-  //       const segments = item.PATH.split('//').filter(s => s.trim() !== '');
-  //       if (segments.length === 0) return;
-        
-  //       // Process each segment in the path
-  //       let parentNode = root;
-  //       let currentPath = root.id;
-        
-  //       for (let i = 0; i < segments.length; i++) {
-  //           const segment = segments[i];
-  //           const isLastSegment = i === segments.length - 1;
-            
-  //           // Build up the path for this segment
-  //           currentPath = `${currentPath}/${segment}`;
-            
-  //           // Check if we already have a node for this path
-  //           let node = nodeByPath.get(currentPath);
-            
-  //           if (!node) {
-  //               // Create a unique ID for this node
-  //               const nodeId = `MC_SEGMENT_${currentPath.replace(/[^a-zA-Z0-9_]/g, '_')}`;
-                
-  //               // Create new node
-  //               node = {
-  //                   id: nodeId,
-  //                   label: segment,
-  //                   children: [],
-  //                   level: i + 1,
-  //                   expanded: false,
-  //                   isLeaf: isLastSegment,
-  //                   hasChildren: !isLastSegment,
-  //                   factId: isLastSegment ? item.MC : null,
-  //                   path: [...parentNode.path, nodeId],
-  //                   hierarchyName: 'mc'
-  //               };
-                
-  //               // Store in maps
-  //               nodesMap[nodeId] = node;
-  //               nodeByPath.set(currentPath, node);
-                
-  //               // Add as child to parent node
-  //               parentNode.children.push(node);
-  //               parentNode.hasChildren = true;
-  //               parentNode.isLeaf = false;
-  //           }
-            
-  //           // Update parent for next iteration
-  //           parentNode = node;
-  //       }
-  //   });
-    
-  //   // Recursively sort nodes at each level
-  //   const sortNodes = (node) => {
-  //       if (node.children && node.children.length > 0) {
-  //           node.children.sort((a, b) => a.label.localeCompare(b.label));
-  //           node.children.forEach(sortNodes);
-  //       }
-  //   };
-    
-  //   sortNodes(root);
-  // }
-
-  
-  /**
-   * Apply a hierarchical filter using hierarchy information
-   * @param {Array} data - Data to filter
-   * @param {Object} dimension - Dimension configuration
-   * @returns {Array} - Filtered data
-   */
-  // applyHierarchicalFilter(data, dimension) {
-  //   // Get hierarchy
-  //   const hierarchy = this.state.hierarchies[dimension.dimensionKey];
-  //   if (!hierarchy || !hierarchy.root) {
-  //     console.warn(`⚠️ Warning: Hierarchy not found for ${dimension.label}, falling back to direct filtering`);
-  //     return data.filter(record => {
-  //       const value = record[dimension.factField];
-  //       return value !== undefined && !this.filterSelections[dimension.id].has(value);
-  //     });
-  //   }
-    
-  //   // Get all excluded fact IDs
-  //   const excludedFactIds = new Set();
-    
-  //   // Process each excluded node
-  //   this.filterSelections[dimension.id].forEach(nodeId => {
-  //     const node = hierarchy.nodesMap[nodeId];
-  //     if (node) {
-  //       // Add this node's factId if it's a leaf node
-  //       if (node.factId) {
-  //         if (Array.isArray(node.factId)) {
-  //           // Handle multiple factIds (sometimes nodes can map to multiple values)
-  //           node.factId.forEach(id => excludedFactIds.add(id));
-  //         } else {
-  //           excludedFactIds.add(node.factId);
-  //         }
-  //       }
-        
-  //       // Add descendant factIds if precomputed
-  //       if (node.descendantFactIds && node.descendantFactIds.length > 0) {
-  //         node.descendantFactIds.forEach(id => excludedFactIds.add(id));
-  //       } else if (node.children && node.children.length > 0) {
-  //         // Otherwise collect all leaf descendants
-  //         this.collectLeafDescendantFactIds(node, hierarchy.nodesMap).forEach(id => excludedFactIds.add(id));
-  //       }
-  //     }
-  //   });
-    
-  //   console.log(`✅ Status: Collected ${excludedFactIds.size} excluded factIds for ${dimension.label}`);
-    
-  //   // If we have no excluded factIds and no selected nodes, everything is selected
-  //   if (excludedFactIds.size === 0 && this.filterSelections[dimension.id].size === 0) {
-  //     return data;
-  //   }
-    
-  //   // Filter data
-  //   const filteredData = data.filter(record => {
-  //     const value = record[dimension.factField];
-  //     return value !== undefined && !excludedFactIds.has(value);
-  //   });
-    
-  //   console.log(`✅ Status: Applied ${dimension.label} filter: ${data.length} -> ${filteredData.length} records`);
-    
-  //   return filteredData;
-  // }
-  
 
   
   // Enhanced method to collect factIds from all leaf descendants
@@ -5525,11 +4302,8 @@ class EnhancedFilterSystem {
    */
   refreshPivotTable() {
     console.log('⏳ Status: Refreshing pivot table with filtered data...');
-    
-    if (window.App && window.App.pivotTable && window.App.pivotTable.generatePivotTable) {
-      window.App.pivotTable.generatePivotTable();
-      console.log('✅ Status: Pivot table refreshed');
-    } else if (window.generatePivotTable) {
+
+    if (window.generatePivotTable) {
       window.generatePivotTable();
       console.log('✅ Status: Pivot table refreshed');
     } else {
@@ -5626,14 +4400,6 @@ class EnhancedFilterSystem {
         this.updateSelectionCount(dimension);
       }
     });
-  }
-
-
-  resetAllFilters() {
-    Object.values(this.filterMeta).forEach(dimension => {
-      this.filterSelections[dimension.id].clear();
-    });
-    this.applyAllFilters();
   }
 }
 

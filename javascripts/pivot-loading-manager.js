@@ -1,6 +1,6 @@
 /**
  * PIVOT TABLE LOADING ANIMATION INTEGRATION
- * Add this to your existing pivot table JavaScript files
+ * Fixed version - Add this to your existing pivot table JavaScript files
  */
 
 // ========================================
@@ -16,27 +16,32 @@ class PivotLoadingManager {
         
         // Create and inject the loading HTML
         this.createLoadingElements();
-        
-        // Bind methods
-        this.show = this.show.bind(this);
-        this.hide = this.hide.bind(this);
-        this.updateStatus = this.updateStatus.bind(this);
     }
-    
+      
     /**
      * Create and inject loading elements into the pivot table container
      */
     createLoadingElements() {
         const pivotContainer = document.getElementById('pivotTableContainer') || 
-                              document.querySelector('.pivot-table-container');
+                              document.querySelector('.pivot-table-container') ||
+                              document.querySelector('[id*="pivot"]') ||
+                              document.querySelector('[class*="pivot"]');
         
         if (!pivotContainer) {
-            console.warn('Pivot table container not found');
+            console.warn('Pivot table container not found. Looking for: #pivotTableContainer, .pivot-table-container, or elements containing "pivot"');
             return;
         }
         
         // Ensure container has relative positioning
-        pivotContainer.style.position = 'relative';
+        if (getComputedStyle(pivotContainer).position === 'static') {
+            pivotContainer.style.position = 'relative';
+        }
+        
+        // Remove existing loaders if they exist
+        const existingFullLoader = document.getElementById('pivotFullLoader');
+        const existingCompactLoader = document.getElementById('pivotCompactLoader');
+        if (existingFullLoader) existingFullLoader.remove();
+        if (existingCompactLoader) existingCompactLoader.remove();
         
         // Create full overlay loader
         const fullLoader = document.createElement('div');
@@ -54,7 +59,7 @@ class PivotLoadingManager {
         pivotContainer.appendChild(fullLoader);
         pivotContainer.appendChild(compactLoader);
         
-        console.log('✅ Pivot loading animations created');
+        console.log('✅ Pivot loading animations created successfully');
     }
     
     /**
@@ -124,7 +129,11 @@ class PivotLoadingManager {
      * @param {Object} options - Configuration options
      */
     show(type = 'full', options = {}) {
-        if (this.isLoading) return;
+        // Don't show multiple full loaders
+        if (this.isLoading && type === 'full') {
+            console.log('Full loader already active');
+            return;
+        }
         
         this.isLoading = true;
         this.currentStep = 0;
@@ -150,6 +159,9 @@ class PivotLoadingManager {
         
         // Auto-hide if requested
         if (autoHide) {
+            if (this.autoHideTimeout) {
+                clearTimeout(this.autoHideTimeout);
+            }
             this.autoHideTimeout = setTimeout(() => {
                 this.hide();
             }, autoHideDelay);
@@ -164,9 +176,12 @@ class PivotLoadingManager {
     showFullLoader(title, subtitle, steps, stepDuration) {
         const loader = document.getElementById('pivotFullLoader');
         const loadingText = document.getElementById('pivotLoadingText');
-        const loadingSubtitle = loader.querySelector('.pivot-loading-subtitle');
+        const loadingSubtitle = loader?.querySelector('.pivot-loading-subtitle');
         
-        if (!loader) return;
+        if (!loader) {
+            console.error('Full loader element not found');
+            return;
+        }
         
         // Update text content
         if (loadingText) loadingText.textContent = title;
@@ -186,6 +201,8 @@ class PivotLoadingManager {
         const loader = document.getElementById('pivotCompactLoader');
         if (loader) {
             loader.classList.add('active');
+        } else {
+            console.error('Compact loader element not found');
         }
     }
     
@@ -195,7 +212,10 @@ class PivotLoadingManager {
     progressThroughSteps(steps, stepDuration) {
         const statusItems = document.querySelectorAll('#pivotStatusList .pivot-status-item');
         
-        if (statusItems.length === 0) return;
+        if (statusItems.length === 0) {
+            console.warn('No status items found for progression');
+            return;
+        }
         
         const progressStep = () => {
             if (this.currentStep < statusItems.length) {
@@ -256,7 +276,7 @@ class PivotLoadingManager {
         if (fullLoader) fullLoader.classList.remove('active');
         if (compactLoader) compactLoader.classList.remove('active');
         
-        // Reset status items
+        // Reset status items after animation completes
         setTimeout(() => {
             this.resetStatusItems();
         }, 300);
@@ -286,8 +306,15 @@ class PivotLoadingManager {
         const loadingText = document.getElementById('pivotLoadingText');
         const loadingSubtitle = document.querySelector('.pivot-loading-subtitle');
         
-        if (loadingText) loadingText.textContent = title;
-        if (loadingSubtitle) loadingSubtitle.textContent = subtitle;
+        if (loadingText && title) loadingText.textContent = title;
+        if (loadingSubtitle && subtitle) loadingSubtitle.textContent = subtitle;
+    }
+    
+    /**
+     * Check if loader is currently active
+     */
+    isActive() {
+        return this.isLoading;
     }
 }
 
@@ -295,40 +322,54 @@ class PivotLoadingManager {
 // INTEGRATION WITH EXISTING PIVOT TABLE
 // ========================================
 
-// Create global loading manager instance
-window.pivotLoadingManager = new PivotLoadingManager();
+// Global loading manager instance
+let pivotLoadingManager = null;
 
-// ========================================
-// INTEGRATION HOOKS
-// ========================================
+/**
+ * Initialize the loading manager
+ */
+function initializePivotLoadingManager() {
+    try {
+        pivotLoadingManager = new PivotLoadingManager();
+        
+        // Make it globally accessible
+        window.pivotLoadingManager = pivotLoadingManager;
+        
+        console.log('✅ Pivot loading manager initialized');
+        return true;
+    } catch (error) {
+        console.error('❌ Failed to initialize pivot loading manager:', error);
+        return false;
+    }
+}
 
 /**
  * Hook into your existing pivot table generation function
  * Add these calls to your pivot table code
  */
-
-// Example integration with your generatePivotTable function
 function integrateWithPivotTable() {
     // Store reference to original function if it exists
     const originalGeneratePivotTable = window.generatePivotTable;
     
-    if (originalGeneratePivotTable) {
+    if (originalGeneratePivotTable && typeof originalGeneratePivotTable === 'function') {
         window.generatePivotTable = function(...args) {
             console.log('🔄 Starting pivot table generation with loading animation');
             
             // Show loading animation
-            window.pivotLoadingManager.show('full', {
-                title: 'Generating Pivot Table',
-                subtitle: 'Please wait while we process your configuration...',
-                steps: [
-                    'Processing field configuration...',
-                    'Calculating aggregations...',
-                    'Rendering table layout...'
-                ],
-                stepDuration: 1200,
-                autoHide: true,
-                autoHideDelay: 6000
-            });
+            if (window.pivotLoadingManager) {
+                window.pivotLoadingManager.show('full', {
+                    title: 'Generating Pivot Table',
+                    subtitle: 'Please wait while we process your configuration...',
+                    steps: [
+                        'Processing field configuration...',
+                        'Calculating aggregations...',
+                        'Rendering table layout...'
+                    ],
+                    stepDuration: 1200,
+                    autoHide: true,
+                    autoHideDelay: 6000
+                });
+            }
             
             // Execute original function
             try {
@@ -337,22 +378,32 @@ function integrateWithPivotTable() {
                 // If it's a promise, handle accordingly
                 if (result && typeof result.then === 'function') {
                     return result.finally(() => {
-                        window.pivotLoadingManager.hide();
+                        if (window.pivotLoadingManager) {
+                            window.pivotLoadingManager.hide();
+                        }
                     });
                 } else {
                     // Hide after a short delay for non-promise returns
                     setTimeout(() => {
-                        window.pivotLoadingManager.hide();
+                        if (window.pivotLoadingManager) {
+                            window.pivotLoadingManager.hide();
+                        }
                     }, 2000);
                     
                     return result;
                 }
             } catch (error) {
                 console.error('Error in pivot table generation:', error);
-                window.pivotLoadingManager.hide();
+                if (window.pivotLoadingManager) {
+                    window.pivotLoadingManager.hide();
+                }
                 throw error;
             }
         };
+        
+        console.log('✅ Pivot table function wrapped with loading animation');
+    } else {
+        console.log('ℹ️ No existing generatePivotTable function found to wrap');
     }
 }
 
@@ -368,8 +419,16 @@ function setupFieldChangeDetection() {
     const fieldContainers = [
         document.getElementById('rowFields'),
         document.getElementById('columnFields'),
-        document.getElementById('valueFields')
+        document.getElementById('valueFields'),
+        document.querySelector('[id*="row"]'),
+        document.querySelector('[id*="column"]'),
+        document.querySelector('[id*="value"]')
     ].filter(el => el !== null);
+    
+    if (fieldContainers.length === 0) {
+        console.log('ℹ️ No field containers found for change detection');
+        return;
+    }
     
     fieldContainers.forEach(container => {
         // Use MutationObserver to detect field changes
@@ -379,10 +438,12 @@ function setupFieldChangeDetection() {
                     (mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0)) {
                     
                     // Show compact loader for quick field changes
-                    window.pivotLoadingManager.show('compact', {
-                        autoHide: true,
-                        autoHideDelay: 3000
-                    });
+                    if (window.pivotLoadingManager) {
+                        window.pivotLoadingManager.show('compact', {
+                            autoHide: true,
+                            autoHideDelay: 3000
+                        });
+                    }
                 }
             });
         });
@@ -393,24 +454,44 @@ function setupFieldChangeDetection() {
         });
     });
     
-    console.log('✅ Field change detection setup complete');
+    console.log(`✅ Field change detection setup complete for ${fieldContainers.length} containers`);
 }
-
 
 // ========================================
 // AUTO-INITIALIZATION
 // ========================================
 
-// Auto-setup when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
+/**
+ * Initialize everything when DOM is ready
+ */
+function initializeWhenReady() {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', performInitialization);
+    } else {
+        // DOM is already ready
+        performInitialization();
+    }
+}
+
+function performInitialization() {
+    console.log('🚀 Initializing pivot loading animations...');
+    
     // Small delay to ensure other scripts are loaded
     setTimeout(() => {
-        integrateWithPivotTable();
-        setupFieldChangeDetection();
-        console.log('✅ Pivot loading animations fully integrated');
+        const success = initializePivotLoadingManager();
+        
+        if (success) {
+            integrateWithPivotTable();
+            setupFieldChangeDetection();
+            console.log('✅ Pivot loading animations fully integrated');
+        } else {
+            console.warn('⚠️ Pivot loading animations failed to initialize');
+        }
     }, 1000);
-});
+}
 
+// Start initialization
+initializeWhenReady();
 
 // ========================================
 // MANUAL CONTROL FUNCTIONS
@@ -422,10 +503,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Show loading for specific operations
 window.showPivotLoader = (type = 'full', options = {}) => {
-    window.pivotLoadingManager.show(type, options);
+    if (window.pivotLoadingManager) {
+        window.pivotLoadingManager.show(type, options);
+    } else {
+        console.warn('Pivot loading manager not initialized yet');
+    }
 };
 
 // Hide loading
 window.hidePivotLoader = () => {
-    window.pivotLoadingManager.hide();
+    if (window.pivotLoadingManager) {
+        window.pivotLoadingManager.hide();
+    } else {
+        console.warn('Pivot loading manager not initialized yet');
+    }
+};
+
+// Check if loading is active
+window.isPivotLoading = () => {
+    return window.pivotLoadingManager ? window.pivotLoadingManager.isActive() : false;
+};
+
+// Update loading message
+window.updatePivotLoaderMessage = (title, subtitle) => {
+    if (window.pivotLoadingManager) {
+        window.pivotLoadingManager.updateMessage(title, subtitle);
+    }
 };

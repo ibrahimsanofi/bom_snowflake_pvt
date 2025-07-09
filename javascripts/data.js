@@ -3761,20 +3761,184 @@ function buildCostElementHierarchy(data) {
 function buildGmidDisplayHierarchy(data) {
     console.log(`⏳ Status: Building GMID Display hierarchy from ${data?.length || 0} records...`);
     
-    // Use dynamic root label detection
+    // Early return for empty data with proper root structure
+    if (!data || !Array.isArray(data) || data.length === 0) {
+        console.warn("No GMID Display data provided or empty data array");
+        return createEmptyGmidHierarchyWithRoot();
+    }
+    
+    // First, check if we can use the dynamic path builder
     const config = createPathSegmentLabelConfig({
         pathField: 'DISPLAY',
         idField: 'PATH_GMID',
         pathSeparator: '//',
         data: data
     });
-    // Don't set rootLabel - let it be determined from the data
     
-    // Build hierarchy with dynamic labels
-    const hierarchy = buildPathHierarchyWithSegmentLabels(data, config);
+    // Try to build hierarchy with dynamic labels
+    let hierarchy = buildPathHierarchyWithSegmentLabels(data, config);
     
-    console.log(`✅ Status: GMID Display hierarchy built with dynamic root label: "${hierarchy.root?.label}"`);
+    // Check if we got a valid hierarchy with a root
+    if (!hierarchy || !hierarchy.root || hierarchy.isEmpty) {
+        console.warn("Dynamic hierarchy builder failed or returned empty hierarchy, creating manual GMID hierarchy");
+        hierarchy = createManualGmidHierarchy(data);
+    }
+    
+    // Ensure the root node has the correct label
+    if (hierarchy && hierarchy.root) {
+        // Force the root label to be "GMID Root" regardless of what was detected
+        hierarchy.root.label = "GMID Root";
+        hierarchy.root.id = "ROOT"; // Ensure consistent ROOT ID
+        
+        // Update the nodesMap if needed
+        if (hierarchy.nodesMap && hierarchy.root.id === "ROOT") {
+            hierarchy.nodesMap["ROOT"] = hierarchy.root;
+        }
+        
+        console.log(`✅ Status: GMID Display hierarchy built with forced root label: "GMID Root"`);
+    } else {
+        console.error("Failed to create GMID hierarchy with proper root structure");
+        return createEmptyGmidHierarchyWithRoot();
+    }
+    
     return hierarchy;
+}
+
+
+/**
+ * Creates an empty GMID hierarchy with proper root structure
+ * @returns {Object} - Empty hierarchy with GMID Root
+ */
+function createEmptyGmidHierarchyWithRoot() {
+    const rootNode = {
+        id: 'ROOT',
+        label: 'GMID Root',
+        children: [],
+        level: 0,
+        path: ['ROOT'],
+        expanded: false,
+        isLeaf: true,
+        hasChildren: false
+    };
+    
+    return {
+        root: rootNode,
+        roots: [rootNode],
+        nodesMap: { 'ROOT': rootNode },
+        flatData: [],
+        isEmpty: true
+    };
+}
+
+
+/**
+ * Creates a manual GMID hierarchy when the dynamic builder fails
+ * @param {Array} data - GMID display dimension data
+ * @returns {Object} - Manually built hierarchy
+ */
+function createManualGmidHierarchy(data) {
+    console.log(`⏳ Status: Creating manual GMID hierarchy for ${data.length} records`);
+    
+    // Create the guaranteed root node
+    const rootNode = {
+        id: 'ROOT',
+        label: 'GMID Root',
+        children: [],
+        level: 0,
+        path: ['ROOT'],
+        expanded: false,
+        isLeaf: false,
+        hasChildren: false
+    };
+    
+    const nodesMap = { 'ROOT': rootNode };
+    const processedPathGmids = new Set();
+    
+    // Process each GMID record
+    data.forEach((item, index) => {
+        try {
+            if (!item || !item.PATH_GMID) {
+                console.warn(`Skipping invalid GMID item at index ${index}:`, item);
+                return;
+            }
+            
+            const pathGmid = item.PATH_GMID;
+            const displayValue = item.DISPLAY || pathGmid;
+            
+            // Skip if we've already processed this PATH_GMID
+            if (processedPathGmids.has(pathGmid)) {
+                return;
+            }
+            processedPathGmids.add(pathGmid);
+            
+            // Create a safe node ID
+            const safeId = pathGmid.replace(/[^a-zA-Z0-9_]/g, '_');
+            const nodeId = `GMID_${safeId}`;
+            
+            // Determine hierarchy level from display path
+            let level = 1; // Default to level 1 (direct child of root)
+            let parentNode = rootNode;
+            
+            // Try to parse the display path for hierarchy
+            if (displayValue && displayValue.includes('//')) {
+                const displaySegments = displayValue.split('//').filter(s => s.trim() !== '');
+                level = displaySegments.length;
+                
+                // For complex hierarchies, we could build intermediate nodes here
+                // For now, we'll keep it simple and make everything a direct child of root
+                // but we'll store the level information
+            }
+            
+            // Create the GMID node
+            const gmidNode = {
+                id: nodeId,
+                label: displayValue,
+                children: [],
+                level: level,
+                path: ['ROOT', nodeId],
+                expanded: false,
+                isLeaf: true,
+                hasChildren: false,
+                factId: pathGmid,
+                data: item
+            };
+            
+            // Add to nodesMap
+            nodesMap[nodeId] = gmidNode;
+            
+            // Add to root's children
+            rootNode.children.push(gmidNode);
+            
+        } catch (error) {
+            console.warn(`Error processing GMID item at index ${index}:`, error);
+        }
+    });
+    
+    // Update root node properties
+    rootNode.hasChildren = rootNode.children.length > 0;
+    rootNode.isLeaf = rootNode.children.length === 0;
+    
+    // Sort children alphabetically by label
+    try {
+        rootNode.children.sort((a, b) => {
+            const labelA = String(a.label || '').toLowerCase();
+            const labelB = String(b.label || '').toLowerCase();
+            return labelA.localeCompare(labelB);
+        });
+    } catch (error) {
+        console.warn('Error sorting GMID children:', error);
+    }
+    
+    console.log(`✅ Status: Manual GMID hierarchy created with ${rootNode.children.length} direct children`);
+    
+    return {
+        root: rootNode,
+        roots: [rootNode],
+        nodesMap: nodesMap,
+        flatData: data,
+        isEmpty: rootNode.children.length === 0,
+        isManuallyBuilt: true
+    };
 }
 
 
@@ -5916,4 +6080,6 @@ export default {
     loadGmidDisplayPlaceholder,
     replaceGmidPlaceholderWithRealData,
     isGmidUsingPlaceholderData,
+    sortHierarchyNodes,
+    sortAllHierarchiesAlphabetically,
   };

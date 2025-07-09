@@ -82,7 +82,7 @@ function initializeApp() {
     // Set up database connection
     setupDatabaseConnection(elements);
 
-    // PHASE 1 CHANGE: Load only dimension data instead of all data
+    // Load only dimension data instead of all data
     loadDimensionDataFromDatabase(elements);
 
     // Initialize filtering system after dimension data is loaded
@@ -159,7 +159,7 @@ function initializeApp() {
         console.log("✅ Status: Pivot table refreshed");
     };
 
-    // 4. Add a new function to reset hierarchies to collapsed state:
+    // Add a new function to reset hierarchies to collapsed state:
     window.resetHierarchyToCollapsed = function() {
         if (window.App && window.App.pivotTable) {
             console.log("🔒 Resetting all hierarchies to collapsed state...");
@@ -169,7 +169,7 @@ function initializeApp() {
         }
     };
 
-    // 5. Add debugging function for hierarchy state:
+    // Add debugging function for hierarchy state:
     window.debugHierarchyState = function(dimensionName) {
         const state = window.App?.state || window.appState;
         if (!state) {
@@ -305,7 +305,7 @@ function setupDatabaseConnection(elements) {
 
 
 /**
- * PHASE 1 CHANGE: Load only dimension data from the database
+ * Load only dimension data from the database
  * @param {Object} elements - DOM elements
  */
 function loadDimensionDataFromDatabase(elements) {
@@ -321,7 +321,7 @@ function loadDimensionDataFromDatabase(elements) {
 
 
 /**
- * PHASE 1 ADDITION: Load fact data on demand
+ * Load fact data on demand
  * @param {Object} elements - DOM elements
  */
 function loadFactDataFromDatabase(elements) {

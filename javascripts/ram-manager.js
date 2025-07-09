@@ -393,9 +393,9 @@
         // Initial search and display creation
         createMemoryDisplay();
         updateMemoryDisplay();
-        
-        // Set up periodic updates: 5 minutes
-        setInterval(updateMemoryDisplay, 300000);
+
+        // Set up periodic updates: 30 seconds
+        setInterval(updateMemoryDisplay, 30000);
         
         // Make functions globally available for debugging
         window.findData = findApplicationData;
