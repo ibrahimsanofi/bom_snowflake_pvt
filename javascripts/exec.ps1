@@ -40,7 +40,7 @@ Start-Sleep -Seconds 2
 
 # === 6. Automatically opening the HTML page in the browser ===
 Write-Host "🌍 Opening the page in the browser..."
-Start-Process "http://localhost:8081/fact_bom.html"
+Start-Process "http://localhost:8081/sso.html"
 
 # === 7. End ===
 Write-Host "✅ Servers started and HTML page opened successfully."

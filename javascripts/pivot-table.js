@@ -2479,7 +2479,7 @@ const pivotTable = {
                     this
                 );
 
-                //this.hideZeroRowsAndColumns();
+                // this.hideZeroRowsAndColumns();
 
                 console.log(`✅ Template-based pivot table generation complete using ${templateType.toUpperCase()}`);
 

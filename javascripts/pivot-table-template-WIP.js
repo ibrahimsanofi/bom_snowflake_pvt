@@ -659,94 +659,347 @@ const PivotTemplateSystem = {
     },
 
 
-    renderTemplate3Header: function(elements, pivotData, rowFields, columnFields, valueFields, pivotTable) {
-        // Use enhanced column processing
-        const orderedColumns = this.getTemplate3ColumnsWithRoot(pivotData, columnFields, pivotTable);
+    // renderTemplate3Header: function(elements, pivotData, rowFields, columnFields, valueFields, pivotTable) {
+    //     // Use enhanced column processing
+    //     const orderedColumns = this.getTemplate3ColumnsWithRoot(pivotData, columnFields, pivotTable);
         
-        let headerHtml = '';
+    //     let headerHtml = '';
         
-        // Row 1: Row header + Measures header
-        headerHtml += '<tr>';
-        const rowDimName = this.getRealDimensionName(rowFields[0]);
-        headerHtml += `<th class="t3-row-header" rowspan="3">${rowDimName}</th>`;
+    //     // Row 1: Row header + Measures header
+    //     headerHtml += '<tr>';
+    //     const rowDimName = this.getRealDimensionName(rowFields[0]);
+    //     headerHtml += `<th class="t3-row-header" rowspan="3">${rowDimName}</th>`;
         
-        const totalValueCells = orderedColumns.length * valueFields.length;
-        headerHtml += `<th class="t3-measures-header" colspan="${totalValueCells}">MEASURES</th>`;
-        headerHtml += '</tr>';
+    //     const totalValueCells = orderedColumns.length * valueFields.length;
+    //     headerHtml += `<th class="t3-measures-header" colspan="${totalValueCells}">MEASURES</th>`;
+    //     headerHtml += '</tr>';
         
-        // Row 2: Value field headers
-        headerHtml += '<tr>';
-        valueFields.forEach(field => {
-            const fieldLabel = pivotTable.getFieldLabel(field);
-            headerHtml += `<th class="t3-measure-header" colspan="${orderedColumns.length}">${fieldLabel}</th>`;
+    //     // Row 2: Value field headers
+    //     headerHtml += '<tr>';
+    //     valueFields.forEach(field => {
+    //         const fieldLabel = pivotTable.getFieldLabel(field);
+    //         headerHtml += `<th class="t3-measure-header" colspan="${orderedColumns.length}">${fieldLabel}</th>`;
+    //     });
+    //     headerHtml += '</tr>';
+        
+    //     // Row 3: Column dimension headers (including root)
+    //     headerHtml += '<tr>';
+    //     valueFields.forEach(() => {
+    //         orderedColumns.forEach(col => {
+    //             const isRootNode = col.isRootNode || col._id === 'ROOT';
+    //             const cssClass = isRootNode ? 't3-column-header root-node' : 't3-column-header';
+                
+    //             headerHtml += `<th class="${cssClass}" data-column-id="${col._id}" data-is-root="${isRootNode}">`;
+                
+    //             // Add expand/collapse control for non-root nodes that have children
+    //             if (!isRootNode && pivotTable.originalColumnHasChildren(col)) {
+    //                 const expandClass = col.expanded ? 'expanded' : 'collapsed';
+    //                 const dimName = data.extractDimensionName(columnFields[0]);
+    //                 headerHtml += `<span class="expand-collapse ${expandClass}" 
+    //                     data-node-id="${col._id}" 
+    //                     data-hierarchy="${dimName}" 
+    //                     data-zone="column"
+    //                     onclick="window.handleExpandCollapseClick(event)"></span>`;
+    //             } else if (isRootNode) {
+    //                 // Root nodes get special expand/collapse handling
+    //                 const expandClass = col.expanded ? 'expanded' : 'collapsed';
+    //                 const dimName = data.extractDimensionName(columnFields[0]);
+    //                 headerHtml += `<span class="expand-collapse ${expandClass} root-expand" 
+    //                     data-node-id="${col._id}" 
+    //                     data-hierarchy="${dimName}" 
+    //                     data-zone="column"
+    //                     onclick="window.handleExpandCollapseClick(event)"
+    //                     title="Expand/collapse all ${dimName} items"></span>`;
+    //             }
+                
+    //             const displayLabel = pivotTable.getDisplayLabel(col);
+    //             headerHtml += `<span class="column-label ${isRootNode ? 'root-label' : ''}">${displayLabel}</span>`;
+    //             headerHtml += '</th>';
+    //         });
+    //     });
+    //     headerHtml += '</tr>';
+        
+    //     elements.pivotTableHeader.innerHTML = headerHtml;
+    //     console.log(`✅ Template3 header built with ${orderedColumns.length} columns including root nodes`);
+    // },
+renderTemplate3Header: function(elements, pivotData, rowFields, columnFields, valueFields, pivotTable) {
+    // Use enhanced column processing that respects collapse state
+    const orderedColumns = this.getTemplate3ColumnsWithRootAndCollapse(pivotData, columnFields, pivotTable);
+    
+    let headerHtml = '';
+    
+    // Row 1: Row header + Measures header
+    headerHtml += '<tr>';
+    const rowDimName = this.getRealDimensionName(rowFields[0]);
+    headerHtml += `<th class="t3-row-header" rowspan="3">${rowDimName}</th>`;
+    
+    const totalValueCells = orderedColumns.length * valueFields.length;
+    headerHtml += `<th class="t3-measures-header" colspan="${totalValueCells}">MEASURES</th>`;
+    headerHtml += '</tr>';
+    
+    // Row 2: Value field headers
+    headerHtml += '<tr>';
+    valueFields.forEach(field => {
+        const fieldLabel = pivotTable.getFieldLabel(field);
+        headerHtml += `<th class="t3-measure-header" colspan="${orderedColumns.length}">${fieldLabel}</th>`;
+    });
+    headerHtml += '</tr>';
+    
+    // Row 3: Column dimension headers (FIXED: with proper collapse state)
+    headerHtml += '<tr>';
+    valueFields.forEach(() => {
+        orderedColumns.forEach(col => {
+            const isRootNode = col.isRootNode || col._id === 'ROOT' || col._id === 'TOT_COST_ELEMENT';
+            const cssClass = isRootNode ? 't3-column-header root-node' : 't3-column-header';
+            
+            headerHtml += `<th class="${cssClass}" data-column-id="${col._id}" data-is-root="${isRootNode}">`;
+            
+            // FIXED: Proper expand/collapse control for Template 3
+            if (this.shouldShowExpandCollapseForTemplate3(col, columnFields, pivotTable)) {
+                const isExpanded = this.isTemplate3ColumnNodeExpanded(col, columnFields[0], pivotTable);
+                const expandClass = isExpanded ? 'expanded' : 'collapsed';
+                const dimName = data.extractDimensionName(columnFields[0]);
+                
+                headerHtml += `<span class="expand-collapse ${expandClass} ${isRootNode ? 'root-expand' : ''}" 
+                    data-node-id="${col._id}" 
+                    data-hierarchy="${dimName}" 
+                    data-zone="column"
+                    onclick="window.handleExpandCollapseClick(event)"
+                    title="Expand/collapse ${col.label || col._id} ${isRootNode ? '(show/hide all children)' : ''}"
+                    style="cursor: pointer; display: inline-block; width: 16px; height: 16px; margin-right: 8px; text-align: center; border: 1px solid #007bff; border-radius: 2px; background: white; line-height: 14px; font-size: 12px; color: #007bff;"></span>`;
+                
+                console.log(`🎯 Template3: Added expand/collapse to ${isRootNode ? 'ROOT' : 'CHILD'} node ${col.label || col._id}`);
+            } else {
+                // No expand/collapse needed
+                headerHtml += '<span class="leaf-spacer" style="display: inline-block; width: 16px; height: 16px; margin-right: 8px;"></span>';
+            }
+            
+            const displayLabel = pivotTable.getDisplayLabel(col);
+            headerHtml += `<span class="column-label ${isRootNode ? 'root-label' : ''}">${displayLabel}</span>`;
+            headerHtml += '</th>';
         });
-        headerHtml += '</tr>';
+    });
+    headerHtml += '</tr>';
+    
+    elements.pivotTableHeader.innerHTML = headerHtml;
+    console.log(`✅ Template3 header built with ${orderedColumns.length} columns including collapse-aware root nodes`);
+},
+
+/**
+ * FIXED: Enhanced column processing for Template 3 that respects collapse state
+ */
+getTemplate3ColumnsWithRootAndCollapse: function(pivotData, columnFields, pivotTable) {
+    const field = columnFields[0]; // Template 3 has only one column field
+    const dimName = data.extractDimensionName(field);
+    
+    console.log(`🔍 Template3: Processing columns for ${dimName} with collapse awareness`);
+    
+    // Get all columns for this dimension
+    const allColumns = pivotData.columns.filter(col => {
+        if (!col.hierarchyField) return false;
+        const colDimName = data.extractDimensionName(col.hierarchyField);
+        return colDimName === dimName && this.isValidColumnForTemplate3(col);
+    });
+    
+    console.log(`🔍 Template3: Found ${allColumns.length} total columns for ${dimName}`);
+    
+    // Check root expansion state
+    const rootNode = allColumns.find(col => 
+        col._id === 'ROOT' || 
+        col._id === 'TOT_COST_ELEMENT' || 
+        col.label === 'TOT_COST_ELEMENT'
+    );
+    
+    if (!rootNode) {
+        console.warn(`⚠️ Template3: No root node found for ${dimName}`);
+        return allColumns.slice(0, 10); // Fallback to first 10 columns
+    }
+    
+    const isRootExpanded = this.isTemplate3ColumnNodeExpanded(rootNode, field, pivotTable);
+    console.log(`🔍 Template3: Root node ${rootNode.label || rootNode._id} expansion state: ${isRootExpanded ? 'EXPANDED' : 'COLLAPSED'}`);
+    
+    const orderedColumns = [];
+    
+    if (isRootExpanded) {
+        // Root is expanded - show root + child nodes
+        console.log(`📂 Template3: Root expanded - showing root + children`);
         
-        // Row 3: Column dimension headers (including root)
-        headerHtml += '<tr>';
-        valueFields.forEach(() => {
-            orderedColumns.forEach(col => {
-                const isRootNode = col.isRootNode || col._id === 'ROOT';
-                const cssClass = isRootNode ? 't3-column-header root-node' : 't3-column-header';
-                
-                headerHtml += `<th class="${cssClass}" data-column-id="${col._id}" data-is-root="${isRootNode}">`;
-                
-                // Add expand/collapse control for non-root nodes that have children
-                if (!isRootNode && pivotTable.originalColumnHasChildren(col)) {
-                    const expandClass = col.expanded ? 'expanded' : 'collapsed';
-                    const dimName = data.extractDimensionName(columnFields[0]);
-                    headerHtml += `<span class="expand-collapse ${expandClass}" 
-                        data-node-id="${col._id}" 
-                        data-hierarchy="${dimName}" 
-                        data-zone="column"
-                        onclick="window.handleExpandCollapseClick(event)"></span>`;
-                } else if (isRootNode) {
-                    // Root nodes get special expand/collapse handling
-                    const expandClass = col.expanded ? 'expanded' : 'collapsed';
-                    const dimName = data.extractDimensionName(columnFields[0]);
-                    headerHtml += `<span class="expand-collapse ${expandClass} root-expand" 
-                        data-node-id="${col._id}" 
-                        data-hierarchy="${dimName}" 
-                        data-zone="column"
-                        onclick="window.handleExpandCollapseClick(event)"
-                        title="Expand/collapse all ${dimName} items"></span>`;
-                }
-                
-                const displayLabel = pivotTable.getDisplayLabel(col);
-                headerHtml += `<span class="column-label ${isRootNode ? 'root-label' : ''}">${displayLabel}</span>`;
-                headerHtml += '</th>';
+        // Add root node first
+        orderedColumns.push({
+            ...rootNode,
+            isRootNode: true,
+            displayOrder: 0
+        });
+        
+        // Add child nodes
+        const childNodes = allColumns.filter(col => 
+            col._id !== rootNode._id && 
+            !this.isTemplate3NodeExpandable(col, pivotTable)
+        );
+        
+        childNodes.forEach((childCol, index) => {
+            orderedColumns.push({
+                ...childCol,
+                isRootNode: false,
+                displayOrder: index + 1
             });
         });
-        headerHtml += '</tr>';
         
-        elements.pivotTableHeader.innerHTML = headerHtml;
-        console.log(`✅ Template3 header built with ${orderedColumns.length} columns including root nodes`);
-    },
+        console.log(`✅ Template3: Added root + ${childNodes.length} children = ${orderedColumns.length} total`);
+    } else {
+        // Root is collapsed - show only root node
+        console.log(`📁 Template3: Root collapsed - showing only root`);
+        
+        orderedColumns.push({
+            ...rootNode,
+            isRootNode: true,
+            displayOrder: 0,
+            isCollapsed: true
+        });
+        
+        console.log(`✅ Template3: Added only collapsed root node`);
+    }
+    
+    return orderedColumns;
+},
+
+/**
+ * Check if column is valid for Template 3 display
+ */
+isValidColumnForTemplate3: function(col) {
+    // Exclude system columns
+    return col._id !== 'VALUE' && 
+           col.label !== 'VALUE' && 
+           col.label !== 'Value' &&
+           col._id !== 'default' && 
+           col._id !== 'no_columns' &&
+           col.label !== 'Measures';
+},
+
+/**
+ * Check if node should show expand/collapse control in Template 3
+ */
+shouldShowExpandCollapseForTemplate3: function(col, columnFields, pivotTable) {
+    // Root nodes always get expand/collapse
+    if (col._id === 'ROOT' || col._id === 'TOT_COST_ELEMENT' || col.label === 'TOT_COST_ELEMENT') {
+        return true;
+    }
+    
+    // Other nodes get expand/collapse if they have children
+    return this.isTemplate3NodeExpandable(col, pivotTable);
+},
+
+/**
+ * Check if Template 3 column node is expanded
+ */
+isTemplate3ColumnNodeExpanded: function(col, field, pivotTable) {
+    const dimName = data.extractDimensionName(field);
+    const expandedNodes = pivotTable.state?.expandedNodes?.[dimName]?.column || {};
+    
+    // Check multiple possible node IDs
+    const nodeIds = [col._id, 'ROOT', 'TOT_COST_ELEMENT'];
+    const isExpanded = nodeIds.some(nodeId => expandedNodes[nodeId]);
+    
+    console.log(`🔍 Template3: Expansion check for ${col._id} (${col.label}) in ${dimName}: ${isExpanded}`);
+    console.log(`🔍 Template3: Available expanded nodes:`, Object.keys(expandedNodes));
+    
+    return isExpanded;
+},
+
+/**
+ * Check if Template 3 node is expandable (has children)
+ */
+isTemplate3NodeExpandable: function(col, pivotTable) {
+    // Root nodes are always expandable
+    if (col._id === 'ROOT' || col._id === 'TOT_COST_ELEMENT' || col.label === 'TOT_COST_ELEMENT') {
+        return true;
+    }
+    
+    // Check if node has children via hierarchy
+    if (col.hierarchyField && pivotTable?.state?.hierarchies) {
+        const dimName = data.extractDimensionName(col.hierarchyField);
+        const hierarchy = pivotTable.state.hierarchies[dimName];
+        
+        if (hierarchy?.nodesMap?.[col._id]) {
+            const originalNode = hierarchy.nodesMap[col._id];
+            return !!(originalNode.children && originalNode.children.length > 0);
+        }
+    }
+    
+    // Check direct children property
+    return !!(col.children && col.children.length > 0);
+},
 
     
-    renderTemplate3Body: function(elements, pivotData, rowFields, columnFields, valueFields, pivotTable) {
-        const visibleRows = pivotTable.getVisibleRowsWithoutDuplicates(pivotData.rows);
-        const orderedColumns = this.getTemplate3ColumnsWithRoot(pivotData, columnFields, pivotTable);
+    // renderTemplate3Body: function(elements, pivotData, rowFields, columnFields, valueFields, pivotTable) {
+    //     const visibleRows = pivotTable.getVisibleRowsWithoutDuplicates(pivotData.rows);
+    //     const orderedColumns = this.getTemplate3ColumnsWithRoot(pivotData, columnFields, pivotTable);
         
-        let bodyHtml = '';
+    //     let bodyHtml = '';
         
+    //     visibleRows.forEach((row, index) => {
+    //         bodyHtml += `<tr class="${index % 2 === 0 ? 'even' : 'odd'}">`;
+            
+    //         // Row cell
+    //         bodyHtml += this.renderTemplate3RowCell(row, rowFields[0]);
+            
+    //         // Cross-tabulated value cells (including root node values)
+    //         valueFields.forEach(field => {
+    //             orderedColumns.forEach((col, colIndex) => {
+    //                 let value;
+                    
+    //                 if (col.isRootNode || col._id === 'ROOT') {
+    //                     // Calculate aggregated value for root node
+    //                     value = this.calculateRootNodeValue(row, col, field, pivotTable);
+    //                     console.log(`🧮 Root node value for ${row.label || row._id} × ${field}: ${value}`);
+    //                 } else {
+    //                     // Regular cross-tabulation for non-root nodes
+    //                     value = pivotTable.calculateMultiDimensionalValue([row], [col], field);
+    //                 }
+                    
+    //                 bodyHtml += this.renderTemplate3ValueCell(value, col, colIndex, field, pivotTable);
+    //             });
+    //         });
+            
+    //         bodyHtml += '</tr>';
+    //     });
+        
+    //     elements.pivotTableBody.innerHTML = bodyHtml;
+    //     pivotTable.attachEventListeners(elements.pivotTableBody);
+        
+    //     console.log(`✅ Template3 body built with ${visibleRows.length} rows × ${orderedColumns.length} columns`);
+    // },
+renderTemplate3Body: function(elements, pivotData, rowFields, columnFields, valueFields, pivotTable) {
+    const visibleRows = pivotTable.getVisibleRowsWithoutDuplicates(pivotData.rows);
+    const orderedColumns = this.getTemplate3ColumnsWithRootAndCollapse(pivotData, columnFields, pivotTable);
+    
+    let bodyHtml = '';
+    
+    if (visibleRows.length === 0 || orderedColumns.length === 0) {
+        const totalCols = 1 + (orderedColumns.length * valueFields.length);
+        bodyHtml = `<tr><td colspan="${totalCols}" class="empty-message">No data to display</td></tr>`;
+    } else {
         visibleRows.forEach((row, index) => {
             bodyHtml += `<tr class="${index % 2 === 0 ? 'even' : 'odd'}">`;
             
             // Row cell
             bodyHtml += this.renderTemplate3RowCell(row, rowFields[0]);
             
-            // Cross-tabulated value cells (including root node values)
+            // Cross-tabulated value cells (respecting column collapse state)
             valueFields.forEach(field => {
                 orderedColumns.forEach((col, colIndex) => {
                     let value;
                     
-                    if (col.isRootNode || col._id === 'ROOT') {
-                        // Calculate aggregated value for root node
-                        value = this.calculateRootNodeValue(row, col, field, pivotTable);
-                        console.log(`🧮 Root node value for ${row.label || row._id} × ${field}: ${value}`);
+                    if (col.isCollapsed) {
+                        // For collapsed root nodes, calculate total of all children
+                        value = this.calculateTemplate3CollapsedRootValue(row, col, field, pivotTable, columnFields[0]);
+                        console.log(`🧮 Template3: Collapsed root value for ${row.label || row._id} × ${field}: ${value}`);
+                    } else if (col.isRootNode && !col.isCollapsed) {
+                        // For expanded root nodes, calculate aggregated value
+                        value = this.calculateTemplate3RootNodeValue(row, col, field, pivotTable);
+                        console.log(`🧮 Template3: Expanded root value for ${row.label || row._id} × ${field}: ${value}`);
                     } else {
-                        // Regular cross-tabulation for non-root nodes
+                        // Regular cross-tabulation for child nodes
                         value = pivotTable.calculateMultiDimensionalValue([row], [col], field);
                     }
                     
@@ -756,13 +1009,72 @@ const PivotTemplateSystem = {
             
             bodyHtml += '</tr>';
         });
-        
-        elements.pivotTableBody.innerHTML = bodyHtml;
-        pivotTable.attachEventListeners(elements.pivotTableBody);
-        
-        console.log(`✅ Template3 body built with ${visibleRows.length} rows × ${orderedColumns.length} columns`);
-    },
+    }
+    
+    elements.pivotTableBody.innerHTML = bodyHtml;
+    pivotTable.attachEventListeners(elements.pivotTableBody);
+    
+    console.log(`✅ Template3 body built with ${visibleRows.length} rows × ${orderedColumns.length} columns (collapse-aware)`);
+},
 
+/**
+ * Calculate aggregated value for expanded root node (Template 3 version)
+ */
+calculateTemplate3RootNodeValue: function(row, rootColumn, field, pivotTable) {
+    console.log(`🧮 Template3: Calculating expanded root value for ${row.label || row._id}, field: ${field}`);
+    
+    // Try to get from pivot data first
+    const rowData = pivotTable.state?.pivotData?.data?.find(d => d._id === row._id);
+    if (rowData && rowData[field] !== undefined) {
+        console.log(`✅ Template3: Found direct root value: ${rowData[field]}`);
+        return rowData[field];
+    }
+    
+    // Fallback to standard calculation
+    const fallbackValue = pivotTable.calculateMultiDimensionalValue([row], [rootColumn], field);
+    console.log(`⚠️ Template3: Using fallback calculation: ${fallbackValue}`);
+    return fallbackValue || 0;
+},
+
+/**
+ * Calculate value for collapsed root node (sum of all hidden children)
+ */
+calculateTemplate3CollapsedRootValue: function(row, rootColumn, field, pivotTable, columnField) {
+    console.log(`🧮 Template3: Calculating collapsed root total for ${row.label || row._id} × ${field}`);
+    
+    // Get all child nodes from hierarchy
+    const dimName = data.extractDimensionName(columnField);
+    const hierarchy = pivotTable.state?.hierarchies?.[dimName];
+    
+    if (!hierarchy || !hierarchy.nodesMap) {
+        // Fallback to standard calculation
+        return pivotTable.calculateMultiDimensionalValue([row], [rootColumn], field);
+    }
+    
+    const rootNode = hierarchy.nodesMap[rootColumn._id] || hierarchy.nodesMap['ROOT'];
+    if (!rootNode || !rootNode.children) {
+        return pivotTable.calculateMultiDimensionalValue([row], [rootColumn], field);
+    }
+    
+    let total = 0;
+    rootNode.children.forEach(childId => {
+        // Create mock child column for calculation
+        const mockChildColumn = {
+            _id: childId,
+            hierarchyField: rootColumn.hierarchyField,
+            factId: hierarchy.nodesMap[childId]?.factId
+        };
+        
+        const childValue = pivotTable.calculateMultiDimensionalValue([row], [mockChildColumn], field);
+        if (typeof childValue === 'number' && !isNaN(childValue)) {
+            total += childValue;
+            console.log(`  + Child ${childId}: ${childValue}`);
+        }
+    });
+    
+    console.log(`✅ Template3: Collapsed total: ${total}`);
+    return total;
+},
 
     /**
      * Calculate aggregated value for root node (sum of all children)
@@ -1761,77 +2073,154 @@ const PivotTemplateSystem = {
      * Check if a column node has expandable children (for expand/collapse UI)
      * FIXED: Properly checks for children regardless of dimension level
      */
-    columnNodeHasExpandableChildren: function(node, pivotTable) {
-        if (!node) {
-            console.log('🔍 columnNodeHasExpandableChildren: node is null/undefined');
-            return false;
-        }
+    // columnNodeHasExpandableChildren: function(node, pivotTable) {
+    //     if (!node) {
+    //         console.log('🔍 columnNodeHasExpandableChildren: node is null/undefined');
+    //         return false;
+    //     }
         
-        // Extract dimension name from node
-        let dimName = '';
-        if (node.hierarchyField) {
-            dimName = data.extractDimensionName(node.hierarchyField);
-        } else if (node._id && node._id.includes('_')) {
-            // Try to extract from node ID pattern (e.g., "le_WORLDWIDE")
-            const parts = node._id.split('_');
-            if (parts.length >= 2) {
-                dimName = parts[0].toLowerCase();
-            }
-        }
+    //     // Extract dimension name from node
+    //     let dimName = '';
+    //     if (node.hierarchyField) {
+    //         dimName = data.extractDimensionName(node.hierarchyField);
+    //     } else if (node._id && node._id.includes('_')) {
+    //         // Try to extract from node ID pattern (e.g., "le_WORLDWIDE")
+    //         const parts = node._id.split('_');
+    //         if (parts.length >= 2) {
+    //             dimName = parts[0].toLowerCase();
+    //         }
+    //     }
         
-        if (!dimName) {
-            console.log(`🔍 columnNodeHasExpandableChildren: cannot determine dimension for node ${node._id || 'unknown'}`);
-            return false;
-        }
+    //     if (!dimName) {
+    //         console.log(`🔍 columnNodeHasExpandableChildren: cannot determine dimension for node ${node._id || 'unknown'}`);
+    //         return false;
+    //     }
         
-        console.log(`🔍 Checking expandable children for node ${node._id} (${node.label || 'no label'}) in dimension ${dimName}`);
+    //     console.log(`🔍 Checking expandable children for node ${node._id} (${node.label || 'no label'}) in dimension ${dimName}`);
         
-        // METHOD 1: Check via hierarchy system
-        const hierarchy = pivotTable.state?.hierarchies?.[dimName];
-        if (hierarchy && hierarchy.nodesMap) {
-            const originalNode = hierarchy.nodesMap[node._id];
-            if (originalNode && originalNode.children && originalNode.children.length > 0) {
-                console.log(`✅ Node ${node._id} has ${originalNode.children.length} children via hierarchy`);
-                return true;
-            }
-        }
+    //     // METHOD 1: Check via hierarchy system
+    //     const hierarchy = pivotTable.state?.hierarchies?.[dimName];
+    //     if (hierarchy && hierarchy.nodesMap) {
+    //         const originalNode = hierarchy.nodesMap[node._id];
+    //         if (originalNode && originalNode.children && originalNode.children.length > 0) {
+    //             console.log(`✅ Node ${node._id} has ${originalNode.children.length} children via hierarchy`);
+    //             return true;
+    //         }
+    //     }
         
-        // METHOD 2: Check direct children property
-        if (node.children && Array.isArray(node.children) && node.children.length > 0) {
-            console.log(`✅ Node ${node._id} has ${node.children.length} direct children`);
-            return true;
-        }
+    //     // METHOD 2: Check direct children property
+    //     if (node.children && Array.isArray(node.children) && node.children.length > 0) {
+    //         console.log(`✅ Node ${node._id} has ${node.children.length} direct children`);
+    //         return true;
+    //     }
         
-        // METHOD 3: Check isLeaf property (inverse logic)
-        if (node.hasOwnProperty('isLeaf') && !node.isLeaf) {
-            console.log(`✅ Node ${node._id} is not a leaf (isLeaf=${node.isLeaf})`);
-            return true;
-        }
+    //     // METHOD 3: Check isLeaf property (inverse logic)
+    //     if (node.hasOwnProperty('isLeaf') && !node.isLeaf) {
+    //         console.log(`✅ Node ${node._id} is not a leaf (isLeaf=${node.isLeaf})`);
+    //         return true;
+    //     }
         
-        // METHOD 4: Check if this node appears in other nodes' children
-        if (hierarchy && hierarchy.nodesMap) {
-            for (const [nodeId, hierarchyNode] of Object.entries(hierarchy.nodesMap)) {
-                if (hierarchyNode.children && hierarchyNode.children.includes(node._id)) {
-                    // This node is someone's child, so it might have its own children
-                    const thisNode = hierarchy.nodesMap[node._id];
-                    if (thisNode && thisNode.children && thisNode.children.length > 0) {
-                        console.log(`✅ Node ${node._id} found in hierarchy with children`);
-                        return true;
-                    }
+    //     // METHOD 4: Check if this node appears in other nodes' children
+    //     if (hierarchy && hierarchy.nodesMap) {
+    //         for (const [nodeId, hierarchyNode] of Object.entries(hierarchy.nodesMap)) {
+    //             if (hierarchyNode.children && hierarchyNode.children.includes(node._id)) {
+    //                 // This node is someone's child, so it might have its own children
+    //                 const thisNode = hierarchy.nodesMap[node._id];
+    //                 if (thisNode && thisNode.children && thisNode.children.length > 0) {
+    //                     console.log(`✅ Node ${node._id} found in hierarchy with children`);
+    //                     return true;
+    //                 }
+    //             }
+    //         }
+    //     }
+        
+    //     // METHOD 5: Check if factId indicates it's a leaf
+    //     if (node.factId) {
+    //         console.log(`❌ Node ${node._id} has factId, likely a leaf node`);
+    //         return false;
+    //     }
+        
+    //     console.log(`❌ Node ${node._id} - no children found via any method`);
+    //     return false;
+    // },
+columnNodeHasExpandableChildren: function(node, pivotTable) {
+    if (!node) {
+        return false;
+    }
+    
+    // SPECIAL CASE: Root nodes should always be expandable if they have a hierarchy
+    if (this.isRootOrAggregateNode(node)) {
+        console.log(`🔍 Root node detected: ${node._id} (${node.label}) - making expandable`);
+        
+        // Check if this root node has a hierarchy with children
+        if (node.hierarchyField && pivotTable?.state?.hierarchies) {
+            const dimName = data.extractDimensionName(node.hierarchyField);
+            const hierarchy = pivotTable.state.hierarchies[dimName];
+            
+            if (hierarchy?.nodesMap) {
+                // Check if there are any non-root nodes in this hierarchy
+                const nonRootNodes = Object.keys(hierarchy.nodesMap).filter(nodeId => 
+                    nodeId !== 'ROOT' && 
+                    nodeId !== 'TOT_COST_ELEMENT' && 
+                    !nodeId.includes('ROOT')
+                );
+                
+                if (nonRootNodes.length > 0) {
+                    console.log(`✅ Root node ${node._id} has ${nonRootNodes.length} child nodes - expandable`);
+                    return true;
                 }
             }
         }
         
-        // METHOD 5: Check if factId indicates it's a leaf
-        if (node.factId) {
-            console.log(`❌ Node ${node._id} has factId, likely a leaf node`);
-            return false;
+        // For root nodes, also check if they have direct children
+        if (node.children && node.children.length > 0) {
+            console.log(`✅ Root node ${node._id} has ${node.children.length} direct children - expandable`);
+            return true;
         }
         
-        console.log(`❌ Node ${node._id} - no children found via any method`);
+        // Default: make root nodes expandable
+        console.log(`✅ Root node ${node._id} - defaulting to expandable`);
+        return true;
+    }
+    
+    // Regular logic for non-root nodes (existing code)
+    console.log(`🔍 Checking expandable children for node ${node._id} (${node.label || 'no label'})`);
+    
+    // Extract dimension name from node
+    let dimName = '';
+    if (node.hierarchyField) {
+        dimName = data.extractDimensionName(node.hierarchyField);
+    }
+    
+    if (!dimName) {
+        console.log(`🔍 columnNodeHasExpandableChildren: cannot determine dimension for node ${node._id || 'unknown'}`);
         return false;
-    },
-
+    }
+    
+    // METHOD 1: Check via hierarchy system
+    if (pivotTable?.state?.hierarchies?.[dimName]?.nodesMap) {
+        const originalNode = pivotTable.state.hierarchies[dimName].nodesMap[node._id];
+        if (originalNode && originalNode.children && originalNode.children.length > 0) {
+            console.log(`✅ Node ${node._id} has ${originalNode.children.length} children via hierarchy`);
+            return true;
+        }
+    }
+    
+    // METHOD 2: Check direct children property
+    if (node.children && Array.isArray(node.children) && node.children.length > 0) {
+        console.log(`✅ Node ${node._id} has ${node.children.length} direct children`);
+        return true;
+    }
+    
+    // METHOD 3: Check isLeaf property (inverse logic)
+    if (node.hasOwnProperty('isLeaf') && !node.isLeaf) {
+        console.log(`✅ Node ${node._id} is not a leaf (isLeaf=${node.isLeaf})`);
+        return true;
+    }
+    
+    console.log(`❌ Node ${node._id} - no children found via any method`);
+    return false;
+},
 
     /**
      * Calculate spanning information for top-level column headers
@@ -2396,25 +2785,317 @@ const PivotTemplateSystem = {
     /**
      * Generate hierarchical column combinations for Template 6
      */
+    // generateTemplate6ColumnCombinations: function(pivotData, columnFields, pivotTable) {
+    //     console.log(`🔍 Generating Template6 hierarchical column combinations for ${columnFields.length} dimensions`);
+        
+    //     // FIXED: Allow root nodes to be displayed
+    //     const columns = this.filterColumnsForDisplay(pivotData.columns, true);
+        
+    //     console.log(`🔍 Found ${columns.length} valid column nodes from ${columnFields.length} column fields`);
+        
+    //     if (columnFields.length === 1) {
+    //         // Single column dimension
+    //         return this.generateSingleColumnCombinations(columns, columnFields[0], pivotTable);
+    //     } else if (columnFields.length >= 2) {
+    //         // Multi-column hierarchical dimensions
+    //         return this.generateMultiColumnHierarchicalCombinations(columns, columnFields, pivotTable);
+    //     }
+        
+    //     return [];
+    // },
     generateTemplate6ColumnCombinations: function(pivotData, columnFields, pivotTable) {
         console.log(`🔍 Generating Template6 hierarchical column combinations for ${columnFields.length} dimensions`);
         
-        // FIXED: Allow root nodes to be displayed
+        // Get all columns but filter properly for collapsed states
         const columns = this.filterColumnsForDisplay(pivotData.columns, true);
         
         console.log(`🔍 Found ${columns.length} valid column nodes from ${columnFields.length} column fields`);
         
         if (columnFields.length === 1) {
-            // Single column dimension
-            return this.generateSingleColumnCombinations(columns, columnFields[0], pivotTable);
+            // Single column dimension with proper collapse handling
+            return this.generateSingleColumnCombinationsWithCollapse(columns, columnFields[0], pivotTable);
         } else if (columnFields.length >= 2) {
-            // Multi-column hierarchical dimensions
-            return this.generateMultiColumnHierarchicalCombinations(columns, columnFields, pivotTable);
+            // Multi-column hierarchical dimensions with proper collapse handling
+            return this.generateMultiColumnHierarchicalCombinationsWithCollapse(columns, columnFields, pivotTable);
         }
         
         return [];
     },
 
+    /**
+ * FIXED: Enhanced multi-column combinations with collapse handling
+ */
+generateMultiColumnHierarchicalCombinationsWithCollapse: function(columns, columnFields, pivotTable) {
+    console.log(`🔍 Generating hierarchical combinations for ${columnFields.length} column dimensions with collapse support`);
+    
+    // Group columns by dimension with hierarchy and collapse awareness
+    const dimensionColumns = this.groupColumnsByDimensionWithCollapse(columns, columnFields, pivotTable);
+    
+    // Generate hierarchical cartesian product respecting collapse states
+    const combinations = this.generateHierarchicalCartesianProductWithCollapse(dimensionColumns, columnFields, pivotTable);
+    
+    console.log(`✅ Generated ${combinations.length} hierarchical combinations with collapse support`);
+    return combinations;
+},
+
+/**
+ * FIXED: Group columns by dimension with collapse awareness
+ */
+groupColumnsByDimensionWithCollapse: function(columns, columnFields, pivotTable) {
+    const dimensionColumns = {};
+    
+    columnFields.forEach(field => {
+        const dimName = data.extractDimensionName(field);
+        const dimColumns = columns.filter(col => {
+            if (!col.hierarchyField) return false;
+            const colDimName = data.extractDimensionName(col.hierarchyField);
+            return colDimName === dimName;
+        });
+        
+        // Get hierarchically visible nodes respecting collapse state
+        dimensionColumns[field] = this.getVisibleColumnNodesRespectingCollapse(dimColumns, field, pivotTable);
+        console.log(`📊 Dimension ${dimName}: ${dimensionColumns[field].length} collapse-aware visible nodes`);
+    });
+    
+    return dimensionColumns;
+},
+
+/**
+ * FIXED: Generate cartesian product respecting collapse states
+ */
+generateHierarchicalCartesianProductWithCollapse: function(dimensionColumns, columnFields, pivotTable) {
+    const combinations = [];
+    
+    if (columnFields.length === 2) {
+        const [field1, field2] = columnFields;
+        const nodes1 = dimensionColumns[field1] || [];
+        const nodes2 = dimensionColumns[field2] || [];
+        
+        // Check if either dimension is completely collapsed
+        const dim1Collapsed = this.isDimensionCollapsed(field1, pivotTable);
+        const dim2Collapsed = this.isDimensionCollapsed(field2, pivotTable);
+        
+        if (dim1Collapsed && dim2Collapsed) {
+            // Both collapsed - show root combination only
+            const root1 = this.getRootNodeForDimension(field1, nodes1);
+            const root2 = this.getRootNodeForDimension(field2, nodes2);
+            if (root1 && root2) {
+                combinations.push({
+                    nodes: [root1, root2],
+                    labels: [pivotTable.getDisplayLabel(root1), pivotTable.getDisplayLabel(root2)],
+                    key: `${root1._id}|${root2._id}`,
+                    isBothCollapsed: true
+                });
+            }
+        } else if (dim1Collapsed) {
+            // First collapsed, second expanded
+            const root1 = this.getRootNodeForDimension(field1, nodes1);
+            if (root1) {
+                nodes2.forEach(node2 => {
+                    combinations.push({
+                        nodes: [root1, node2],
+                        labels: [pivotTable.getDisplayLabel(root1), pivotTable.getDisplayLabel(node2)],
+                        key: `${root1._id}|${node2._id}`,
+                        isFirstCollapsed: true
+                    });
+                });
+            }
+        } else if (dim2Collapsed) {
+            // Second collapsed, first expanded
+            const root2 = this.getRootNodeForDimension(field2, nodes2);
+            if (root2) {
+                nodes1.forEach(node1 => {
+                    combinations.push({
+                        nodes: [node1, root2],
+                        labels: [pivotTable.getDisplayLabel(node1), pivotTable.getDisplayLabel(root2)],
+                        key: `${node1._id}|${root2._id}`,
+                        isSecondCollapsed: true
+                    });
+                });
+            }
+        } else {
+            // Both expanded - normal cartesian product
+            nodes1.forEach(node1 => {
+                nodes2.forEach(node2 => {
+                    combinations.push({
+                        nodes: [node1, node2],
+                        labels: [pivotTable.getDisplayLabel(node1), pivotTable.getDisplayLabel(node2)],
+                        key: `${node1._id}|${node2._id}`,
+                        isBothExpanded: true
+                    });
+                });
+            });
+        }
+    }
+    
+    return combinations;
+},
+
+/**
+ * Get root node for dimension from available nodes
+ */
+getRootNodeForDimension: function(field, nodes) {
+    return nodes.find(node => 
+        node._id === 'ROOT' || 
+        node._id === 'TOT_COST_ELEMENT' || 
+        node.label === 'TOT_COST_ELEMENT'
+    ) || nodes[0]; // fallback to first node
+},
+
+/**
+ * Check if a dimension is completely collapsed
+ */
+isDimensionCollapsed: function(field, pivotTable) {
+    const dimName = data.extractDimensionName(field);
+    const expandedNodes = pivotTable.state?.expandedNodes?.[dimName]?.column || {};
+    
+    // Check if root nodes are collapsed
+    const rootExpanded = expandedNodes['ROOT'] || expandedNodes['TOT_COST_ELEMENT'];
+    return !rootExpanded;
+},
+
+    /**
+ * FIXED: Generate single column combinations with proper collapse state handling
+ */
+generateSingleColumnCombinationsWithCollapse: function(columns, field, pivotTable) {
+    const dimName = data.extractDimensionName(field);
+    console.log(`🔍 Single column dimension ${dimName} with collapse handling`);
+    
+    // Check if root is collapsed
+    const isRootCollapsed = !this.isColumnNodeExpanded({ _id: 'ROOT' }, dimName, pivotTable) && 
+                           !this.isColumnNodeExpanded({ _id: 'TOT_COST_ELEMENT' }, dimName, pivotTable);
+    
+    console.log(`🔍 Root collapse state for ${dimName}: ${isRootCollapsed ? 'COLLAPSED' : 'EXPANDED'}`);
+    
+    if (isRootCollapsed) {
+        // If root is collapsed, only show the root node itself
+        const rootNode = columns.find(col => 
+            col._id === 'ROOT' || 
+            col._id === 'TOT_COST_ELEMENT' || 
+            col.label === 'TOT_COST_ELEMENT'
+        );
+        
+        if (rootNode) {
+            console.log(`✅ Showing only collapsed root node: ${rootNode.label || rootNode._id}`);
+            return [{
+                nodes: [rootNode],
+                labels: [pivotTable.getDisplayLabel(rootNode)],
+                key: rootNode._id,
+                isCollapsedRoot: true
+            }];
+        }
+    }
+    
+    // If root is expanded, show visible child nodes
+    const visibleNodes = this.getVisibleColumnNodesRespectingCollapse(columns, field, pivotTable);
+    console.log(`✅ Showing ${visibleNodes.length} expanded nodes for ${dimName}`);
+    
+    return visibleNodes.map(col => ({
+        nodes: [col],
+        labels: [pivotTable.getDisplayLabel(col)],
+        key: col._id,
+        isExpandedChild: true
+    }));
+},
+
+
+/**
+ * FIXED: Get visible column nodes that respect collapse state
+ */
+getVisibleColumnNodesRespectingCollapse: function(columns, field, pivotTable) {
+    const dimName = data.extractDimensionName(field);
+    const hierarchy = pivotTable.state?.hierarchies?.[dimName];
+    
+    if (!hierarchy || !hierarchy.nodesMap) {
+        // Fallback: exclude root nodes when expanded
+        return columns.filter(col => 
+            col._id !== 'ROOT' && 
+            col._id !== 'TOT_COST_ELEMENT' &&
+            (!this.columnNodeHasExpandableChildren(col, pivotTable) || col.factId)
+        ).slice(0, 10);
+    }
+    
+    const visibleNodes = [];
+    
+    // Start from root and traverse based on expand/collapse state
+    const rootNode = hierarchy.nodesMap['ROOT'] || hierarchy.nodesMap['TOT_COST_ELEMENT'];
+    if (rootNode) {
+        this.traverseColumnHierarchyRespectingCollapse(
+            rootNode, 
+            hierarchy, 
+            columns, 
+            visibleNodes, 
+            dimName, 
+            pivotTable,
+            true // isRootLevel
+        );
+    }
+    
+    console.log(`🔍 Traversal found ${visibleNodes.length} visible nodes for ${dimName}`);
+    
+    // If no nodes found through traversal, fall back to safe defaults
+    if (visibleNodes.length === 0) {
+        const fallbackNodes = columns.filter(col => {
+            return col._id !== 'ROOT' && 
+                   col._id !== 'TOT_COST_ELEMENT' && 
+                   (col.level || 0) <= 1;
+        }).slice(0, 5);
+        
+        console.log(`⚠️ Using ${fallbackNodes.length} fallback nodes for ${dimName}`);
+        return fallbackNodes;
+    }
+    
+    return visibleNodes;
+},
+
+/**
+ * FIXED: Traverse hierarchy respecting collapse state
+ */
+traverseColumnHierarchyRespectingCollapse: function(node, hierarchy, dimensionColumns, visibleNodes, dimName, pivotTable, isRootLevel = false) {
+    if (!node) return;
+    
+    // Find the corresponding column in dimensionColumns
+    const columnNode = dimensionColumns.find(col => col._id === node.id);
+    if (!columnNode) return;
+    
+    // Check if this node is expanded
+    const isExpanded = this.isColumnNodeExpanded(columnNode, dimName, pivotTable);
+    
+    console.log(`🔍 Traversing node ${node.id} (${node.label || 'no label'}): expanded=${isExpanded}, isRoot=${isRootLevel}, hasChildren=${!!(node.children && node.children.length > 0)}`);
+    
+    if (isRootLevel && !isExpanded) {
+        // Root level and collapsed - don't traverse children, the root itself will be shown
+        console.log(`🔍 Root level collapsed - stopping traversal at ${node.id}`);
+        return;
+    }
+    
+    if (node.isLeaf || !node.children || node.children.length === 0) {
+        // Leaf node - always include if we've reached this point
+        visibleNodes.push(columnNode);
+        console.log(`🍃 Added leaf node: ${node.id}`);
+    } else if (!isExpanded && !isRootLevel) {
+        // Collapsed parent (non-root) - include the parent node itself
+        visibleNodes.push(columnNode);
+        console.log(`📁 Added collapsed parent: ${node.id}`);
+    } else if (isExpanded) {
+        // Expanded parent - include visible children
+        console.log(`📂 Expanding children of ${node.id} (${node.children.length} children)`);
+        node.children.forEach(childId => {
+            const childNode = hierarchy.nodesMap[childId];
+            if (childNode) {
+                this.traverseColumnHierarchyRespectingCollapse(
+                    childNode, 
+                    hierarchy, 
+                    dimensionColumns, 
+                    visibleNodes, 
+                    dimName, 
+                    pivotTable,
+                    false // not root level
+                );
+            }
+        });
+    }
+},
 
 
     /**
@@ -2667,30 +3348,88 @@ const PivotTemplateSystem = {
      * Render higher dimension header (blue arrow level) - IMPROVEMENT 2
      * Always show expand/collapse, never show leaf node icons
      */
+    // renderTemplate6HigherDimensionHeader: function(spanInfo, field, levelIndex, valueIndex, pivotTable) {
+    //     const node = spanInfo.node;
+    //     const spanCount = spanInfo.spanCount;
+    //     const isRootNode = node._id === 'ROOT';
+        
+    //     let headerHtml = `<th class="t6-column-header dimension-level-${levelIndex} ${isRootNode ? 'root-node' : ''}" colspan="${spanCount}" data-node-id="${node._id}" data-value-index="${valueIndex}">`;
+        
+    //     // Always add expand/collapse for higher dimension nodes (including root)
+    //     const dimName = data.extractDimensionName(field);
+    //     const isExpanded = this.isColumnNodeExpanded(node, dimName, pivotTable);
+    //     const expandClass = isExpanded ? 'expanded' : 'collapsed';
+        
+    //     headerHtml += `<span class="expand-collapse ${expandClass}" 
+    //         data-node-id="${node._id}" 
+    //         data-hierarchy="${dimName}" 
+    //         data-zone="column"
+    //         onclick="window.handleExpandCollapseClick(event)"
+    //         title="Expand/collapse ${pivotTable.getDisplayLabel(node)} (spans ${spanCount} columns)"></span>`;
+        
+    //     const displayLabel = pivotTable.getDisplayLabel(node);
+    //     headerHtml += `<span class="column-label ${isRootNode ? 'root-label' : ''}">${displayLabel}</span>`;
+    //     headerHtml += '</th>';
+        
+    //     return headerHtml;
+    // },
     renderTemplate6HigherDimensionHeader: function(spanInfo, field, levelIndex, valueIndex, pivotTable) {
         const node = spanInfo.node;
         const spanCount = spanInfo.spanCount;
-        const isRootNode = node._id === 'ROOT';
+        const isRootNode = node._id === 'ROOT' || node._id === 'TOT_COST_ELEMENT' || node.label === 'TOT_COST_ELEMENT';
         
         let headerHtml = `<th class="t6-column-header dimension-level-${levelIndex} ${isRootNode ? 'root-node' : ''}" colspan="${spanCount}" data-node-id="${node._id}" data-value-index="${valueIndex}">`;
         
-        // Always add expand/collapse for higher dimension nodes (including root)
+        // FIXED: Always add expand/collapse for higher dimension nodes, especially root nodes
         const dimName = data.extractDimensionName(field);
         const isExpanded = this.isColumnNodeExpanded(node, dimName, pivotTable);
         const expandClass = isExpanded ? 'expanded' : 'collapsed';
         
-        headerHtml += `<span class="expand-collapse ${expandClass}" 
-            data-node-id="${node._id}" 
-            data-hierarchy="${dimName}" 
-            data-zone="column"
-            onclick="window.handleExpandCollapseClick(event)"
-            title="Expand/collapse ${pivotTable.getDisplayLabel(node)} (spans ${spanCount} columns)"></span>`;
+        // For root nodes or nodes with children, always show expand/collapse
+        const hasExpandableChildren = isRootNode || this.columnNodeHasExpandableChildren(node, pivotTable);
+        
+        if (hasExpandableChildren || isRootNode) {
+            headerHtml += `<span class="expand-collapse ${expandClass} ${isRootNode ? 'root-control' : ''}" 
+                data-node-id="${node._id}" 
+                data-hierarchy="${dimName}" 
+                data-zone="column"
+                onclick="window.handleExpandCollapseClick(event)"
+                title="Expand/collapse ${pivotTable.getDisplayLabel(node)} (spans ${spanCount} columns)"
+                style="cursor: pointer; display: inline-block; width: 16px; height: 16px; margin-right: 8px; text-align: center; border: 1px solid #007bff; border-radius: 2px; background: white; line-height: 14px; font-size: 12px; color: #007bff;"></span>`;
+            
+            console.log(`🎯 Template6: Added expand/collapse to ${isRootNode ? 'ROOT' : 'SPANNING'} node ${node.label || node._id} (${node._id}) in ${dimName}`);
+        } else {
+            headerHtml += '<span class="leaf-node-empty" style="display: inline-block; width: 16px; height: 16px; margin-right: 8px;"></span>';
+        }
         
         const displayLabel = pivotTable.getDisplayLabel(node);
         headerHtml += `<span class="column-label ${isRootNode ? 'root-label' : ''}">${displayLabel}</span>`;
         headerHtml += '</th>';
         
         return headerHtml;
+    },
+
+    /**
+     * ENHANCED: Better detection of root nodes for column expand/collapse
+     */
+    isRootOrAggregateNode: function(node) {
+        if (!node) return false;
+        
+        // Check for various root node patterns
+        const rootPatterns = [
+            'ROOT',
+            'TOT_COST_ELEMENT', 
+            'TOTAL_COST_ELEMENT',
+            'ALL_COST_ELEMENTS',
+            'COST_ELEMENT_ROOT'
+        ];
+        
+        return rootPatterns.some(pattern => 
+            node._id === pattern || 
+            node.label === pattern ||
+            node._id?.includes(pattern) ||
+            node.label?.includes(pattern)
+        );
     },
 
 
@@ -2735,6 +3474,18 @@ const PivotTemplateSystem = {
     /**
      * Check if column node is expanded - helper function
      */
+    // isColumnNodeExpanded: function(node, dimName, pivotTable) {
+    //     if (!pivotTable || !pivotTable.state || !pivotTable.state.expandedNodes) {
+    //         return false;
+    //     }
+        
+    //     const expandedNodes = pivotTable.state.expandedNodes[dimName];
+    //     if (!expandedNodes || !expandedNodes.column) {
+    //         return false;
+    //     }
+        
+    //     return expandedNodes.column[node._id] || false;
+    // },
     isColumnNodeExpanded: function(node, dimName, pivotTable) {
         if (!pivotTable || !pivotTable.state || !pivotTable.state.expandedNodes) {
             return false;
@@ -2745,7 +3496,14 @@ const PivotTemplateSystem = {
             return false;
         }
         
-        return expandedNodes.column[node._id] || false;
+        // Check both the node ID and common root patterns
+        const nodeId = node._id;
+        const isExpanded = expandedNodes.column[nodeId] || 
+                        expandedNodes.column['ROOT'] || 
+                        expandedNodes.column['TOT_COST_ELEMENT'];
+        
+        console.log(`🔍 Expansion check for ${nodeId} in ${dimName}: ${isExpanded}`);
+        return !!isExpanded;
     },
    
 
